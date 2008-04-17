@@ -2,6 +2,7 @@
 from __future__ import division
 
 import ctypes
+import math
 import numpy
 import os
 import sys
@@ -10,27 +11,34 @@ import random
 RandomSeed = 1361
 random.seed(RandomSeed+165)
 
-from common import *
+from saiga12.common import *
 
 class SimData(ctypes.Structure):
     _fields_ = [
         ("beta", ctypes.c_double),
         ("N", ctypes.c_int),
-        ("NMax", ctypes.c_int),
+        #("NMax", ctypes.c_int),  # use lattSize instead
         ("hardness", ctypes.c_double),
-        ("chempotentialEx", ctypes.c_double),
+        ("uVTchempotential", ctypes.c_double),
         ("inserttype", ctypes.c_int),
+        ("widominserttype", ctypes.c_int),
+        ("inserttypes_n", ctypes.c_int),
+        ("inserttypes_prob", ctypes.c_void_p),
+        ("inserttypes_type", ctypes.c_void_p),
         ("lattSize", ctypes.c_int),
         #("partpos", ctypes.c_void_p),
         ("lattsite", ctypes.c_void_p),    # position (occupancy)
         ("conn", ctypes.c_void_p),   # connections
         ("connN", ctypes.c_void_p),  # num of connections for each
         ("connMax", ctypes.c_int),
+        ("nneighbors", ctypes.c_void_p),
 
         ("cumProbAdd", ctypes.c_double),
         ("cumProbDel", ctypes.c_double),
         ]
 SimData_p = ctypes.POINTER(SimData)
+
+neighlist = 1
 
 def getClib():
     filename = "saiga12c.so"
@@ -42,6 +50,15 @@ def getClib():
     C.neighbors_pos.restype = c_int
     C.neighbors_pos.argtypes = SimData_p, c_int
 
+    C.getInsertType.restype = c_int
+    C.getInsertType.argtypes = SimData_p, 
+    if neighlist:
+        C.addParticle.restype = None
+        C.addParticle.argtypes = SimData_p, c_int, c_int
+
+        C.delParticle.restype = None
+        C.delParticle.argtypes = SimData_p, c_int
+
     C.energy_pos.restype = c_double
     C.energy_pos.argtypes = SimData_p, c_int
 
@@ -51,8 +68,8 @@ def getClib():
     C.energy.restype = c_double
     C.energy.argtypes = SimData_p,
 
-    C.chempotentialEx.restype = c_double
-    C.chempotentialEx.argtypes = SimData_p,
+    C.chempotential.restype = c_double
+    C.chempotential.argtypes = SimData_p,
 
     C.cycle.restype = c_int
     C.cycle.argtypes = SimData_p, c_int
@@ -70,34 +87,82 @@ class Sys(object):
         self.C = getClib()
         self.SD_p = ctypes.pointer(SD)
 
-        self.beta = 1
+        self.beta = 1.
         self.hardness = float("inf")
         self.cumProbAdd = 0
         self.cumProbDel = 0
-        self._avgs = {}
+        self.inserttype = S12_EMPTYSITE
+        self.widominserttype = S12_EMPTYSITE
 
         self.N = SD.N = 0
+        self.resetTime()
+        self.avgReset()
 
         #self.partpos = numpy.zeros(shape=(self.NMax), dtype=numpy.int_)
         #SD.partpos   = self.partpos.ctypes.data
         #self.partpos[:] = S12_EMPTYSITE
 
-    def initboard(self):
-        # particle 1 at site 0
-        # particle 2 at site 7
-        pass
+    def _initArrays(self, lattSize, connMax):
+        """Function to initilize various data structures.
+
+        This is used with the various grid initialization methods.
+        """
+        self.lattSize = lattSize
+        self.connMax = connMax
+
+        # nneighbors   (the only reason these comments are here is to
+                      # make it easier to pick out the separations by eye)
+        self.__dict__["nneighbors"]=numpy.zeros(shape=(lattSize),
+                                          dtype=numpy.int_)
+        self.SD.nneighbors = self.nneighbors.ctypes.data
+
+        # conn
+        self.__dict__["conn"]=numpy.zeros(shape=(lattSize, self.connMax),
+                                          dtype=numpy.int_)
+        self.SD.conn = self.conn.ctypes.data
+        self.conn.shape = lattSize, self.connMax
+
+        # connN
+        self.__dict__["connN"] = numpy.zeros(shape=(lattSize),
+                                             dtype=numpy.int_)
+        self.SD.connN = self.connN.ctypes.data
+
+        # lattsite
+        self.__dict__["lattsite"] = numpy.zeros(shape=(self.lattSize),
+                                                dtype=numpy.int_)
+        self.SD.lattsite = self.lattsite.ctypes.data
+        self.lattsite[:] = S12_EMPTYSITE
+
+        
+        
+
     def addParticle(self, pos, type_=1):
-        """Add particle i at lattice site `pos`"""
-        if self.N >= self.NMax:
+        """Add particle at lattice site `pos`.
+
+        This does minimal checks, and then calls the proper C
+        function.  You really should be doing this from C, not python."""
+        if self.N >= self.lattSize:
             print "ERROR: No more room to insert particles"
         if pos < 0 or pos >= self.lattSize:
             print "ERROR: Lattice position is out of bounds"
         if self.lattsite[pos] != S12_EMPTYSITE:
             print "ERROR: lattice site already occupied"
-        self.lattsite[pos] = type_
-        #self.partpos[self.N] = pos
-        self.N += 1
-        #self.SD = self.N
+        if not neighlist:   self.lattsite[pos] = type_
+        else:               self.C.addParticle(self.SD_p, pos, type_)
+    def delParticle(self, pos):
+        """Delete particle at lattice site `pos`"""
+        self.C.delParticle(self.SD_p, pos)
+    def consistencyCheck(self, type_=3):
+        """Check that all stored neighbor numbers are correct.
+        """
+        Ncalc = len(self.lattsite[self.lattsite != S12_EMPTYSITE].flat)
+        if Ncalc != self.N:
+            raise Exception("Inconsistent N: %s %s"%(Ncalc, self.N))
+        for pos in range(self.lattSize):
+            if self.neighbors_pos(pos) != self.nneighbors[pos]:
+                raise Exception("wrong number of neighbors cached at pos %s",
+                                pos)
+        
     def addParticleRandom(self, n, type_=1):
         """Randomly add n particles to the system.
 
@@ -125,9 +190,11 @@ class Sys(object):
             i = random.randrange(len(spots))
             pos = spots.pop(i)
             #print "inserting at site:", pos
-            self.lattsite[pos] = type_
+            if not neighlist:      self.lattsite[pos] = type_
+            else:                  self.addParticle(pos, type_)
             if self.energy_posNeighborhood(pos) == float("inf"):
-                self.lattsite[pos] = S12_EMPTYSITE
+                if not neighlist:  self.lattsite[pos] = S12_EMPTYSITE
+                else:              self.delParticle(pos)
                 continue
             inserted += 1
             self.N += 1
@@ -154,13 +221,21 @@ class Sys(object):
         """
         moves = int(n * self.movesPerCycle)
         self.C.cycle(self.SD_p, moves)
-    def setMoveProb(self, shift=None, insertdel=0):
+        self.mctime += n
+    def resetTime(self):
+        """Sets time back to zero.
+
+        Time is measured in cycles, and stored in self.mctime.  Cycles
+        are set via self.setCycleMoves().
+        """
+        self.mctime = 0
+    def setCycleMoves(self, shift=None, insertdel=0):
         """Sets moves executed each cycle.
 
         To run GCE, do:
         - set this method
         - set self.inserttype
-        - set self.chempotentialEx
+        - set self.uVTchempotential
         """
         if shift is None:
             shift = self.N
@@ -168,16 +243,41 @@ class Sys(object):
 
         self.cumProbAdd = (insertdel/2.) / self.movesPerCycle
         self.cumProbDel = (insertdel) / self.movesPerCycle
-        print self.cumProbAdd, self.cumProbDel
+        #print self.cumProbAdd, self.cumProbDel
         
         
         
-    def removeParticle(self, pos):
-        """not inplemented yet"""
-        pass
     def neighbors_pos(self, i):
         """Number of neighbors of a lattice site"""
-        return self.C.neighbors_pos(self.SD_p, 0)
+        return self.C.neighbors_pos(self.SD_p, i)
+    def setInsertType(self, type_prob_array):
+        """Set the types of atoms to be inserted
+        
+        
+        type_prob_array = ((t0, p0),
+                           (t1, p1),
+                           (t2, p2))
+        """
+        self.inserttype = S12_EMPTYSITE
+        n = len(type_prob_array)
+        inserttypes_prob = numpy.empty(shape=(n), dtype=numpy.double)
+        self.__dict__["inserttypes_prob"] = inserttypes_prob
+        self.SD.inserttypes_prob = inserttypes_prob.ctypes.data
+
+        inserttypes_type = numpy.empty(shape=(n), dtype=numpy.int_)
+        self.__dict__["inserttypes_type"] = inserttypes_type
+        self.SD.inserttypes_type = inserttypes_type.ctypes.data
+
+        cumulProb = 0.
+        for i, (type_, prob) in enumerate(type_prob_array):
+            cumulProb += prob
+            inserttypes_prob[i] = cumulProb
+            inserttypes_type[i] = type_
+        if inserttypes_prob[-1] != 1:
+            raise Exception, "sum of insert types must be one!"
+    def getInsertType(self):
+        """Get the type of particle to be inserted-- fixed or random."""
+        return self.C.getInsertType(self.SD_p)
     def energy(self):
         """Total energy of the system."""
         return self.C.energy(self.SD_p)
@@ -185,7 +285,7 @@ class Sys(object):
         """Energy due to a single lattice site."""
         return self.C.energy_pos(self.SD_p, pos)
     def energy_posNeighborhood(self, pos):
-        """Energy due to a single position and all neighboring sites"""
+        """Energy due to a single position and all neighboring sites."""
         return self.C.energy_posNeighborhood(self.SD_p, pos)
     def findInfiniteEnergy(self):
         """Utility function to find the lattice sites which have inf energy.
@@ -196,46 +296,96 @@ class Sys(object):
                       self.energy_posNeighborhood(pos)
                 self.printLatticeLocal(pos, width=2)
     def hash(self):
-        """Utility function to print checksum of state."""
+        """Utility function to print checksum of current state."""
         x = ( tuple(self.lattsite.flat),
               tuple(self.conn.flat), tuple(self.connN.flat),
               self.hardness, self.lattSize, 
               )
         return hash(x)
+    def numberOfType(self, type_):
+        """Return the number of lattice sites with type type_
+        """
+        return len(self.lattsite[self.lattsite==type_].flat)
     
-    def anneal(self):
+    def anneal(self, verbose=True):
         """Slowly increase the hardness of the system until energy is zero.
 
         Used to go from an initial configuration which has overlaps,
         to a hard configuration with no overlaps.
+
+        Set self.hardness = inf at the end.
         """
         hardness = 1.
         while self.energy() > 0:
             self.hardness = hardness
             self.C.cycle(self.SD_p, self.N * 2)
-            print "hardness: %5d  energy: %8.2f"%(hardness, self.energy()), \
+            if verbose:
+                print "\rannealing: hardness: %5d  energy: %8.2f"% \
+                      (hardness, self.energy()), \
                   self.N
             hardness += 1
+            print "\033[2A\r"
+        print
         self.hardness == float("inf")
-    def chempotentialEx(self):
+    def chempotential(self):
         """Chemical potential of the system, test inserting at every site.
         """
-        if self.inserttype == S12_EMPTYSITE:
+        if self.widominserttype == S12_EMPTYSITE:
             raise Exception("Must set self.inserttype to the type of particle to insert")
         
-        mu = self.C.chempotentialEx(self.SD_p)
+        mu = self.C.chempotential(self.SD_p)
         if mu != inf:
-            self.storeAvg("chempotentialEx", mu)
+            self.avgStore("chempotential", mu)
         return mu
 
-    def storeAvg(self, name,  value):
-        x = self._avgs.setdefault(name, [0., 0. ])
+    def avgStore(self, name,  value):
+        """Add an average to lists, to easily compute avgs and stddevs later.
+
+        `name` is the identifier to use when storing `value`.  Each
+        time a certain quantity is computed, it should be stored with
+        this function, with the same name.
+
+        Related methods:
+          - avg()
+          - secondmoment()
+          - stddev()
+          - resetAvgs()
+        """
+        x = self._avgs.setdefault(name, [0., 0., 0. ])
         x[0] += 1
         x[1] += value
+        x[2] += value*value
     def avg(self, name):
+        """Return < x >
+        """
         x = self._avgs[name]
         return x[1] / x[0]
-    def resetAvgs(self):
+    def avgSecondmoment(self, name):
+        """Return < x**2 >.
+        """
+        x = self._avgs[name]
+        return x[2]/x[0]
+    def avgStddev(self, name, population=True):
+        """Return the *population* std dev of item `name`.
+
+        The population std dev *does* divide by N-1.  To get the
+        sample std dev, set population=False.
+        """
+        x = self._avgs[name]
+        if population:
+            try:
+                return math.sqrt((x[2]/x[0] - (x[1]/x[0])**2) / (x[0]-1))
+            except (ValueError, ZeroDivisionError):
+                return -1.
+        else:
+            try:
+                return math.sqrt((x[2]/x[0] - (x[1]/x[0])**2))
+            except (ValueError, ZeroDivisionError):
+                return -1.
+            
+    def avgReset(self):
+        """Reset all averages.
+        """
         self._avgs = { }
 
     def _density_get(self):
@@ -246,20 +396,30 @@ class Sys(object):
 
 
     def __getattr__(self, attrname):
+        """Wrapper to proxy attribute gets to the C SimData struct
+        """
         if hasattr(self.SD, attrname):
             return getattr(self.SD, attrname)
         raise AttributeError("unknown ")
     def __setattr__(self, name, value):
+        """Wrapper to proxy attribute sets to the C SimData struct
+        """
         if hasattr(self.SD, name):
             setattr(self.SD, name, value)
         else:
             self.__dict__[name] = value
     
 
-def correlation(lattice0, lattice1, S):
-    avg = S.density * S.density * S.lattSize * 3 * 3
+def correlation(lattice0, lattice1):
+    lattice0 = lattice0.copy()
+    lattice1 = lattice1.copy()
+    
+    lattice0[lattice0 != S12_EMPTYSITE] = 1
+    lattice1[lattice1 != S12_EMPTYSITE] = 1
+
+    #avg = S.density * S.density * S.lattSize * 3 * 3
     #print avg
-    return float(sum(lattice0 * lattice1)) - avg
+    return float(numpy.sum(lattice0 * lattice1))# - avg
     
 
 if __name__ == "__main__":
