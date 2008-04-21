@@ -27,10 +27,25 @@ def xcombine(*seqin):
     return rloop(seqin,[])
 cartesianproduct = xcombine
 
+# the following are from Richard's dimcalc.py file.
+# this is the cryptic, impossible to understand version of these...
+from operator import mul as operator_mul
+product = lambda l: reduce(operator_mul, l, 1)
+def cords(dims, index):
+    """Given array dimensions and a (linear) position index,
+    return the coordinates.
+    """
+    return tuple( (index // product(dims[i+1:])) % dims[i]
+                  for i in range(len(dims)))
+def index(dims, cords):
+    """Given array dimensions and coordinates, return the (linear) index.
+    """
+    return reduce(lambda a, x:a*x[0]+x[1],
+                  zip(dims, cords),
+                  0)
+
 
 class GridNd(saiga12.Sys):
-    #def fillcelllist(self, celllist, dimensions):
-        
     
     def makegrid(self, *dimensions):
         lattSize = reduce(lambda x,y: x*y, dimensions) # product of numbers
@@ -72,6 +87,18 @@ class Grid2d(GridNd):
     #    for ai in range(a):
     #        for bi in range(b):
     #            celllist.append((ai, bi))
+
+    def distance(self, index0, index1):
+        """Distance between any two lattice points
+
+        This works for arbitrary dimensions, as well as arrays!
+        """
+        cords0 = numpy.asarray(cords(self.lattShape, index0), dtype=float)
+        cords1 = numpy.asarray(cords(self.lattShape, index1), dtype=float)
+        lindistances = cords0 - cords1
+        dists = numpy.sqrt(numpy.sum(lindistances * lindistances, axis=0))
+        return dists
+
 
     def printLattice(self, lattice=None):
         if lattice is None:

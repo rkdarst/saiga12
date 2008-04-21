@@ -17,7 +17,7 @@ class SimData(ctypes.Structure):
     _fields_ = [
         ("beta", ctypes.c_double),
         ("N", ctypes.c_int),
-        #("NMax", ctypes.c_int),  # use lattSize instead
+        #("NMax", ctypes.c_int),  # lattSize is NMax
         ("hardness", ctypes.c_double),
         ("uVTchempotential", ctypes.c_double),
         ("inserttype", ctypes.c_int),
@@ -32,6 +32,9 @@ class SimData(ctypes.Structure):
         ("connN", ctypes.c_void_p),  # num of connections for each
         ("connMax", ctypes.c_int),
         ("nneighbors", ctypes.c_void_p),
+        ("atomtype", ctypes.c_void_p),
+        ("atompos", ctypes.c_void_p),
+        ("ntype", ctypes.c_void_p),
 
         ("cumProbAdd", ctypes.c_double),
         ("cumProbDel", ctypes.c_double),
@@ -80,7 +83,7 @@ def getClib():
 
 
 class Sys(object):
-    def __init__(self, N):
+    def __init__(self, N=None):
 
         SD = SimData()
         self.__dict__["SD"] = SD
@@ -94,9 +97,10 @@ class Sys(object):
         self.inserttype = S12_EMPTYSITE
         self.widominserttype = S12_EMPTYSITE
 
-        self.N = SD.N = 0
+        self.N = 0
         self.resetTime()
         self.avgReset()
+        self.setCycleMoves(shift=1)  # this must be reset once N is known.
 
         #self.partpos = numpy.zeros(shape=(self.NMax), dtype=numpy.int_)
         #SD.partpos   = self.partpos.ctypes.data
@@ -109,6 +113,7 @@ class Sys(object):
         """
         self.lattSize = lattSize
         self.connMax = connMax
+        maxTypes = connMax + 1  # we don't use zero  [1, N+1)
 
         # nneighbors   (the only reason these comments are here is to
                       # make it easier to pick out the separations by eye)
@@ -133,6 +138,23 @@ class Sys(object):
         self.SD.lattsite = self.lattsite.ctypes.data
         self.lattsite[:] = S12_EMPTYSITE
 
+        # atomtype                                        # lattSize is NMax
+        self.__dict__["atomtype"] = numpy.zeros(shape=(self.lattSize),
+                                                dtype=numpy.int_)
+        self.SD.atomtype = self.atomtype.ctypes.data
+        self.atomtype[:] = S12_EMPTYSITE
+
+        # atomtype                                       # lattSize is NMax
+        self.__dict__["atompos"] = numpy.zeros(shape=(self.lattSize),
+                                               dtype=numpy.int_)
+        self.SD.atompos = self.atompos.ctypes.data
+        self.atompos[:] = S12_EMPTYSITE
+
+        # atomtype                                        # lattSize is NMax
+        self.__dict__["ntype"] = numpy.zeros(shape=(maxTypes),
+                                             dtype=numpy.int_)
+        self.SD.ntype = self.ntype.ctypes.data
+
         
         
 
@@ -147,22 +169,60 @@ class Sys(object):
             print "ERROR: Lattice position is out of bounds"
         if self.lattsite[pos] != S12_EMPTYSITE:
             print "ERROR: lattice site already occupied"
-        if not neighlist:   self.lattsite[pos] = type_
-        else:               self.C.addParticle(self.SD_p, pos, type_)
+        #if not neighlist:   self.lattsite[pos] = type_
+        #else:               self.C.addParticle(self.SD_p, pos, type_)
+        self.C.addParticle(self.SD_p, pos, type_)
     def delParticle(self, pos):
         """Delete particle at lattice site `pos`"""
+        #if not neighlist:  self.lattsite[pos] = S12_EMPTYSITE
+        #else:              self.delParticle(pos)
         self.C.delParticle(self.SD_p, pos)
     def consistencyCheck(self, type_=3):
         """Check that all stored neighbor numbers are correct.
         """
+        if False:
+            print self.lattsite
+            print self.atomtype
+            print self.atompos
+            print self.ntype
+        # check total number of atoms
+        # via lattsite
         Ncalc = len(self.lattsite[self.lattsite != S12_EMPTYSITE].flat)
         if Ncalc != self.N:
-            raise Exception("Inconsistent N: %s %s"%(Ncalc, self.N))
+            raise Exception("Inconsistent N (lattsite): %s %s"%(Ncalc, self.N))
+        # via atomtype
+        Ncalc = len(self.atomtype[self.atomtype != S12_EMPTYSITE].flat)
+        if Ncalc != self.N:
+            raise Exception("Inconsistent N (atomtype): %s %s"%(Ncalc, self.N))
+        # via atompos
+        Ncalc = len(self.atompos[self.atompos != S12_EMPTYSITE].flat)
+        if Ncalc != self.N:
+            raise Exception("Inconsistent N (atompos): %s %s"%(Ncalc, self.N))
+        # number of atoms of each type:
+        for type_ in range(len(self.ntype)):
+            if self.ntype[type_] != \
+                   len(self.atomtype[self.atomtype==type_].flat):
+                raise Excpetion("wrong atom type count: type %d"%type_)
+    
+        # lookup for each lattsite
+        for pos in range(len(self.lattsite.flat)):
+            if self.lattsite[pos] != S12_EMPTYSITE:
+                if pos != self.atompos[self.lattsite[pos]]:
+                    raise Exception(
+                      "lookup error: %d != self.atompos[self.lattsite[%d]]"%
+                      (self.atompos[self.lattsite[pos]], pos))
+        # lookup for each atompos
+        for i in range(self.N):
+            if i != self.lattsite[self.atompos[i]]:
+                raise Exception(
+                    "lookup error: %d != self.lattsite[self.atompos[%d]]"%
+                                (self.lattsite[self.atompos[i]], i))
+        # neighborlists
         for pos in range(self.lattSize):
             if self.neighbors_pos(pos) != self.nneighbors[pos]:
                 raise Exception("wrong number of neighbors cached at pos %s",
                                 pos)
-        
+
     def addParticleRandom(self, n, type_=1):
         """Randomly add n particles to the system.
 
@@ -190,14 +250,16 @@ class Sys(object):
             i = random.randrange(len(spots))
             pos = spots.pop(i)
             #print "inserting at site:", pos
-            if not neighlist:      self.lattsite[pos] = type_
-            else:                  self.addParticle(pos, type_)
+            #if not neighlist:      self.lattsite[pos] = type_
+            #else:                  self.addParticle(pos, type_)
+            self.addParticle(pos, type_)
             if self.energy_posNeighborhood(pos) == float("inf"):
-                if not neighlist:  self.lattsite[pos] = S12_EMPTYSITE
-                else:              self.delParticle(pos)
+                #if not neighlist:  self.lattsite[pos] = S12_EMPTYSITE
+                #else:              self.delParticle(pos)
+                self.delParticle(pos)
                 continue
             inserted += 1
-            self.N += 1
+            #self.N += 1
     def addParticleRandomDensity(self, density, type_=1):
         """Add particles to give system requested density.
 
@@ -250,7 +312,7 @@ class Sys(object):
     def neighbors_pos(self, i):
         """Number of neighbors of a lattice site"""
         return self.C.neighbors_pos(self.SD_p, i)
-    def setInsertType(self, type_prob_array):
+    def setInsertType(self, probs):
         """Set the types of atoms to be inserted
         
         
@@ -259,7 +321,8 @@ class Sys(object):
                            (t2, p2))
         """
         self.inserttype = S12_EMPTYSITE
-        n = len(type_prob_array)
+        n = len(probs)
+        maxtype = max(probs.keys())
         inserttypes_prob = numpy.empty(shape=(n), dtype=numpy.double)
         self.__dict__["inserttypes_prob"] = inserttypes_prob
         self.SD.inserttypes_prob = inserttypes_prob.ctypes.data
@@ -268,16 +331,24 @@ class Sys(object):
         self.__dict__["inserttypes_type"] = inserttypes_type
         self.SD.inserttypes_type = inserttypes_type.ctypes.data
 
+        inserttypes_plookup = numpy.empty(shape=(maxtype+1), dtype=numpy.int_)
+        self.__dict__["inserttypes_plookup"] = inserttypes_plookup
+        self.SD.inserttypes_plookup = inserttypes_plookup.ctypes.data
+
         cumulProb = 0.
-        for i, (type_, prob) in enumerate(type_prob_array):
+        for i, (type_, prob) in enumerate(probs.iteritems()):
             cumulProb += prob
             inserttypes_prob[i] = cumulProb
             inserttypes_type[i] = type_
+            inserttypes_plookup[type_] = prob
         if inserttypes_prob[-1] != 1:
             raise Exception, "sum of insert types must be one!"
     def getInsertType(self):
         """Get the type of particle to be inserted-- fixed or random."""
         return self.C.getInsertType(self.SD_p)
+    def getPos(self):
+        """Return positions of all existant particles."""
+        return self.atompos[self.atompos != S12_EMPTYSITE]
     def energy(self):
         """Total energy of the system."""
         return self.C.energy(self.SD_p)
@@ -305,7 +376,8 @@ class Sys(object):
     def numberOfType(self, type_):
         """Return the number of lattice sites with type type_
         """
-        return len(self.lattsite[self.lattsite==type_].flat)
+        #return len(self.lattsite[self.lattsite==type_].flat)
+        return len(self.atomtype[self.atomtype==type_].flat)
     
     def anneal(self, verbose=True):
         """Slowly increase the hardness of the system until energy is zero.
@@ -325,16 +397,17 @@ class Sys(object):
                   self.N
             hardness += 1
             print "\033[2A\r"
+            #self.printLattice()
         print
         self.hardness == float("inf")
-    def chempotential(self):
+    def chempotential(self, store=True):
         """Chemical potential of the system, test inserting at every site.
         """
         if self.widominserttype == S12_EMPTYSITE:
             raise Exception("Must set self.inserttype to the type of particle to insert")
         
         mu = self.C.chempotential(self.SD_p)
-        if mu != inf:
+        if store and mu != inf:
             self.avgStore("chempotential", mu)
         return mu
 
@@ -423,25 +496,29 @@ def correlation(lattice0, lattice1):
     
 
 if __name__ == "__main__":
-    from saiga12.geom.grid2d import Grid2d
-    class Sc(Sys, Grid2d):
-        pass
+    from saiga12.geom.grid import Grid2d
 
-    a, b = 500, 500
-    S = Sc(N=a*b)
+    a, b = 4, 4
+    S = Grid2d(N=a*b)
     print "x"
-    S.makeconn_2Dgrid(a, b)
+    S.makegrid(a, b)
     print "y"
     S.hardness = 10.
-    S.addParticleRandomDensity(.75, type_=3)
+    S.addParticle(pos=1, type_=3)
+    S.addParticle(pos=4, type_=3)
+    S.addParticle(pos=5, type_=3)
+    S.addParticle(pos=6, type_=3)
+    S.addParticle(pos=9, type_=3)
+    #S.addParticleRandomDensity(.7, type_=3)
     
     print "E:", S.energy()
     #sys.exit()
     latticeOrig = S.lattsite.copy()
+    S.printLattice()
 
     print S.energy()
     print
-
+    print S.consistencyCheck()
     S.anneal()
     #for i in range(1000):
     #    S.C.cycle(S.SD_p, S.N)

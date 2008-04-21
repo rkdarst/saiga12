@@ -2,5 +2,5 @@
 # Part of Saiga-12
 
 
-S12_EMPTYSITE = 0
+S12_EMPTYSITE = -1
 inf = float("inf")
