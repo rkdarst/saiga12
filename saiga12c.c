@@ -23,6 +23,8 @@ struct SimData {
   int inserttypes_n;    // not used
   double *inserttypes_prob; // when multiple insert types, this is cum prob.
   int *inserttypes_type; // and this is corresponding type.
+  double *inserttypes_plookup; // lookup from type->prob
+  double *inserttypes_mulookup; // lookup from type->mu
   int lattSize;
   //int *partpos;
   int *lattsite;
@@ -230,14 +232,28 @@ int grandcanonical_add(struct SimData *SD, int pos) {
       return(0);
     }
   }
-
   if (SD->lattsite[pos] != S12_EMPTYSITE) exit(57);
+  
+  int inserttype;
+  double inserttype_prob, uVTchempotential;
+  if (SD->inserttype != S12_EMPTYSITE) { // Single Component
+    inserttype = SD->inserttype;
+    inserttype_prob = 1.;
+    uVTchempotential = SD->uVTchempotential;
+  }
+  else {  // Multicomponent
+    inserttype = getInsertType(SD);
+    inserttype_prob = SD->inserttypes_plookup[inserttype];
+    uVTchempotential = SD->inserttypes_mulookup[inserttype];
+  }
+
   double Eold = energy_posNeighborhood(SD, pos);
-  addParticle(SD, pos, getInsertType(SD));
+  addParticle(SD, pos, inserttype);
   double Enew = energy_posNeighborhood(SD, pos);
-  int accept;
   double x = //(SD->lattSize/(double)(SD->N+1)) *   // this for method A only
-               exp( SD->beta * ((SD->uVTchempotential) - Enew + Eold));
+               exp( SD->beta * (uVTchempotential - Enew + Eold))
+               / inserttype_prob;
+  int accept;
   if (x >= 1) {
     accept = 1;
   } else {
@@ -261,24 +277,37 @@ int grandcanonical_del(struct SimData *SD, int pos) {
   if (pos == -1) {
     // pick a random particle.
     if (SD->N == 0) {
-      printf("No particles remaining (grandcanonical_del), exiting\n");
+      printf("eNo particles remaining (grandcanonical_del), exiting\n");
       exit(45);
     }
     do {
       pos = SD->lattSize * genrand_real2();
     } while (SD->lattsite[pos] == S12_EMPTYSITE);
   }
-      
   if (SD->lattsite[pos] == S12_EMPTYSITE) exit(56);
+
+  int inserttype;
+  double inserttype_prob, uVTchempotential;
+  if (SD->inserttype != S12_EMPTYSITE) {  //Singlecomponent
+    inserttype_prob = 1.;
+    uVTchempotential = SD->uVTchempotential;
+  }
+  else { // Multicomponent
+    inserttype = SD->atomtype[SD->lattsite[pos]];
+    inserttype_prob = SD->inserttypes_plookup[inserttype];
+    uVTchempotential = SD->inserttypes_mulookup[inserttype];
+  }
+
   double Eold = energy_posNeighborhood(SD, pos);
   int origtype = atomType(SD, pos);
   delParticle(SD, pos);
   double Enew = energy_posNeighborhood(SD, pos);
   
 
-  int accept;
   double x = //((SD->N+1)/(double)SD->lattSize) *  // this for method A only
-               exp( SD->beta * ((-SD->uVTchempotential) + Eold - Enew));
+               ((inserttype_prob)) *
+               exp( - SD->beta * (uVTchempotential - Eold + Enew));
+  int accept;
   if (x >= 1) {
     accept = 1;
   } else {
@@ -302,10 +331,10 @@ int grandcanonical_del(struct SimData *SD, int pos) {
 
 
 
-double chempotential(struct SimData *SD) {
+double chempotential(struct SimData *SD, int inserttype) {
   // this variable will hold the sum of all exp(-beta deltaU)
   double totalsum=0;
-  int inserttype = SD->widominserttype;
+  //int inserttype = SD->widominserttype;
   //printf("insert type: %d\n", inserttype);
 
   int pos;
@@ -328,7 +357,9 @@ double chempotential(struct SimData *SD) {
   //printf("%f\n", totalsum);
 
   //double chempotential = - log(totalsum / SD->lattSize) / SD->beta; // A
-  double chempotential = - log(totalsum / (SD->N+1)) / SD->beta; // B
+  //double chempotential = - log(totalsum / (SD->N+1)) / SD->beta; // B
+  double chempotential = 
+     - log(totalsum / (SD->ntype[inserttype])) / SD->beta; // B per type
   return(chempotential);
 }
 

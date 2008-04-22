@@ -25,6 +25,8 @@ class SimData(ctypes.Structure):
         ("inserttypes_n", ctypes.c_int),
         ("inserttypes_prob", ctypes.c_void_p),
         ("inserttypes_type", ctypes.c_void_p),
+        ("inserttypes_plookup", ctypes.c_void_p),
+        ("inserttypes_mulookup", ctypes.c_void_p),
         ("lattSize", ctypes.c_int),
         #("partpos", ctypes.c_void_p),
         ("lattsite", ctypes.c_void_p),    # position (occupancy)
@@ -72,7 +74,7 @@ def getClib():
     C.energy.argtypes = SimData_p,
 
     C.chempotential.restype = c_double
-    C.chempotential.argtypes = SimData_p,
+    C.chempotential.argtypes = SimData_p, c_int
 
     C.cycle.restype = c_int
     C.cycle.argtypes = SimData_p, c_int
@@ -202,7 +204,7 @@ class Sys(object):
         for type_ in range(len(self.ntype)):
             if self.ntype[type_] != \
                    len(self.atomtype[self.atomtype==type_].flat):
-                raise Excpetion("wrong atom type count: type %d"%type_)
+                raise Exception("wrong atom type count: type %d"%type_)
     
         # lookup for each lattsite
         for pos in range(len(self.lattsite.flat)):
@@ -331,16 +333,25 @@ class Sys(object):
         self.__dict__["inserttypes_type"] = inserttypes_type
         self.SD.inserttypes_type = inserttypes_type.ctypes.data
 
-        inserttypes_plookup = numpy.empty(shape=(maxtype+1), dtype=numpy.int_)
+        inserttypes_plookup = numpy.zeros(shape=(maxtype+1),
+                                          dtype=numpy.double)
         self.__dict__["inserttypes_plookup"] = inserttypes_plookup
         self.SD.inserttypes_plookup = inserttypes_plookup.ctypes.data
 
+        inserttypes_mulookup = numpy.zeros(shape=(maxtype+1),
+                                          dtype=numpy.double)
+        self.__dict__["inserttypes_mulookup"] = inserttypes_mulookup
+        self.SD.inserttypes_mulookup = inserttypes_mulookup.ctypes.data
+
         cumulProb = 0.
         for i, (type_, prob) in enumerate(probs.iteritems()):
+            mu = prob[1]    # hack twiddling with variables
+            prob = prob[0]
             cumulProb += prob
             inserttypes_prob[i] = cumulProb
             inserttypes_type[i] = type_
             inserttypes_plookup[type_] = prob
+            inserttypes_mulookup[type_] = mu
         if inserttypes_prob[-1] != 1:
             raise Exception, "sum of insert types must be one!"
     def getInsertType(self):
@@ -378,6 +389,7 @@ class Sys(object):
         """
         #return len(self.lattsite[self.lattsite==type_].flat)
         return len(self.atomtype[self.atomtype==type_].flat)
+        #return self.ntype[type_]
     
     def anneal(self, verbose=True):
         """Slowly increase the hardness of the system until energy is zero.
@@ -400,13 +412,14 @@ class Sys(object):
             #self.printLattice()
         print
         self.hardness == float("inf")
-    def chempotential(self, store=True):
+    def chempotential(self, inserttype, store=True):
         """Chemical potential of the system, test inserting at every site.
         """
-        if self.widominserttype == S12_EMPTYSITE:
-            raise Exception("Must set self.inserttype to the type of particle to insert")
+        #if self.widominserttype == S12_EMPTYSITE:
+        #    raise Exception(
+        #        "Must set self.inserttype to the type of particle to insert")
         
-        mu = self.C.chempotential(self.SD_p)
+        mu = self.C.chempotential(self.SD_p, inserttype)
         if store and mu != inf:
             self.avgStore("chempotential", mu)
         return mu
