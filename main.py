@@ -11,6 +11,7 @@ import random
 RandomSeed = 1361
 random.seed(RandomSeed+165)
 
+from saiga12 import io
 from saiga12.common import *
 
 class SimData(ctypes.Structure):
@@ -84,7 +85,7 @@ def getClib():
     return C
 
 
-class Sys(object):
+class Sys(io.IOSys, object):
     def __init__(self, N=None):
 
         SD = SimData()
@@ -388,9 +389,13 @@ class Sys(object):
         """Return the number of lattice sites with type type_
         """
         #return len(self.lattsite[self.lattsite==type_].flat)
-        return len(self.atomtype[self.atomtype==type_].flat)
-        #return self.ntype[type_]
-    
+        #return len(self.atomtype[self.atomtype==type_].flat)
+        if type_ == S12_EMPTYSITE:
+            return len(self.atomtype[self.atomtype==type_].flat)
+        return self.ntype[type_]
+    def densityOf(self, type_):
+        """Density of a certin atomtype"""
+        return float(self.numberOfType(type_)) / self.lattSize
     def anneal(self, verbose=True):
         """Slowly increase the hardness of the system until energy is zero.
 
@@ -486,7 +491,7 @@ class Sys(object):
         """
         if hasattr(self.SD, attrname):
             return getattr(self.SD, attrname)
-        raise AttributeError("unknown ")
+        raise AttributeError("No Such Attribute: %s"%attrname)
     def __setattr__(self, name, value):
         """Wrapper to proxy attribute sets to the C SimData struct
         """

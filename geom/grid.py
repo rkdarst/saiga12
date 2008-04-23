@@ -50,6 +50,8 @@ class GridNd(saiga12.Sys):
     def makegrid(self, *dimensions):
         lattSize = reduce(lambda x,y: x*y, dimensions) # product of numbers
         self.lattShape = dimensions
+        # v-- used for re-initilizing the lattice.
+        self.latticeReInitData = dimensions
 
         self._initArrays(lattSize=lattSize,
                          connMax=len(self._neighborlist))
@@ -73,6 +75,7 @@ class GridNd(saiga12.Sys):
                 self.connN[cur] += 1
         #self.printLattice(x)
         #print self.conn
+    latticeReInit = makegrid
 
 class Grid2d(GridNd):
     _neighborlist = numpy.asarray(
