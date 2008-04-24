@@ -12,11 +12,16 @@
 
 #define S12_EMPTYSITE (-1)
 
+int debug = 0;
+int errorcheck = 0;
+
 struct SimData {
   double beta;
   int N;
-  //int NMax;  // use lattSize instead
+  int *ntype;
+  //int NMax;  // lattSize is NMax
   double hardness;
+
   double uVTchempotential;
   int inserttype;  // must be generalized later.
   int widominserttype;  // must be generalized later.
@@ -25,8 +30,8 @@ struct SimData {
   int *inserttypes_type; // and this is corresponding type.
   double *inserttypes_plookup; // lookup from type->prob
   double *inserttypes_mulookup; // lookup from type->mu
+
   int lattSize;
-  //int *partpos;
   int *lattsite;
   int *conn;
   int *connN;
@@ -34,7 +39,6 @@ struct SimData {
   int *nneighbors;
   int *atomtype;
   int *atompos;
-  int *ntype;
 
   double cumProbAdd;
   double cumProbDel;
@@ -49,7 +53,7 @@ struct SimData {
 #define neighlist 
 
 
-/* Given lattice point latI, how many adjacent atoms does it have?
+/* Given lattice point `pos`, how many adjacent atoms does it have?
  */
 inline int neighbors_pos(struct SimData *SD, int pos) {
   int neighbors = 0;
@@ -63,16 +67,9 @@ inline int neighbors_pos(struct SimData *SD, int pos) {
   return(neighbors);
 }
 
-
-inline int getInsertType_i(struct SimData *SD) {
-  double ran = genrand_real2();  /*[0,1)*/
-  int i=0;
-  while (1) {
-    if (SD->inserttypes_prob[i] >= ran)
-      return i;
-    i++;
-  }
-}
+/*  Use the getInsertTypes returns a random type to try inserting in
+    multicomponent grand canonical simulations.
+ */
 //#define getInsertType(x) (x)->inserttype;
 inline int getInsertType(struct SimData *SD) {
   /* When running a mixture, this selects of several different
@@ -94,6 +91,9 @@ inline int getInsertType(struct SimData *SD) {
   }
 }
 
+/*  C function to print out the lattice.  Not really used except for
+ *  debugging from C-- use the python ones instead.
+ */
 void printLatticeC(struct SimData *SD) {
   int pos;
   for (pos=0 ; pos<SD->lattSize ; pos++)
@@ -101,6 +101,8 @@ void printLatticeC(struct SimData *SD) {
   printf("\n");
 }
 
+/*  Little "macro" to return atomtype at a position.
+ */
 inline int atomType(struct SimData *SD, int pos) {
   //return(SD->lattsite[pos]);
   return(SD->atomtype[SD->lattsite[pos]]);
@@ -109,7 +111,7 @@ inline int atomType(struct SimData *SD, int pos) {
 
 #ifdef neighlist
 inline void addParticle(struct SimData *SD, int pos, int type) {
-  //if (SD->lattsite[pos] != S12_EMPTYSITE) exit(61);
+  if (errorcheck) if (SD->lattsite[pos] != S12_EMPTYSITE) exit(61);
   
   ////SD->lattsite[pos] = type;
   SD->lattsite[pos] = SD->N;     // atomnumberings start at zero.
@@ -124,7 +126,7 @@ inline void addParticle(struct SimData *SD, int pos, int type) {
   SD->N++;
 }
 inline void delParticle(struct SimData *SD, int pos) {
-  //if (SD->lattsite[pos] == S12_EMPTYSITE) exit(62);
+  if (errorcheck) if (SD->lattsite[pos] == S12_EMPTYSITE) exit(62);
   int i;
   for (i=0 ; i<SD->connN[pos] ; i++) {
     int neighpos = SD->conn[SD->connMax*pos + i];
@@ -153,8 +155,8 @@ inline void delParticle(struct SimData *SD, int pos) {
   SD->N--;
 }
 inline void moveParticle(struct SimData *SD, int oldpos, int newpos) {
-  if (SD->lattsite[newpos] != S12_EMPTYSITE) exit(61);
-  if (SD->lattsite[oldpos] == S12_EMPTYSITE) exit(62);
+  if (errorcheck) if (SD->lattsite[newpos] != S12_EMPTYSITE) exit(61);
+  if (errorcheck) if (SD->lattsite[oldpos] == S12_EMPTYSITE) exit(62);
   SD->lattsite[newpos] = SD->lattsite[oldpos];
   SD->lattsite[oldpos] = S12_EMPTYSITE;
   SD->atompos[SD->lattsite[newpos]] = newpos;
@@ -177,8 +179,8 @@ inline void moveParticle(struct SimData *SD, int oldpos, int newpos) {
           SD->lattsite[pos] = S12_EMPTYSITE;
         }
 
-        #define addParticle(x, y, z) (x)->lattsite[y] = (z);
-        #define delParticle(x, y) (x)->lattsite[y] = S12_EMPTYSITE;
+        //#define addParticle(x, y, z) (x)->lattsite[y] = (z);
+        // #define delParticle(x, y) (x)->lattsite[y] = S12_EMPTYSITE;
 
 #endif
 
@@ -186,8 +188,8 @@ inline void moveParticle(struct SimData *SD, int oldpos, int newpos) {
 
 
 inline double energy_pos(struct SimData *SD, int pos) {
-  // lattice site contiains the type of particle, which is max # of
-  // neighbors of that particle.
+  /*  Energy of a particle at one particular position.
+   */
   int type = atomType(SD, pos);
   if (type == S12_EMPTYSITE)
      return 0;
@@ -211,7 +213,10 @@ inline double energy_pos(struct SimData *SD, int pos) {
 
 inline double energy_posNeighborhood(struct SimData *SD, int pos) {
   /* This is similar to the energy_pos, but will also return energy of
-   * that position, and all neighboring positions.
+   * that position, and all neighboring positions.  This takes into
+   * account "induced" interactions, where one particle doesn't
+   * violate its own density constraint, but violates the density
+   * constraint one of its neighbors.
    */
   int i_conn;
   double E = energy_pos(SD, pos);
@@ -226,6 +231,8 @@ inline double energy_posNeighborhood(struct SimData *SD, int pos) {
 
 
 double energy(struct SimData *SD) {
+  /* Total energy of the system.
+   */
   int pos;
   double energy=0;
   for (pos=0 ; pos<SD->lattSize ; pos++) {
@@ -239,6 +246,9 @@ double energy(struct SimData *SD) {
 
 
 int grandcanonical_add(struct SimData *SD, int pos) {
+  /*  Grand-canonical move where we trial insert a particle.  cycle()
+   *  decides when it is time to call this function.
+   */
   if (pos == -1) {
     // pick a random position, occupied or not.
     pos = SD->lattSize * genrand_real2();
@@ -247,7 +257,7 @@ int grandcanonical_add(struct SimData *SD, int pos) {
       return(0);
     }
   }
-  if (SD->lattsite[pos] != S12_EMPTYSITE) exit(57);
+  if (errorcheck) if (SD->lattsite[pos] != S12_EMPTYSITE) exit(57);
   
   int inserttype;
   double inserttype_prob, uVTchempotential;
@@ -289,6 +299,9 @@ int grandcanonical_add(struct SimData *SD, int pos) {
 }
 
 int grandcanonical_del(struct SimData *SD, int pos) {
+  /* Grand-canonical move where we try to remove a particle.  Called
+   * from cycle().
+   */
   if (pos == -1) {
     // pick a random particle.
     if (SD->N == 0) {
@@ -299,7 +312,7 @@ int grandcanonical_del(struct SimData *SD, int pos) {
       pos = SD->lattSize * genrand_real2();
     } while (SD->lattsite[pos] == S12_EMPTYSITE);
   }
-  if (SD->lattsite[pos] == S12_EMPTYSITE) exit(56);
+  if (errorcheck) if (SD->lattsite[pos] == S12_EMPTYSITE) exit(56);
 
   int inserttype;
   double inserttype_prob, uVTchempotential;
@@ -315,7 +328,7 @@ int grandcanonical_del(struct SimData *SD, int pos) {
 
   double Eold = energy_posNeighborhood(SD, pos);
   int origtype = atomType(SD, pos);
-  delParticle(SD, pos);
+  delParticle(SD, pos);  // this WILL result in particle nums being shifted.
   double Enew = energy_posNeighborhood(SD, pos);
   
 
@@ -347,6 +360,10 @@ int grandcanonical_del(struct SimData *SD, int pos) {
 
 
 double chempotential(struct SimData *SD, int inserttype) {
+  /*  Use widom insertion to calculate the chemical potential of a
+   *  certain type.  This tries inserting a particle at *every*
+   *  lattice location, for best averaging.
+   */
   // this variable will hold the sum of all exp(-beta deltaU)
   double totalsum=0;
   //int inserttype = SD->widominserttype;
@@ -385,13 +402,10 @@ double chempotential(struct SimData *SD, int inserttype) {
 int cycle(struct SimData *SD, int n) {
 
   int i_trial;
-  int debug = 0;
 
   for (i_trial=0 ; i_trial<n ; i_trial++) {
 
     //int N = SD->N;
-    int i_conn;
-    int *connLocal;
 
     // Decide what kind of trial move we should do;
     double ran = genrand_real2();
@@ -424,11 +438,9 @@ int cycle(struct SimData *SD, int n) {
 
 
 
-    // otherwise, do a regular move (this should be the most common case)
+    // otherwise, do a regular move (this should be the most common
+    // case and thus inlined)
 
-
-    
-    //CHECK
     // Find a lattice site with a particle:
     if (SD->N == 0) {
       printf("we are out of particles!\n");
@@ -438,16 +450,18 @@ int cycle(struct SimData *SD, int n) {
     do {
       pos = SD->lattSize * genrand_real2();
     } while (SD->lattsite[pos] == S12_EMPTYSITE);
-    connLocal = SD->conn + pos*SD->connMax;
+    //pos = SD->atompos[ (int)(SD->N * genrand_real2()) ];
+
 
     // Find an arbitrary connection:
-    i_conn = SD->connN[pos] * genrand_real2();
-    int newPos = connLocal[i_conn];
+    int i_conn = SD->connN[pos] * genrand_real2();
+    //int *connLocal = SD->conn + pos*SD->connMax;
+    int newPos = SD->conn[ pos*SD->connMax + i_conn];
     
     if (debug) printf("%d %d %d\n", pos, i_conn, newPos);
     
     if (SD->lattsite[newPos] != S12_EMPTYSITE) {
-      // can't move to an adjecent occupied site.
+      // can't move to an adjecent occupied site, reject move.
       if(debug) printf("can't move to adjecent occpuied site\n");
       continue;
     }
@@ -455,15 +469,10 @@ int cycle(struct SimData *SD, int n) {
     int accept;
     double Eold = energy_posNeighborhood(SD, pos) +
                   energy_posNeighborhood(SD, newPos);
-/* #ifndef neighlist */
-/*     SD->lattsite[newPos] = SD->lattsite[pos]; */
-/*     SD->lattsite[pos] = S12_EMPTYSITE; */
-/* #else */
     //int atomtype = atomType(SD, pos);
     //delParticle(SD, pos);
     //addParticle(SD, newPos, atomtype);
     moveParticle(SD, pos, newPos);
-/* #endif */
     double Enew = energy_posNeighborhood(SD, newPos) +
                   energy_posNeighborhood(SD, pos);
 
@@ -487,24 +496,17 @@ int cycle(struct SimData *SD, int n) {
     }
   
     if (accept == 0) {
-/* #ifndef neighlist */
-/*       SD->lattsite[pos] = SD->lattsite[newPos]; */
-/*       SD->lattsite[newPos] = S12_EMPTYSITE; */
-/* #else */
+      // Restore the particle location if it wasn't accepted.
       //atomtype = atomType(SD, newPos);
       //delParticle(SD, newPos);
       //addParticle(SD, pos, atomtype);
       moveParticle(SD, newPos, pos);
-/* #endif */
     }
     else {
       if (debug) printf("accepting move\n");
     }
-    
-    
+
     if(debug) printf("Eold: %.3f Enew: %.3f\n", Eold, Enew);
-    
   }
-  
   return(0);
 }

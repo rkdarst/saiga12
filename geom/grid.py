@@ -101,7 +101,7 @@ class SquareGrid(GridNd):
         cords1 = cords1.transpose()
         lindistances = cords0 - cords1
         # v-- this 
-        delta = (numpy.floor(lindistances/self.lattShape + .5)) * lattShape
+        delta = (numpy.floor(lindistances/self.lattShape + .5)) *self.lattShape
         lindistances = lindistances - delta
         dists2 = numpy.sum(lindistances * lindistances, axis=-1)
         return dists2

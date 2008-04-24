@@ -14,12 +14,15 @@ random.seed(RandomSeed+165)
 from saiga12 import io
 from saiga12.common import *
 
+# Shared state between python and C.
 class SimData(ctypes.Structure):
     _fields_ = [
         ("beta", ctypes.c_double),
-        ("N", ctypes.c_int),
-        #("NMax", ctypes.c_int),  # lattSize is NMax
-        ("hardness", ctypes.c_double),
+        ("N", ctypes.c_int),             # total number of particles
+        ("ntype", ctypes.c_void_p),      # number of each atomtype.
+        #("NMax", ctypes.c_int),         # lattSize is NMax
+        ("hardness", ctypes.c_double),   # hardness of the hard spheres
+
         ("uVTchempotential", ctypes.c_double),
         ("inserttype", ctypes.c_int),
         ("widominserttype", ctypes.c_int),
@@ -28,16 +31,15 @@ class SimData(ctypes.Structure):
         ("inserttypes_type", ctypes.c_void_p),
         ("inserttypes_plookup", ctypes.c_void_p),
         ("inserttypes_mulookup", ctypes.c_void_p),
-        ("lattSize", ctypes.c_int),
-        #("partpos", ctypes.c_void_p),
-        ("lattsite", ctypes.c_void_p),    # position (occupancy)
-        ("conn", ctypes.c_void_p),   # connections
-        ("connN", ctypes.c_void_p),  # num of connections for each
-        ("connMax", ctypes.c_int),
-        ("nneighbors", ctypes.c_void_p),
-        ("atomtype", ctypes.c_void_p),
-        ("atompos", ctypes.c_void_p),
-        ("ntype", ctypes.c_void_p),
+
+        ("lattSize", ctypes.c_int),      # integer, length of lattice
+        ("lattsite", ctypes.c_void_p),   # lookup from lattsite->atomnumber
+        ("conn", ctypes.c_void_p),       # array of connections
+        ("connN", ctypes.c_void_p),      # atomnumber->N conncetions of it
+        ("connMax", ctypes.c_int),       
+        ("nneighbors", ctypes.c_void_p), # num of neighbers
+        ("atomtype", ctypes.c_void_p),   # lookup of atomnumber->atomtype
+        ("atompos", ctypes.c_void_p),    # lookup of atomnumber->latt position
 
         ("cumProbAdd", ctypes.c_double),
         ("cumProbDel", ctypes.c_double),
@@ -180,7 +182,9 @@ class Sys(io.IOSys, object):
         #else:              self.delParticle(pos)
         self.C.delParticle(self.SD_p, pos)
     def consistencyCheck(self, type_=3):
-        """Check that all stored neighbor numbers are correct.
+        """Check of internal data structures.
+
+        Shouldn't be needed in production, only during testing of code changes.
         """
         if False:
             print self.lattsite
@@ -321,10 +325,9 @@ class Sys(io.IOSys, object):
     def setInsertType(self, probs):
         """Set the types of atoms to be inserted
         
-        
-        type_prob_array = ((t0, p0),
-                           (t1, p1),
-                           (t2, p2))
+        probs = {type0: (prob0, mu0 ),
+                 type1: (prob1, mu1 ),
+                 ... }
         """
         self.inserttype = S12_EMPTYSITE
         n = len(probs)
@@ -382,6 +385,8 @@ class Sys(io.IOSys, object):
         return self.C.energy_posNeighborhood(self.SD_p, pos)
     def findInfiniteEnergy(self):
         """Utility function to find the lattice sites which have inf energy.
+
+        Print information about infinite areas.
         """
         for pos in range(self.lattSize):
             if self.energy_posNeighborhood(pos) == float("inf"):
@@ -389,7 +394,10 @@ class Sys(io.IOSys, object):
                       self.energy_posNeighborhood(pos)
                 self.printLatticeLocal(pos, width=2)
     def hash(self):
-        """Utility function to print checksum of current state."""
+        """Utility function to find checksum of current state.
+
+        This can be used to see if two systems are in exactly the same
+        state after some changes."""
         x = ( tuple(self.lattsite.flat),
               tuple(self.conn.flat), tuple(self.connN.flat),
               self.hardness, self.lattSize, 
@@ -426,7 +434,7 @@ class Sys(io.IOSys, object):
             print "\033[2A\r"
             #self.printLattice()
         print
-        self.hardness == float("inf")
+        self.hardness == inf
     def chempotential(self, inserttype, store=True):
         """Chemical potential of the system, test inserting at every site.
         """
@@ -524,6 +532,8 @@ def correlation(lattice0, lattice1):
     
 
 if __name__ == "__main__":
+    # Some test scripts, but the main tests are in the tests/
+    # directory.
     from saiga12.geom.grid import Grid2d
 
     a, b = 4, 4
