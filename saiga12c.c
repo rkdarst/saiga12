@@ -125,7 +125,6 @@ inline void addParticle(struct SimData *SD, int pos, int type) {
 }
 inline void delParticle(struct SimData *SD, int pos) {
   //if (SD->lattsite[pos] == S12_EMPTYSITE) exit(62);
-  //SD->lattsite[pos] = S12_EMPTYSITE;
   int i;
   for (i=0 ; i<SD->connN[pos] ; i++) {
     int neighpos = SD->conn[SD->connMax*pos + i];
@@ -152,6 +151,22 @@ inline void delParticle(struct SimData *SD, int pos) {
     SD->lattsite[pos] = S12_EMPTYSITE;
   }
   SD->N--;
+}
+inline void moveParticle(struct SimData *SD, int oldpos, int newpos) {
+  if (SD->lattsite[newpos] != S12_EMPTYSITE) exit(61);
+  if (SD->lattsite[oldpos] == S12_EMPTYSITE) exit(62);
+  SD->lattsite[newpos] = SD->lattsite[oldpos];
+  SD->lattsite[oldpos] = S12_EMPTYSITE;
+  SD->atompos[SD->lattsite[newpos]] = newpos;
+  int i;
+  for (i=0 ; i<SD->connN[oldpos] ; i++) {
+    int neighpos = SD->conn[SD->connMax*oldpos + i];
+    SD->nneighbors[neighpos] --;
+  }
+  for (i=0 ; i<SD->connN[newpos] ; i++) {
+    int neighpos = SD->conn[SD->connMax*newpos + i];
+    SD->nneighbors[neighpos] ++;
+  }
 }
 #else
 
@@ -444,9 +459,10 @@ int cycle(struct SimData *SD, int n) {
 /*     SD->lattsite[newPos] = SD->lattsite[pos]; */
 /*     SD->lattsite[pos] = S12_EMPTYSITE; */
 /* #else */
-    int atomtype = atomType(SD, pos);
-    delParticle(SD, pos);
-    addParticle(SD, newPos, atomtype);
+    //int atomtype = atomType(SD, pos);
+    //delParticle(SD, pos);
+    //addParticle(SD, newPos, atomtype);
+    moveParticle(SD, pos, newPos);
 /* #endif */
     double Enew = energy_posNeighborhood(SD, newPos) +
                   energy_posNeighborhood(SD, pos);
@@ -475,9 +491,10 @@ int cycle(struct SimData *SD, int n) {
 /*       SD->lattsite[pos] = SD->lattsite[newPos]; */
 /*       SD->lattsite[newPos] = S12_EMPTYSITE; */
 /* #else */
-      atomtype = atomType(SD, newPos);
-      delParticle(SD, newPos);
-      addParticle(SD, pos, atomtype);
+      //atomtype = atomType(SD, newPos);
+      //delParticle(SD, newPos);
+      //addParticle(SD, pos, atomtype);
+      moveParticle(SD, newPos, pos);
 /* #endif */
     }
     else {

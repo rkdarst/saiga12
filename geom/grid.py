@@ -51,7 +51,6 @@ class GridNd(saiga12.Sys):
         lattSize = reduce(lambda x,y: x*y, dimensions) # product of numbers
         self.lattShape = dimensions
         # v-- used for re-initilizing the lattice.
-        self.latticeReInitData = dimensions
 
         self._initArrays(lattSize=lattSize,
                          connMax=len(self._neighborlist))
@@ -75,9 +74,41 @@ class GridNd(saiga12.Sys):
                 self.connN[cur] += 1
         #self.printLattice(x)
         #print self.conn
-    latticeReInit = makegrid
+    def distance(self, index0, index1):
+        """Distance between any two lattice points.
+        """
+        return numpy.sqrt(self.distance2(index0, index1))
+    def latticeReInitData(self):
+        """Get state data needed to re-create our grid.
+        """
+        return self.lattShape
+    def latticeReInit(self, latticeReInitData):
+        """Recreate our grid arrays using the data from above.
+        """
+        self.makegrid(*latticeReInitData)
 
-class Grid2d(GridNd):
+
+
+class SquareGrid(GridNd):
+    def distance2(self, index0, index1):
+        """Distance-squared between any two lattice points.
+
+        This works for arbitrary dimensions, as well as arrays!
+        """
+        cords0 = numpy.asarray(cords(self.lattShape, index0), dtype=float)
+        cords1 = numpy.asarray(cords(self.lattShape, index1), dtype=float)
+        cords0 = cords0.transpose()
+        cords1 = cords1.transpose()
+        lindistances = cords0 - cords1
+        # v-- this 
+        delta = (numpy.floor(lindistances/self.lattShape + .5)) * lattShape
+        lindistances = lindistances - delta
+        dists2 = numpy.sum(lindistances * lindistances, axis=-1)
+        return dists2
+    # .distance method is defined above, and simply sqrt's distance2
+    
+
+class Grid2d(SquareGrid):
     _neighborlist = numpy.asarray(
         (( 0, 1 ),
          ( 1, 0 ),
@@ -91,16 +122,6 @@ class Grid2d(GridNd):
     #        for bi in range(b):
     #            celllist.append((ai, bi))
 
-    def distance(self, index0, index1):
-        """Distance between any two lattice points
-
-        This works for arbitrary dimensions, as well as arrays!
-        """
-        cords0 = numpy.asarray(cords(self.lattShape, index0), dtype=float)
-        cords1 = numpy.asarray(cords(self.lattShape, index1), dtype=float)
-        lindistances = cords0 - cords1
-        dists = numpy.sqrt(numpy.sum(lindistances * lindistances, axis=0))
-        return dists
 
 
     def printLattice(self, lattice=None):
@@ -132,7 +153,7 @@ class Grid2d(GridNd):
             print
 
 
-class Grid3d(GridNd):
+class Grid3d(SquareGrid):
     _neighborlist = numpy.asarray(
         (( 0, 1, 0 ),
          ( 1, 0, 0 ),

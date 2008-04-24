@@ -59,6 +59,8 @@ class StateFinder(object):
         S = self.S
         logfile = self.logfile
         S.avgStore("density", S.density)
+        S.avgStore("density1", S.densityOf(1))
+        S.avgStore("density3", S.densityOf(3))
         mu1 = S.chempotential(1, store=False)
         mu3 = S.chempotential(3, store=False)
         S.avgStore("mu1", mu1)

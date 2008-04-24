@@ -33,8 +33,8 @@ while SF.mu1 <= 8.:
     S.avgReset()
     for j in range(10):
         SF.runPass()
-        if j == 5:
+        if j == 1:
             SF.S.avgReset()
-    S.io_writeToFile("outputs/gceeq_mu1=%s.ugh"%SF.mu1)
-    SF.mu1 += .1
+    S.io_writeToFile("outputs/gceeq_mu1=%s_speed.5.ugh"%SF.mu1)
+    SF.mu1 += .5
 #SF.runPass()

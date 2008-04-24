@@ -100,7 +100,6 @@ class Sys(io.IOSys, object):
         self.inserttype = S12_EMPTYSITE
         self.widominserttype = S12_EMPTYSITE
 
-        self.N = 0
         self.resetTime()
         self.avgReset()
         self.setCycleMoves(shift=1)  # this must be reset once N is known.
@@ -283,6 +282,10 @@ class Sys(io.IOSys, object):
         """Run MC trial moves for once cycle.
 
         Cycles defined by setMoveProb()
+
+        Timing: 45000 function calls takes one second (in an single
+        unscientific test).  This excludes the time taken to do the
+        simulation.
         """
         moves = int(n * self.movesPerCycle)
         self.C.cycle(self.SD_p, moves)
@@ -358,9 +361,16 @@ class Sys(io.IOSys, object):
     def getInsertType(self):
         """Get the type of particle to be inserted-- fixed or random."""
         return self.C.getInsertType(self.SD_p)
-    def getPos(self):
-        """Return positions of all existant particles."""
-        return self.atompos[self.atompos != S12_EMPTYSITE]
+    def getPos(self, type_=None):
+        """Return positions of all existant particles.
+
+        if type_ is None (default), return positions of all particles.
+        If type is not None, return all positions of that particular
+        type."""
+        if type_ == None:
+            return self.atompos[self.atompos != S12_EMPTYSITE].copy()
+        else:
+            return self.atompos[self.atomtype == type_].copy()
     def energy(self):
         """Total energy of the system."""
         return self.C.energy(self.SD_p)
