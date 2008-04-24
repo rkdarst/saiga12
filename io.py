@@ -25,6 +25,7 @@ class IOSys(object):
         """Write state to a file.
         """
         state = self.io_state(otherData)
+        state.update(otherData)
         pickle.dump(state, file(filename, "wb"), protocol=-1)
     def io_loadFromFile(self, filename):
         """Load state from a file and load onto self

@@ -6,33 +6,32 @@ import saiga12
 class StateFinder(object):
     # S = <set manually>
     # S.mu2 = <set manually at a guess>
-    targets = (.3, .7)
     skip = 100
     cyclelen = 100
     logfile = None
+    controlScale = 1.
     def setCE(self):
         self.S.setCycleMoves(shift=self.S.N)
     def setGCE(self):
         self.S.setCycleMoves(shift=0, insertdel=self.S.N)
-    def begin(self):
+    def begin(self, total, skip):
         # equilibrate in CE
         self.setCE()
-        for i in range(self.cyclelen):
-            self.S.cycle(self.skip)
+        for i in range(total // skip):
+            self.S.cycle(skip)
             self.status(log=False)
+        self.mu3 = self.S.avg("mu3")
     def actualX(self):
         return self.S.densityOf(1) / self.S.densityOf(3)
         #return self.S.densityOf(3) / self.S.density
     def targetX(self):
-        return .3 / .7
-        #return .7
+        return self.fracA / (1 - self.fracA)
         
-    def runPass(self):
+    def adjustMu(self):
         S = self.S
 
-
         # Establish how far from ideal we are
-        deltaX = self.actualX() - self.targetX()
+        deltaX = (self.actualX() - self.targetX()) * self.controlScale
         #deltaX = -deltaX
         print "target: %.4f, actual: %.4f, delta: %.4f"%\
               (self.targetX(), self.actualX(), deltaX),
@@ -41,14 +40,16 @@ class StateFinder(object):
         print "old mu3: %.4f"%self.mu3,
         self.mu3 += deltaX
         print "new mu3: %.4f"%self.mu3
-        S.setInsertType( {1: (.3, self.mu1),
-                          3: (.7, self.mu3)} )
+        S.setInsertType( {1: (self.fracA   , self.mu1),
+                          3: (1-self.fracA , self.mu3)} )
         print
-        # run at the new conditions, GCE -- get number of particles closer.
-        self.setGCE()
-        for i in range(self.cyclelen):
-            S.cycle(self.skip)
-            self.status()
+
+
+        ## run at the new conditions, GCE -- get number of particles closer.
+        #self.setGCE()
+        #for i in range(self.cyclelen):
+        #    S.cycle(self.skip)
+        #    self.status()
 
 
     def eqCE(self):
