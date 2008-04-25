@@ -513,3 +513,23 @@ int cycle(struct SimData *SD, int n) {
   }
   return(0);
 }
+
+
+void ctest(struct SimData *SD) {
+  int i;
+
+  printf("printing atomtype\n");
+  //longX *atomtype = SD->atomtype;
+  for (i=0 ; i<24 ; i++) {
+    //printf("%d ", atomtype[i]);
+    printf("%ld ", SD->atomtype[i]);
+  } printf("\n");
+
+  printf("printing lattsite\n");
+  //longX *lattsite = SD->lattsite;
+  for (i=0 ; i<24 ; i++) {
+    //printf("%d ", lattsite[i]);
+    printf("%ld ", SD->lattsite[i]);
+
+  } printf("\n");
+}
