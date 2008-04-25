@@ -14,35 +14,42 @@ random.seed(RandomSeed+165)
 from saiga12 import io
 from saiga12.common import *
 
+
+numpy_int = numpy.int_
+numpy_double = numpy.double
+c_int = ctypes.c_int
+c_double = ctypes.c_double
+c_void_p = ctypes.c_void_p
+
 # Shared state between python and C.
 class SimData(ctypes.Structure):
     _fields_ = [
-        ("beta", ctypes.c_double),
-        ("N", ctypes.c_int),             # total number of particles
-        ("ntype", ctypes.c_void_p),      # number of each atomtype.
-        #("NMax", ctypes.c_int),         # lattSize is NMax
-        ("hardness", ctypes.c_double),   # hardness of the hard spheres
+        ("beta", c_double),
+        ("N", c_int),             # total number of particles
+        ("ntype", c_void_p),      # number of each atomtype.
+        #("NMax", c_int),         # lattSize is NMax
+        ("hardness", c_double),   # hardness of the hard spheres
 
-        ("uVTchempotential", ctypes.c_double),
-        ("inserttype", ctypes.c_int),
-        ("widominserttype", ctypes.c_int),
-        ("inserttypes_n", ctypes.c_int),
-        ("inserttypes_prob", ctypes.c_void_p),
-        ("inserttypes_type", ctypes.c_void_p),
-        ("inserttypes_plookup", ctypes.c_void_p),
-        ("inserttypes_mulookup", ctypes.c_void_p),
+        ("uVTchempotential", c_double),
+        ("inserttype", c_int),
+        ("widominserttype", c_int),
+        ("inserttypes_n", c_int),
+        ("inserttypes_prob", c_void_p),
+        ("inserttypes_type", c_void_p),
+        ("inserttypes_plookup", c_void_p),
+        ("inserttypes_mulookup", c_void_p),
 
-        ("lattSize", ctypes.c_int),      # integer, length of lattice
-        ("lattsite", ctypes.c_void_p),   # lookup from lattsite->atomnumber
-        ("conn", ctypes.c_void_p),       # array of connections
-        ("connN", ctypes.c_void_p),      # atomnumber->N conncetions of it
-        ("connMax", ctypes.c_int),       
-        ("nneighbors", ctypes.c_void_p), # num of neighbers
-        ("atomtype", ctypes.c_void_p),   # lookup of atomnumber->atomtype
-        ("atompos", ctypes.c_void_p),    # lookup of atomnumber->latt position
+        ("lattSize", c_int),      # integer, length of lattice
+        ("lattsite", c_void_p),   # lookup from lattsite->atomnumber
+        ("conn", c_void_p),       # array of connections
+        ("connN", c_void_p),      # atomnumber->N conncetions of it
+        ("connMax", c_int),       
+        ("nneighbors", c_void_p), # num of neighbers
+        ("atomtype", c_void_p),   # lookup of atomnumber->atomtype
+        ("atompos", c_void_p),    # lookup of atomnumber->latt position
 
-        ("cumProbAdd", ctypes.c_double),
-        ("cumProbDel", ctypes.c_double),
+        ("cumProbAdd", c_double),
+        ("cumProbDel", c_double),
         ]
 SimData_p = ctypes.POINTER(SimData)
 
@@ -106,7 +113,7 @@ class Sys(io.IOSys, object):
         self.avgReset()
         self.setCycleMoves(shift=1)  # this must be reset once N is known.
 
-        #self.partpos = numpy.zeros(shape=(self.NMax), dtype=numpy.int_)
+        #self.partpos = numpy.zeros(shape=(self.NMax), dtype=numpy_int)
         #SD.partpos   = self.partpos.ctypes.data
         #self.partpos[:] = S12_EMPTYSITE
 
@@ -122,41 +129,41 @@ class Sys(io.IOSys, object):
         # nneighbors   (the only reason these comments are here is to
                       # make it easier to pick out the separations by eye)
         self.__dict__["nneighbors"]=numpy.zeros(shape=(lattSize),
-                                          dtype=numpy.int_)
+                                          dtype=numpy_int)
         self.SD.nneighbors = self.nneighbors.ctypes.data
 
         # conn
         self.__dict__["conn"]=numpy.zeros(shape=(lattSize, self.connMax),
-                                          dtype=numpy.int_)
+                                          dtype=numpy_int)
         self.SD.conn = self.conn.ctypes.data
         self.conn.shape = lattSize, self.connMax
 
         # connN
         self.__dict__["connN"] = numpy.zeros(shape=(lattSize),
-                                             dtype=numpy.int_)
+                                             dtype=numpy_int)
         self.SD.connN = self.connN.ctypes.data
 
         # lattsite
         self.__dict__["lattsite"] = numpy.zeros(shape=(self.lattSize),
-                                                dtype=numpy.int_)
+                                                dtype=numpy_int)
         self.SD.lattsite = self.lattsite.ctypes.data
         self.lattsite[:] = S12_EMPTYSITE
 
         # atomtype                                        # lattSize is NMax
         self.__dict__["atomtype"] = numpy.zeros(shape=(self.lattSize),
-                                                dtype=numpy.int_)
+                                                dtype=numpy_int)
         self.SD.atomtype = self.atomtype.ctypes.data
         self.atomtype[:] = S12_EMPTYSITE
 
         # atomtype                                       # lattSize is NMax
         self.__dict__["atompos"] = numpy.zeros(shape=(self.lattSize),
-                                               dtype=numpy.int_)
+                                               dtype=numpy_int)
         self.SD.atompos = self.atompos.ctypes.data
         self.atompos[:] = S12_EMPTYSITE
 
         # atomtype                                        # lattSize is NMax
         self.__dict__["ntype"] = numpy.zeros(shape=(maxTypes),
-                                             dtype=numpy.int_)
+                                             dtype=numpy_int)
         self.SD.ntype = self.ntype.ctypes.data
 
         
@@ -332,21 +339,21 @@ class Sys(io.IOSys, object):
         self.inserttype = S12_EMPTYSITE
         n = len(probs)
         maxtype = max(probs.keys())
-        inserttypes_prob = numpy.empty(shape=(n), dtype=numpy.double)
+        inserttypes_prob = numpy.empty(shape=(n), dtype=numpy_double)
         self.__dict__["inserttypes_prob"] = inserttypes_prob
         self.SD.inserttypes_prob = inserttypes_prob.ctypes.data
 
-        inserttypes_type = numpy.empty(shape=(n), dtype=numpy.int_)
+        inserttypes_type = numpy.empty(shape=(n), dtype=numpy_int)
         self.__dict__["inserttypes_type"] = inserttypes_type
         self.SD.inserttypes_type = inserttypes_type.ctypes.data
 
         inserttypes_plookup = numpy.zeros(shape=(maxtype+1),
-                                          dtype=numpy.double)
+                                          dtype=numpy_double)
         self.__dict__["inserttypes_plookup"] = inserttypes_plookup
         self.SD.inserttypes_plookup = inserttypes_plookup.ctypes.data
 
         inserttypes_mulookup = numpy.zeros(shape=(maxtype+1),
-                                          dtype=numpy.double)
+                                          dtype=numpy_double)
         self.__dict__["inserttypes_mulookup"] = inserttypes_mulookup
         self.SD.inserttypes_mulookup = inserttypes_mulookup.ctypes.data
 

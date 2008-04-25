@@ -15,10 +15,13 @@
 int debug = 0;
 int errorcheck = 0;
 
+//typedef int intA;
+typedef long intA;
+
 struct SimData {
   double beta;
   int N;
-  int *ntype;
+  intA *ntype;
   //int NMax;  // lattSize is NMax
   double hardness;
 
@@ -27,18 +30,18 @@ struct SimData {
   int widominserttype;  // must be generalized later.
   int inserttypes_n;    // not used
   double *inserttypes_prob; // when multiple insert types, this is cum prob.
-  int *inserttypes_type; // and this is corresponding type.
+  intA *inserttypes_type; // and this is corresponding type.
   double *inserttypes_plookup; // lookup from type->prob
   double *inserttypes_mulookup; // lookup from type->mu
 
   int lattSize;
-  int *lattsite;
-  int *conn;
-  int *connN;
+  intA *lattsite;
+  intA *conn;
+  intA *connN;
   int connMax;
-  int *nneighbors;
-  int *atomtype;
-  int *atompos;
+  intA *nneighbors;
+  intA *atomtype;
+  intA *atompos;
 
   double cumProbAdd;
   double cumProbDel;

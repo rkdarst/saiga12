@@ -95,8 +95,10 @@ class SquareGrid(GridNd):
 
         This works for arbitrary dimensions, as well as arrays!
         """
-        cords0 = numpy.asarray(cords(self.lattShape, index0), dtype=float)
-        cords1 = numpy.asarray(cords(self.lattShape, index1), dtype=float)
+        cords0 = numpy.asarray(cords(self.lattShape, index0),
+                               dtype=saiga12.numpy_double)
+        cords1 = numpy.asarray(cords(self.lattShape, index1),
+                               dtype=saiga12.numpy_double)
         cords0 = cords0.transpose()
         cords1 = cords1.transpose()
         lindistances = cords0 - cords1
