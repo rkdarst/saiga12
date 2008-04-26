@@ -54,7 +54,7 @@ struct SimData {
 
 
 #define neighlist 
-
+void ctest(struct SimData *SD);
 
 /* Given lattice point `pos`, how many adjacent atoms does it have?
  */
@@ -193,9 +193,9 @@ inline void moveParticle(struct SimData *SD, int oldpos, int newpos) {
 inline double energy_pos(struct SimData *SD, int pos) {
   /*  Energy of a particle at one particular position.
    */
-  int type = atomType(SD, pos);
-  if (type == S12_EMPTYSITE)
+  if (SD->lattsite[pos] == S12_EMPTYSITE)
      return 0;
+  int type = atomType(SD, pos);
 #ifndef neighlist
   int excessneighbors = neighbors_pos(SD, pos) - type;
 #else
