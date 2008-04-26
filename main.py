@@ -15,11 +15,11 @@ from saiga12 import io
 from saiga12.common import *
 
 
-numpy_int = numpy.int_
-numpy_double = numpy.double
 c_int = ctypes.c_int
 c_double = ctypes.c_double
 c_void_p = ctypes.c_void_p
+numpy_int = ctypes.c_int
+numpy_double = ctypes.c_double
 
 # Shared state between python and C.
 class SimData(ctypes.Structure):
@@ -59,8 +59,6 @@ def getClib():
     filename = "saiga12c.so"
     C = numpy.ctypeslib.load_library(filename,
                                      os.path.dirname(__file__))
-    c_int = ctypes.c_int
-    c_double = ctypes.c_double
 
     C.neighbors_pos.restype = c_int
     C.neighbors_pos.argtypes = SimData_p, c_int

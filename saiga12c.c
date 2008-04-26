@@ -15,13 +15,10 @@
 int debug = 0;
 int errorcheck = 0;
 
-//typedef int intA;
-typedef long intA;
-
 struct SimData {
   double beta;
   int N;
-  intA *ntype;
+  int *ntype;
   //int NMax;  // lattSize is NMax
   double hardness;
 
@@ -30,18 +27,18 @@ struct SimData {
   int widominserttype;  // must be generalized later.
   int inserttypes_n;    // not used
   double *inserttypes_prob; // when multiple insert types, this is cum prob.
-  intA *inserttypes_type; // and this is corresponding type.
+  int *inserttypes_type; // and this is corresponding type.
   double *inserttypes_plookup; // lookup from type->prob
   double *inserttypes_mulookup; // lookup from type->mu
 
   int lattSize;
-  intA *lattsite;
-  intA *conn;
-  intA *connN;
+  int *lattsite;
+  int *conn;
+  int *connN;
   int connMax;
-  intA *nneighbors;
-  intA *atomtype;
-  intA *atompos;
+  int *nneighbors;
+  int *atomtype;
+  int *atompos;
 
   double cumProbAdd;
   double cumProbDel;
@@ -522,14 +519,14 @@ void ctest(struct SimData *SD) {
   //longX *atomtype = SD->atomtype;
   for (i=0 ; i<24 ; i++) {
     //printf("%d ", atomtype[i]);
-    printf("%ld ", SD->atomtype[i]);
+    printf("%d ", SD->atomtype[i]);
   } printf("\n");
 
   printf("printing lattsite\n");
   //longX *lattsite = SD->lattsite;
   for (i=0 ; i<24 ; i++) {
     //printf("%d ", lattsite[i]);
-    printf("%ld ", SD->lattsite[i]);
+    printf("%d ", SD->lattsite[i]);
 
   } printf("\n");
 }
