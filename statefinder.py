@@ -33,16 +33,16 @@ class StateFinder(object):
         # Establish how far from ideal we are
         deltaX = (self.actualX() - self.targetX()) * self.controlScale
         #deltaX = -deltaX
-        print "target: %.4f, actual: %.4f, delta: %.4f"%\
-              (self.targetX(), self.actualX(), deltaX),
+        #print "target: %.4f, actual: %.4f, delta: %.4f"%\
+        #      (self.targetX(), self.actualX(), deltaX),
 
         # set us to our new proper state
-        print "old mu3: %.4f"%self.mu3,
+        #print "old mu3: %.4f"%self.mu3,
         self.mu3 += deltaX
-        print "new mu3: %.4f"%self.mu3
+        #print "new mu3: %.4f"%self.mu3
         S.setInsertType( {1: (self.fracA   , self.mu1),
                           3: (1-self.fracA , self.mu3)} )
-        print
+        #print
 
 
         ## run at the new conditions, GCE -- get number of particles closer.
@@ -68,18 +68,16 @@ class StateFinder(object):
         S.avgStore("mu3", mu3)
 
         print "\033[2A\r"
-        print "\r", S.mctime, S.energy(), S.N, \
-              "  %.4f %.4f %.4f %.4f %.4f "%(S.density,
-                                       1/S.avg("density"),
-                                       S.densityOf(1),
-                                       S.densityOf(3), \
-                                       S.densityOf(saiga12.S12_EMPTYSITE)),\
+        print "\r", S.mctime, S.N, \
+              "  %.4f %.4f %.4f "%(S.density,
+                                   S.densityOf(1),
+                                   S.densityOf(3)),\
               " %1.4f %1.4f "%(S.avg("mu1"), S.avg("mu3"))
         if log and logfile:
             print >> logfile, \
                   S.mctime, S.avg("density"), S.densityOf(1), \
                   S.densityOf(3), \
                   S.avg("mu1"), S.avg("mu3")
-            logfile.flush()
+            #logfile.flush()
         
 

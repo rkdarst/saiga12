@@ -31,17 +31,17 @@ cartesianproduct = xcombine
 # this is the cryptic, impossible to understand version of these...
 from operator import mul as operator_mul
 product = lambda l: reduce(operator_mul, l, 1)
-def cords(dims, index):
+def coords(dims, index):
     """Given array dimensions and a (linear) position index,
     return the coordinates.
     """
     return tuple( (index // product(dims[i+1:])) % dims[i]
                   for i in range(len(dims)))
-def index(dims, cords):
+def index(dims, coords):
     """Given array dimensions and coordinates, return the (linear) index.
     """
     return reduce(lambda a, x:a*x[0]+x[1],
-                  zip(dims, cords),
+                  zip(dims, coords),
                   0)
 
 
@@ -95,20 +95,23 @@ class SquareGrid(GridNd):
 
         This works for arbitrary dimensions, as well as arrays!
         """
-        cords0 = numpy.asarray(cords(self.lattShape, index0),
+        coords0 = numpy.asarray(coords(self.lattShape, index0),
                                dtype=saiga12.numpy_double)
-        cords1 = numpy.asarray(cords(self.lattShape, index1),
+        coords1 = numpy.asarray(coords(self.lattShape, index1),
                                dtype=saiga12.numpy_double)
-        cords0 = cords0.transpose()
-        cords1 = cords1.transpose()
-        lindistances = cords0 - cords1
+        coords0 = coords0.transpose()
+        coords1 = coords1.transpose()
+        lindistances = coords0 - coords1
         # v-- this 
         delta = (numpy.floor(lindistances/self.lattShape + .5)) *self.lattShape
         lindistances = lindistances - delta
         dists2 = numpy.sum(lindistances * lindistances, axis=-1)
         return dists2
     # .distance method is defined above, and simply sqrt's distance2
-    
+    def grid_coords(self, pos):
+        return coords(self.lattShape, pos)
+    def grid_index(self, coords):
+        return index(self.lattShape, coords)
 
 class Grid2d(SquareGrid):
     _neighborlist = numpy.asarray(
