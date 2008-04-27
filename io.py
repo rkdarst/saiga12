@@ -84,6 +84,14 @@ if __name__ == "__main__":
     import readline
     import sys
 
+    try:
+        import readline
+    except ImportError:
+        pass
+    else:
+        import rlcompleter
+        readline.parse_and_bind("tab: complete")
+                            
     S = io_open(file(sys.argv[1]))
     code.interact(local=locals(), banner="")
     
