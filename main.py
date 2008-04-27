@@ -439,7 +439,7 @@ class Sys(io.IOSys, object):
             print "\033[2A\r"
             #self.printLattice()
         print
-        self.hardness == inf
+        self.hardness = inf
     def chempotential(self, inserttype, store=True):
         """Chemical potential of the system, test inserting at every site.
         """
