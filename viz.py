@@ -59,6 +59,7 @@ class VizSystem(object):
                 display.append(visual.sphere(pos=coords,
                                              radius=.25, #r, not d
                                              color=c[self.S.atomtype[i]]))
+                display[-1].opacity = .2
                 self._display = display
         else:
             display = self._display
@@ -75,18 +76,21 @@ if __name__ == "__main__":
     import saiga12.io
     import sys
 
-    wait = False
+    wait = True
 
     for i, fname in enumerate(sys.argv[1:]):
         if fname == "-w":
-            wait = True
+            wait = False
             continue
         
         S = saiga12.io.io_open(file(fname))
-        print fname, S.__class__
 
         V = VizSystem(S)
         V.vizMakeBox()
         V.vizDisplay()
+
+        print fname, S.__class__,
         if wait:
-            raw_input("press enter,")
+            raw_input(", ...")
+
+

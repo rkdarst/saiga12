@@ -56,7 +56,7 @@ class StateFinder(object):
         S = self.S
         
 
-    def status(self, log=True):
+    def status(self, log=True, printstdout=True):
         S = self.S
         logfile = self.logfile
         S.avgStore("density", S.density)
@@ -67,17 +67,23 @@ class StateFinder(object):
         S.avgStore("mu1", mu1)
         S.avgStore("mu3", mu3)
 
-        print "\033[2A\r"
-        print "\r", S.mctime, S.N, \
-              "  %.4f %.4f %.4f "%(S.density,
-                                   S.densityOf(1),
-                                   S.densityOf(3)),\
-              " %1.4f %1.4f "%(S.avg("mu1"), S.avg("mu3"))
+        if printstdout:
+            print "\033[2A\r"
+            print "\r", S.mctime, S.N, \
+                  " ", (5*"%.4f ")%(S.density,
+                                    S.densityOf(1),
+                                    S.densityOf(3),
+                                    S.avg("mu1"),
+                                    S.avg("mu3"))
         if log and logfile:
             print >> logfile, \
-                  S.mctime, S.avg("density"), S.densityOf(1), \
-                  S.densityOf(3), \
-                  S.avg("mu1"), S.avg("mu3")
+                  S.mctime, (7*"%0.6f ")%(S.avg("density"),
+                                          S.densityOf(1),
+                                          S.densityOf(3),
+                                          S.avg("mu1"),
+                                          S.avg("mu3"),
+                                          self.mu1,
+                                          self.mu3)
             #logfile.flush()
         
 

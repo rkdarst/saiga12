@@ -9,6 +9,7 @@ classvars = ("N", "beta", "hardness", "mctime",
 arrays = ("lattsite", "nneighbors", "atomtype", "atompos", "ntype")
             # self.conn, self.connN, self.connMax (not array),
 
+consistencyCheck = False
 
 class IOSys(object):
     def io_state(self, otherData=None):
@@ -37,7 +38,8 @@ class IOSys(object):
             getattr(self, key)[:] = state[key]
         if state.has_key("otherData"):
             self.otherData = state["otherData"]
-        #self.consistencyCheck()
+        if consistencyCheck:
+            self.consistencyCheck()
     def __getstate__(self):
         return self.io_state()
     def __setstate__(self, state):
@@ -76,4 +78,12 @@ def io_open(state):
     S = Grid3d()
     S.io_loadState(state)
     return S
+
+if __name__ == "__main__":
+    import code
+    import readline
+    import sys
+
+    S = io_open(file(sys.argv[1]))
+    code.interact(local=locals(), banner="")
     
