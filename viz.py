@@ -75,6 +75,11 @@ class VizSystem(object):
 if __name__ == "__main__":
     import saiga12.io
     import sys
+    try:
+        from urllib import urlopen as open
+    except ImportError:
+        pass
+                        
 
     wait = True
 
@@ -83,13 +88,13 @@ if __name__ == "__main__":
             wait = False
             continue
         
-        S = saiga12.io.io_open(file(fname))
+        S = saiga12.io.io_open(open(fname))
 
         V = VizSystem(S)
         V.vizMakeBox()
         V.vizDisplay()
 
-        print fname, S.__class__,
+        print fname,
         if wait:
             raw_input(", ...")
 

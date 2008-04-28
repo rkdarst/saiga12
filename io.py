@@ -14,7 +14,7 @@ specialvars = ("hardness", "latticeReInitData", "stateSaveVersion",
 consistencyCheck = False
 
 class IOSys(object):
-    def io_state(self, otherData=None):
+    def io_state(self):
         """Return a dict containing enough state to reconstruct the system.
         """
         state = { }
@@ -32,8 +32,6 @@ class IOSys(object):
         else:
             state["hardness"] = self.hardness
 
-        if otherData:
-            state["otherData"] = otherData
         return state
     def io_loadState(self, state):
         """Set self's state based on passed dict of state.
@@ -60,17 +58,17 @@ class IOSys(object):
         self.io_loadState(state)
 
 
-    def io_writeToFile(self, filename, otherData=None):
-        """Write state to a file.
-        """
-        state = self.io_state(otherData)
-        state.update(otherData)
-        pickle.dump(state, file(filename, "wb"), protocol=-1)
-    def io_loadFromFile(self, filename):
-        """Load state from a file and load onto self
-        """
-        state = pickle.load(file(filename))
-        self.io_loadState(state)
+    #def io_writeToFile(self, filename):
+    #    """Write state to a file.
+    #
+    #    This function has problems, 
+    #    """
+    #    pickle.dump(self, file(filename, "wb"), protocol=-1)
+    #def io_loadFromFile(self, filename):
+    #    """Load state from a file and load onto self
+    #    """
+    #    state = pickle.load(file(filename))
+    #    self.io_loadState(state)
 
 
 def io_open(state):
@@ -81,16 +79,18 @@ def io_open(state):
 
     Return the Sys object.
     """
-    if type(state) == file:
+    # if it is a file-object, load from there.
+    if hasattr(state, "read") and hasattr(state, "readline"):
         state = pickle.load(state)
+    # if we we just loaded a dictionary, manually reconstruct it...
+    if type(state) == dict:
+        from saiga12.geom.grid import Grid3d
+        S = Grid3d()
+        S.io_loadState(state)
+        return S
 
-    if not type(state) == dict:
-        return state
-    # we have a dictionary, manually reconstruct it...
-    from saiga12.geom.grid import Grid3d
-    S = Grid3d()
-    S.io_loadState(state)
-    return S
+    return state
+
 
 if __name__ == "__main__":
     import code
@@ -100,7 +100,12 @@ if __name__ == "__main__":
     else:
         import rlcompleter
         readline.parse_and_bind("tab: complete")
-                            
-    S = io_open(file(sys.argv[1]))
+
+    try:
+        from urllib import urlopen as open
+    except ImportError:
+        pass
+    
+    S = io_open(open(sys.argv[1]))
     code.interact(local=locals(), banner="")
     
