@@ -86,6 +86,14 @@ def getClib():
 
     C.cycle.restype = c_int
     C.cycle.argtypes = SimData_p, c_int
+
+    cfuncs = (("calc_structfact", c_double, (SimData_p, c_void_p, c_int,
+                                             c_int, c_void_p, c_void_p,
+                                             c_void_p)),
+              )
+    for name, restype, argtypes in cfuncs:
+        getattr(C, name).restype  = restype
+        getattr(C, name).argtypes = argtypes
     
     C.init_gen_rand.restype = None
     C.init_gen_rand(RandomSeed+641)
@@ -372,10 +380,10 @@ class Sys(io.IOSys, object):
     def getPos(self, type_=None):
         """Return positions of all existant particles.
 
-        if type_ is None (default), return positions of all particles.
-        If type is not None, return all positions of that particular
-        type."""
-        if type_ == None:
+        If type_ is None or S12_TYPE_ANY (default), return positions
+        of all particles.  Otherwise, return all positions
+        of that particular type."""
+        if type_ == None or type_ == S12_TYPE_ANY:
             return self.atompos[self.atompos != S12_EMPTYSITE].copy()
         else:
             return self.atompos[self.atomtype == type_].copy()
@@ -410,14 +418,22 @@ class Sys(io.IOSys, object):
         return hash(x)
     def numberOfType(self, type_):
         """Return the number of lattice sites with type type_
+
+        If type_ is None or S12_TYPE_ANY (default), return number of
+        all particles.  Otherwise, return number of that particular
+        type.
         """
         #return len(self.lattsite[self.lattsite==type_].flat)
         #return len(self.atomtype[self.atomtype==type_].flat)
+        if type_ == None or type_ == S12_TYPE_ANY:
+            return self.N
         if type_ == S12_EMPTYSITE:
             return len(self.atomtype[self.atomtype==type_].flat)
         return self.ntype[type_]
     def densityOf(self, type_):
-        """Density of a certin atomtype"""
+        """Density of a certin atomtype.
+
+        Uses same atom selection logic as numberOfType()"""
         return float(self.numberOfType(type_)) / self.lattSize
     def anneal(self, verbose=True):
         """Slowly increase the hardness of the system until energy is zero.

@@ -11,6 +11,7 @@
 #include "SFMT.h"
 
 #define S12_EMPTYSITE (-1)
+#define S12_TYPE_ANY (-1)
 
 int debug = 0;
 int errorcheck = 0;
@@ -510,6 +511,50 @@ int cycle(struct SimData *SD, int n) {
   }
   return(0);
 }
+
+
+
+
+double calc_structfact(struct SimData *SD, 
+		       double *kvecs, int Nk, int type,
+		       int *cords, double *lattShape,
+		       double *Skresult) {
+  int n1, n2, nk;
+  double totalsum = 0;
+  int pos1, pos2;
+  //double r1[3];
+  double dr[3];
+
+  for (n1=0 ; n1 < SD->N ; n1++) {
+    if ((type != S12_TYPE_ANY) && (SD->atomtype[n1] != type))
+      continue;
+    pos1 = SD->atompos[n1];
+    for (n2=n1+1 ; n2 < SD->N ; n2++) {
+      if ((type != S12_TYPE_ANY) && (SD->atomtype[n2] != type))
+	continue;
+      pos2 = SD->atompos[n2];
+      dr[0] = cords[3*pos1 + 0] - cords[3*pos2 + 0];
+      dr[1] = cords[3*pos1 + 1] - cords[3*pos2 + 1];
+      dr[2] = cords[3*pos1 + 2] - cords[3*pos2 + 2];
+      dr[0] -= (floor(dr[0]/lattShape[0] + .5)) *lattShape[0];
+      dr[1] -= (floor(dr[1]/lattShape[1] + .5)) *lattShape[1];
+      dr[2] -= (floor(dr[2]/lattShape[2] + .5)) *lattShape[2];
+	
+      for(nk=0 ; nk < Nk ; nk++) {
+	double dot = dr[0]*kvecs[3*nk + 0] +
+                     dr[1]*kvecs[3*nk + 1] +
+	             dr[2]*kvecs[3*nk + 2];
+	double x = cos(dot);
+	totalsum += x;
+	Skresult[nk] += x;
+      }
+    }
+  }
+  return(totalsum);
+}
+
+
+
 
 
 void ctest(struct SimData *SD) {

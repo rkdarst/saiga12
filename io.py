@@ -82,7 +82,7 @@ def io_open(state):
     # if it is a file-object, load from there.
     if hasattr(state, "read") and hasattr(state, "readline"):
         state = pickle.load(state)
-    # if we we just loaded a dictionary, manually reconstruct it...
+    # if we we just unpickled a dictionary, manually reconstruct it...
     if type(state) == dict:
         from saiga12.geom.grid import Grid3d
         S = Grid3d()

@@ -44,6 +44,8 @@ def index(dims, coords):
                   zip(dims, coords),
                   0)
 
+grid_datacache = { }
+
 
 class GridNd(saiga12.Sys):
     
@@ -55,6 +57,10 @@ class GridNd(saiga12.Sys):
         self._initArrays(lattSize=lattSize,
                          connMax=len(self._neighborlist))
 
+        if grid_datacache.has_key(dimensions):
+            self.conn[:] = grid_datacache[dimensions][0]
+            self.connN[:] = grid_datacache[dimensions][1]
+            return
         # x is our 2D array of maps of shapes
         x = numpy.arange(lattSize)
         x.shape = dimensions
@@ -74,6 +80,7 @@ class GridNd(saiga12.Sys):
                 self.connN[cur] += 1
         #self.printLattice(x)
         #print self.conn
+        grid_datacache[dimensions] = self.conn, self.connN
     def distance(self, index0, index1):
         """Distance between any two lattice points.
         """
@@ -90,6 +97,12 @@ class GridNd(saiga12.Sys):
 
 
 class SquareGrid(GridNd):
+    def coords(self, index):
+        c = numpy.asarray(coords(self.lattShape, index),
+                             dtype=saiga12.numpy_double)
+        # should I really copy this ? 
+        c = c.transpose().copy()
+        return c
     def distance2(self, index0, index1):
         """Distance-squared between any two lattice points.
 

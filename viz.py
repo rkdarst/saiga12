@@ -90,6 +90,7 @@ if __name__ == "__main__":
         
         S = saiga12.io.io_open(open(fname))
 
+        visual.scene.title = fname
         V = VizSystem(S)
         V.vizMakeBox()
         V.vizDisplay()
