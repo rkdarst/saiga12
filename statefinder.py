@@ -21,27 +21,34 @@ class StateFinder(object):
             self.S.cycle(skip)
             self.status(log=False)
         self.mu3 = self.S.avg("mu3")
-    def actualX(self):
-        return self.S.densityOf(1) / self.S.densityOf(3)
+    def actualX(self, i):
+        return self.S.densityOf(1) / self.S.densityOf(self.types[i])
         #return self.S.densityOf(3) / self.S.density
-    def targetX(self):
-        return self.fracA / (1 - self.fracA)
+    def targetX(self, i):
+        #return self.fracA / (1 - self.fracA)
+        return self.fracs[0] / self.fracs[i]
         
     def adjustMu(self):
         S = self.S
-
-        # Establish how far from ideal we are
-        deltaX = (self.actualX() - self.targetX()) * self.controlScale
-        #deltaX = -deltaX
-        #print "target: %.4f, actual: %.4f, delta: %.4f"%\
-        #      (self.targetX(), self.actualX(), deltaX),
-
-        # set us to our new proper state
-        #print "old mu3: %.4f"%self.mu3,
-        self.mu3 += deltaX
-        #print "new mu3: %.4f"%self.mu3
-        S.setInsertType( {1: (self.fracA   , self.mu1),
-                          3: (1-self.fracA , self.mu3)} )
+        
+        for i in range(1, len(self.types)):
+            # Establish how far from ideal we are
+            deltaX = (self.actualX(i) - self.targetX(i)) * self.controlScale
+            #deltaX = -deltaX
+            #print "target: %.4f, actual: %.4f, delta: %.4f"%\
+            #      (self.targetX(), self.actualX(), deltaX),
+            
+            # set us to our new proper state
+            #print "old mu3: %.4f"%self.mu3,
+            self.mus[i] += deltaX
+            #print "new mu3: %.4f"%self.mu3
+        ##S.setInsertType( {1: (self.fracA   , self.mu1),
+        ##                  3: (1-self.fracA , self.mu3)} )
+        insertTypes = { }
+        for t, f, mu in zip(self.types, self.fracs, self.mus):
+            insertTypes[t] = (f, mu)
+        S.setInsertType(insertTypes)
+                        
         #print
 
 
@@ -85,5 +92,30 @@ class StateFinder(object):
                                           self.mu1,
                                           self.mu3)
             #logfile.flush()
-        
+
+    def status2(self, log=True, printstdout=True):
+        S = self.S
+        logfile = self.logfile
+        S.avgStore("density", S.density)
+        for t in self.types:
+            #S.avgStore("density%s"%t, S.densityOf(t))
+            mu = S.chempotential(1, store=False)
+            S.avgStore("mu%s"%t, mu)
+
+        if printstdout:
+            print "\033[2A\r"
+            print "\r",S.mctime, S.N, "%.4f"%S.density, " ",
+            for t in self.types:
+                print "%.4f %.4f"%(S.densityOf(t), S.avg("mu%s"%t)),
+            print
+
+        if log and logfile:
+            print >> logfile, S.mctime, S.N, "%.6f"%S.avg("density"), " ",
+            for t, mu in zip(self.types, self.mus):
+                print >> logfile, "%.6f %.6f %.6f"%(S.densityOf(t),
+                                             S.avg("mu%s"%t),
+                                             mu),
+            print >> logfile
+            #logfile.flush()
+
 
