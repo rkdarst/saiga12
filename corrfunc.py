@@ -149,21 +149,31 @@ class StructCorr(Averager, object):
 
 
         # Do it using FFTn.
-        fftpar = (type_, )
-        fftcache = S1.__dict__.setdefault("fftcache", { })
 
+        # this is caching code.  
+        # fftpar is a parameter relating to our fourier transform.
+        # For example, we will need different transforms for different
+        # particle typs.
+        fftpar = (type_, )
+        fftcache = S1.__dict__.setdefault("_fftcache", { })
+        fftn = None
+        # Do we have the FFT already stored in the cache?
         if fftcache.has_key(fftpar):
-            fftn, ifftn = S1.fftcache[fftpar]
-        else:
+            fftn, ifftn, mctime = S1._fftcache[fftpar]
+            # if our mctime has changed (we have advanced in time),
+            # then we need to regenerate the FFTn.
+            if mctime != S1.mctime:
+                fftn = None
+        if fftn is None:
+            print "calculating fft"
             lattsite = S1.lattsite.copy()
             lattsite[:] = 0
             lattsite[S1.atompos[S1.atomtype == type_]] = 1
-            lattsite.shape = 15, 15, 15
-            print "..",
+            lattsite.shape = S1.lattShape
             fftn = numpy.fft.fftn(lattsite)
             ifftn = numpy.fft.ifftn(lattsite)
-            print ".."
-            S1.fftcache[fftpar] = fftn, ifftn
+            S1._fftcache[fftpar] = fftn, ifftn, S1.mctime
+
         totalsum2 = 0.
         for i, k in enumerate(self.kvecsOrig):
             k = tuple(k)
@@ -190,7 +200,75 @@ class StructCorr(Averager, object):
     def SkArray(self):
         return self.SkArrayAvgs / self._niterSk
 
-
+def makeSsfList(S, type_, kmag2s, L=15.):
+    """Create a list of Static Structure Factors to the parameters,
+    mainly being the different kmag's.
+    """
+    SsfList = [ ]
+    for kmag2 in kmag2s:
+        Ssf = StructCorr(kmag2=kmag2,
+                         S=S,
+                         type_=type_)
+        if len(Ssf.kvecs) == 0:
+            continue
+        Ssf.kvecsOrig = Ssf.kvecs.copy()
+        Ssf.kvecs *= (2*math.pi / L)
+        SsfList.append(Ssf)
+    return SsfList
 
 if __name__ == "__main__":
-    A(3 * math.sqrt(3))
+    import sys
+
+    from rpy import r
+    
+    fname = sys.argv[2]
+    type_ = int(sys.argv[1])
+
+    S = saiga12.io.io_open(file(fname))
+    SsfList = [ ]
+
+    for kmag2 in range(1, 50):
+        kmag = math.sqrt(kmag2)
+    
+        Ssf = StructCorr(kmag2=kmag2,
+                         S=S,
+                         type_=type_)
+        if len(Ssf.kvecs) == 0:
+            continue
+        Ssf.kvecsOrig = Ssf.kvecs.copy()
+        Ssf.kvecs *= (2*math.pi / 15.)
+        SsfList.append(Ssf)
+    
+    
+    thisRun = [ ]
+    
+    for S in (S, ):
+        for Ssf in SsfList:
+            #s =
+            Ssf.staticStructureFactor(S)
+            #Ssf.avgStore('ssf', s)
+            #print Ssf._avgs
+        
+    for Ssf in SsfList:
+        thisRun.append((Ssf.kmag, Ssf.Sk()))
+    v_kmag = zip(*thisRun)[0]
+    v_ssf = zip(*thisRun)[1]
+    
+    i = 0
+    #if mu > 10: pch = "x"
+    #else:       pch = "+" #1
+    pch = 1
+    r.plot(v_kmag, v_ssf,
+           xlab="", ylab="", type="l", col=i+1,
+           ylim=(0., 15)
+           #ylim=(0., 15000)
+           )
+    for kmag in v_kmag:
+        r.abline(v=kmag, lty=3, col="lightgray")
+
+    for Ssf in SsfList:
+        r.points(x=[Ssf.kmag]*len(Ssf.kvecs), y=Ssf.SkArray(),
+                 col=i+1, pch=pch)
+    
+    
+    import code ; code.interact(local=locals(), banner="" )
