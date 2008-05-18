@@ -79,6 +79,8 @@ def io_open(state):
 
     Return the Sys object.
     """
+    if isinstance(state, str):
+        state = file(state, "rb")
     # if it is a file-object, load from there.
     if hasattr(state, "read") and hasattr(state, "readline"):
         state = pickle.load(state)
