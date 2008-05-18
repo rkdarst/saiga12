@@ -319,9 +319,16 @@ class Sys(io.IOSys, object):
 
         To run GCE, do:
         - set this method
-        - set self.inserttype
-        - set self.uVTchempotential
+        - do one of these:
+          single particle type:
+            - set self.inserttype
+            - set self.uVTchempotential
+          multiple particle types:
+            - use self.setInsertTypes()
         """
+        if type(shift) == str and shift.lower() == 'gce':
+            shift = 0
+            insertdel = self.N
         if shift is None:
             shift = self.N
         self.movesPerCycle = shift + insertdel
