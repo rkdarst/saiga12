@@ -22,7 +22,7 @@ class StateFinder(object):
             self.status(log=False)
         self.mu3 = self.S.avg("mu3")
     def actualX(self, i):
-        return self.S.densityOf(1) / self.S.densityOf(self.types[i])
+        return self.S.densityOf(self.types[0])/self.S.densityOf(self.types[i])
         #return self.S.densityOf(3) / self.S.density
     def targetX(self, i):
         #return self.fracA / (1 - self.fracA)
