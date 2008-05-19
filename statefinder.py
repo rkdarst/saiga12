@@ -20,7 +20,7 @@ class StateFinder(object):
         for i in range(total // skip):
             self.S.cycle(skip)
             self.status(log=False)
-        self.mu3 = self.S.avg("mu3")
+        #self.mu3 = self.S.avg("mu3")
     def actualX(self, i):
         return self.S.densityOf(self.types[0])/self.S.densityOf(self.types[i])
         #return self.S.densityOf(3) / self.S.density
@@ -63,7 +63,7 @@ class StateFinder(object):
         S = self.S
         
 
-    def status(self, log=True, printstdout=True):
+    def status1(self, log=True, printstdout=True):
         S = self.S
         logfile = self.logfile
         S.avgStore("density", S.density)
@@ -99,14 +99,14 @@ class StateFinder(object):
         S.avgStore("density", S.density)
         for t in self.types:
             #S.avgStore("density%s"%t, S.densityOf(t))
-            mu = S.chempotential(1, store=False)
+            mu = S.chempotential(t, store=False)
             S.avgStore("mu%s"%t, mu)
 
         if printstdout:
             print "\033[2A\r"
             print "\r",S.mctime, S.N, "%.4f"%S.density, " ",
             for t in self.types:
-                print "%.4f %.4f"%(S.densityOf(t), S.avg("mu%s"%t)),
+                print "%d %.4f %.4f"%(t, S.densityOf(t), S.avg("mu%s"%t)),
             print
 
         if log and logfile:
@@ -117,5 +117,5 @@ class StateFinder(object):
                                              mu),
             print >> logfile
             #logfile.flush()
-
+    status = status2
 
