@@ -62,16 +62,14 @@ SimData_p = ctypes.POINTER(SimData)
 
 neighlist = 1
 
+_clibCache = { }
 def getClib():
-    filename = "saiga12c.so"
+    if _clibCache.has_key("C"):
+        C = _clibCache['C']
+        return C
+    filename = 'saiga12c.so'
     C = numpy.ctypeslib.load_library(filename,
                                      os.path.dirname(__file__))
-
-    C.neighbors_pos.restype = c_int
-    C.neighbors_pos.argtypes = SimData_p, c_int
-
-    C.getInsertType.restype = c_int
-    C.getInsertType.argtypes = SimData_p, 
     if neighlist:
         C.addParticle.restype = None
         C.addParticle.argtypes = SimData_p, c_int, c_int
@@ -79,31 +77,30 @@ def getClib():
         C.delParticle.restype = None
         C.delParticle.argtypes = SimData_p, c_int
 
-    C.energy_pos.restype = c_double
-    C.energy_pos.argtypes = SimData_p, c_int
-
-    C.energy_posNeighborhood.restype = c_double
-    C.energy_posNeighborhood.argtypes = SimData_p, c_int
-
-    C.energy.restype = c_double
-    C.energy.argtypes = SimData_p,
-
-    C.chempotential.restype = c_double
-    C.chempotential.argtypes = SimData_p, c_int
-
-    C.cycle.restype = c_int
-    C.cycle.argtypes = SimData_p, c_int
-
-    cfuncs = (("calc_structfact", c_double, (SimData_p, c_void_p, c_int,
-                                             c_int, c_void_p, c_void_p,
-                                             c_void_p)),
-              )
+    cfuncs = (
+        ("neighbors_pos",          c_int,    (SimData_p, c_int)),
+        ("getInsertType",          c_int,    (SimData_p,)),
+        ("energy_pos",             c_double, (SimData_p, c_int)),
+        ("energy_posNeighborhood", c_double, (SimData_p, c_int) ),
+        ("energy",                 c_double, (SimData_p,)),
+        ("chempotential",          c_double, (SimData_p, c_int)),
+        ("cycle",                  c_int,    (SimData_p, c_int)),
+        ("calc_structfact",        c_double, (SimData_p, c_void_p, c_int,
+                           c_int, c_void_p, c_void_p, c_void_p)),
+        ("addToMLL",               None,     (SimData_p, c_int, c_int)),
+        ("removeFromMLL",          None,     (SimData_p, c_int, c_int)),
+        ("updateMLLatPos",         None,     (SimData_p, c_int, )),
+        ("initMLL",                None,     (SimData_p, )),
+        ("MLLConsistencyCheck",    None,     (SimData_p, )),
+        ("eddCycle",               c_int,    (SimData_p, c_int)),
+        )
     for name, restype, argtypes in cfuncs:
         getattr(C, name).restype  = restype
         getattr(C, name).argtypes = argtypes
     
     C.init_gen_rand.restype = None
     C.init_gen_rand(RandomSeed+641)
+    _clibCache['C'] = C
     return C
 
 
