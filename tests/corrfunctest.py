@@ -26,10 +26,6 @@ for i, (mu, type_) in enumerate(runs):
     S = saiga12.io.io_open(file(fname))
     SsfList = [ ]
     for kmag2 in range(1, 50):
-        kmag = math.sqrt(kmag2)
-        #kmag = (2*math.pi / 15.) * kmag
-        #kmag2 = kmag*kmag
-    
         Ssf = saiga12.corrfunc.StructCorr(kmag2=kmag2,
                                           S=S,
                                           type_=type_)
