@@ -39,6 +39,13 @@ class SimData(ctypes.Structure):
         ("inserttypes_plookup", c_void_p),
         ("inserttypes_mulookup", c_void_p),
 
+        ("MLL", c_void_p),        # Move Lookup List, for event-driven dynamics
+        ("MLLr",c_void_p),        # Move Lookup List, reverse
+        ("MLLlen", c_int),     # MLL length
+        ("MLLextraTime", c_double), # time-surplus
+        
+        
+
         ("lattSize", c_int),      # integer, length of lattice
         ("lattsite", c_void_p),   # lookup from lattsite->atomnumber
         ("conn", c_void_p),       # array of connections
@@ -114,6 +121,8 @@ class Sys(io.IOSys, object):
         self.cumProbDel = 0
         self.inserttype = S12_EMPTYSITE
         self.widominserttype = S12_EMPTYSITE
+        self.naccept = 0
+        self._eddEnabled = False
 
         self.resetTime()
         self.avgReset()
@@ -305,7 +314,10 @@ class Sys(io.IOSys, object):
         simulation.
         """
         moves = int(n * self.movesPerCycle)
-        self.C.cycle(self.SD_p, moves)
+        if self._eddEnabled:
+            self.naccept += self.C.eddCycle(self.SD_p, moves)
+        else:
+            self.naccept += self.C.cycle(self.SD_p, moves)
         self.mctime += n
     def resetTime(self):
         """Sets time back to zero.
@@ -437,6 +449,7 @@ class Sys(io.IOSys, object):
         if type_ == S12_EMPTYSITE:
             return len(self.atomtype[self.atomtype==type_].flat)
         return self.ntype[type_]
+    n = numberOfType
     def densityOf(self, type_):
         """Density of a certin atomtype.
 
@@ -474,6 +487,33 @@ class Sys(io.IOSys, object):
         if store and mu != inf:
             self.avgStore("chempotential", mu)
         return mu
+
+    def _allocArray(self, name, **args):
+        self.__dict__[name]=numpy.zeros(**args)
+        setattr(self.SD, name, getattr(self, name).ctypes.data)
+        #self.conn.shape = lattSize, self.connMax
+        
+
+    def eddInit(self):
+        self._allocArray("MLL",
+                         shape=(self.lattSize*self.connMax),
+                         dtype=numpy_int,
+                         )
+        self._allocArray("MLLr",
+                         shape=(self.lattSize, self.connMax),
+                         dtype=numpy_int,
+                         )
+        self.MLL [:] = -1
+        self.MLLr[:] = -1
+        self.MLLlen = 0
+        self.MLLextraTime = 0.
+        self.C.initMLL(self.SD_p)
+        self._eddEnabled = True
+    def eddCycle(self, nraw):
+        return self.C.eddCycle(self.SD_p, nraw)
+    def eddConsistencyCheck(self):
+        self.C.MLLConsistencyCheck(self.SD_p)
+        
 
     def avgStore(self, name,  value):
         """Add an average to lists, to easily compute avgs and stddevs later.
