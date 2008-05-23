@@ -12,6 +12,15 @@ try:
 except ImportError:
     pass
 
+# at least on Debian systems, scipy is linked to FFTW and numpy isn't.
+try:
+    from scipy.fftpack import fftn, ifftn
+except ImportError:
+    from numpy.fft import fftn, ifftn
+    
+
+_kvecCache = { }
+
 class Averager(object):
     # Averaging methods
     def avgStore(self, name,  value):
@@ -83,7 +92,33 @@ class ConvolvingCorrelation(Averager, object):
 class StructCorrAll(Averager, object):
     def __init__(self, S, ):
         pass
-    
+
+
+def getLattice(S, type_):
+    lattice = S.lattsite.copy()
+    lattice[:] = 0
+    lattice[S.atompos[S.atomtype == type_]] = 1
+    lattice.shape = S.lattShape
+    return lattice
+def getFromCache(S, type_, function):
+    """function should be fftn or ifftn
+    """
+    cachepar = (type_, function)
+    cache = S.__dict__.setdefault("_fftcache", { })
+    val = None
+    if cache.has_key(cachepar):
+        val, mctime = cache[cachepar]
+        # if our mctime has changed (we have advanced in time),
+        # then we need to regenerate the FFTn.
+        if mctime != S.mctime:
+            val = None
+    if val is None:
+        #print "calculating", function
+        lattice = getLattice(S, type_)
+        val = function(lattice)
+        S._fftcache[cachepar] = val, S.mctime
+    return val
+
 
 class StructCorr(Averager, object):
     def __init__(self, S, kmag=None, kmag2=None, type_=None):
@@ -97,28 +132,46 @@ class StructCorr(Averager, object):
         if kmag2 is not None:
             kmag = math.sqrt(kmag2)
         self.kmag = kmag
-        self.makeKvecs(kmag)
-        self.makeCoordLookup(S)
+        self.makeKvecs(kmag, S)
+        #self.makeCoordLookup(S)
 
-    def makeKvecs(self, kmag):
+    def makeKvecs(self, kmag, S):
+        import shelve
+        cachepar = str((kmag, len(S.lattShape)))
         kmax = int(math.ceil(kmag))
 
-        # kvecs is a list of all k-vectors consistent with our magnitude.
-        full = [ x for x in range(-kmax+1, kmax+1) ]
-        half = [ x for x in range(0, kmax+1) ]
-
-        kvecs = cartesianproduct(full, full, half)
-        kvecs = numpy.asarray([ _ for _ in kvecs ], dtype=saiga12.c_double)
-
-        magnitudes2 = numpy.sum(kvecs * kvecs, axis=1)
-        kvecs = kvecs[magnitudes2 == kmag*kmag]
+        if _kvecCache.has_key(cachepar):
+            kvecs = _kvecCache[cachepar]
+        else:
+            cache = shelve.open("kvecCache")
+            if cache.has_key(cachepar):
+            
+                kvecs = cache[cachepar]
+                _kvecCache[cachepar] = kvecs
+            else:
+                # kvecs is a list of all k-vectors consistent with our
+                # magnitude.
+                full = [ x for x in range(-kmax, kmax+1) ]
+                half = [ x for x in range(0, kmax+1) ]
+                
+                if len(S.lattShape) == 2:
+                    kvecs = cartesianproduct(full, half)
+                elif len(S.lattShape) == 3:
+                    kvecs = cartesianproduct(full, full, half)
+                kvecs = numpy.asarray([ _ for _ in kvecs ],
+                                      dtype=saiga12.c_double)
+                magnitudes2 = numpy.sum(kvecs * kvecs, axis=1)
+                kvecs = kvecs[magnitudes2 == kmag*kmag]
+            
+                cache[cachepar] = kvecs
+                _kvecCache[cachepar] = kvecs
+            del cache
 
         self.kvecs = kvecs
         self.SkArray_ = numpy.zeros(shape=len(kvecs),
                                     dtype=saiga12.c_double)
         self.SkArrayAvgs = numpy.zeros(shape=len(kvecs),
                                        dtype=saiga12.c_double)
-
 
     def makeCoordLookup(self, S):
         c = S.coords(numpy.arange(S.lattSize))
@@ -129,70 +182,43 @@ class StructCorr(Averager, object):
         
 
 
-    def staticStructureFactor(self, S1):
+    def staticStructureFactor(self, S1, S2=None):
         type_ = self._type_
         self.SkArray_[:] = 0
         self._niterSk += 1
-
-        lattShape = numpy.asarray(S1.lattShape,
-                                  dtype=saiga12.c_double).ctypes.data
-
-        #totalsum = S1.C.calc_structfact(S1.SD_p, self.kvecs.ctypes.data,
-        #                                len(self.kvecs), type_,
-        #                                self.coordLookup.ctypes.data,
-        #                                lattShape,
-        #                                self.SkArray_.ctypes.data)
-        totalsum = 0
+        if S2 == None:
+            S2 = S1
         N = S1.numberOfType(type_)
 
-        Sk = totalsum / ((N * (N-1)/2.) * len(self.kvecs))
-
+        # old method: using my custom C code:
+        ##  lattShape = numpy.asarray(S1.lattShape,
+        ##                            dtype=saiga12.c_double).ctypes.data
+        ##  totalsum = S1.C.calc_structfact(S1.SD_p, self.kvecs.ctypes.data,
+        ##                                  len(self.kvecs), type_,
+        ##                                  self.coordLookup.ctypes.data,
+        ##                                  lattShape,
+        ##                                  self.SkArray_.ctypes.data)
+        ##  totalsum = 0
+        ##  Sk = totalsum / ((N * (N-1)/2.) * len(self.kvecs))
 
         # Do it using FFTn.
+        # caching code:
 
-        # this is caching code.  
-        # fftpar is a parameter relating to our fourier transform.
-        # For example, we will need different transforms for different
-        # particle typs.
-        fftpar = (type_, )
-        fftcache = S1.__dict__.setdefault("_fftcache", { })
-        fftn = None
-        # Do we have the FFT already stored in the cache?
-        if fftcache.has_key(fftpar):
-            fftn, ifftn, mctime = S1._fftcache[fftpar]
-            # if our mctime has changed (we have advanced in time),
-            # then we need to regenerate the FFTn.
-            if mctime != S1.mctime:
-                fftn = None
-        if fftn is None:
-            print "calculating fft"
-            lattsite = S1.lattsite.copy()
-            lattsite[:] = 0
-            lattsite[S1.atompos[S1.atomtype == type_]] = 1
-            lattsite.shape = S1.lattShape
-            fftn = numpy.fft.fftn(lattsite)
-            ifftn = numpy.fft.ifftn(lattsite)
-            S1._fftcache[fftpar] = fftn, ifftn, S1.mctime
+        ForwardFFT =  getFromCache(S1, type_, fftn )
+        InverseFFT = getFromCache(S2, type_, ifftn)
 
         totalsum2 = 0.
         for i, k in enumerate(self.kvecsOrig):
             k = tuple(k)
-            #print k
-            x = ((ifftn[k]) * (fftn[k])).real * S1.lattSize / N #(N * (N-1)/2.)
+            x = ((InverseFFT[k]) * (ForwardFFT[k])).real * S1.lattSize / N
             totalsum2 += x
             self.SkArray_[i] += x
-        #Sk2 = totalsum2 / ((N * (N-1)/2.) * len(self.kvecs))
         Sk2 = totalsum2 / len(self.kvecs)
-        Sk2 = Sk2.real #abs(Sk2)
-        #print Sk, Sk2, Sk2/Sk
-
-
+        Sk2 = Sk2.real
         Sk = Sk2
-        self.SkArrayAvgs += self.SkArray_ #/ ((N * (N-1)/2.))
-        
-        #interact()
-
         self.avgStore('Sk', Sk)
+
+        self.SkArrayAvgs += self.SkArray_ #/ ((N * (N-1)/2.))
         return Sk
 
     def Sk(self):
