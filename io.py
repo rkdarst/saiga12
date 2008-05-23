@@ -92,7 +92,8 @@ def io_open(state):
         return S
 
     return state
-
+open = io_open # too bad this is a namespace collision, but hopefully
+                # it's ok here...
 
 if __name__ == "__main__":
     import code
