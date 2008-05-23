@@ -594,6 +594,40 @@ def correlation(lattice0, lattice1):
     #avg = S.density * S.density * S.lattSize * 3 * 3
     #print avg
     return float(numpy.sum(lattice0 * lattice1))# - avg
+
+def diff(S1, S2):
+    #if type(S1) != numpy.ndarray:
+    #    S1 = S1.lattsite
+    #if type(S2) != numpy.ndarray:
+    #    S2 = S2.lattsite
+    if False:
+        diffs = (S1.lattsite != S2.lattsite)
+        if not numpy.any(diffs):
+            print "no differences"
+            return
+        diffIndexes = numpy.where(diffs)
+        #print diffIndexes[0]
+        for i, index in enumerate(diffIndexes[0]):
+            #print index, S1[index], S2[index]
+            print "(at %4d) %4d -> %4d   "%(index, S1.lattsite[index],
+                                                   S2.lattsite[index]),
+            if i%3 == 2: print
+        print
+    # diff by atom numbers
+    if True:
+        diffs = (S1.atompos != S2.atompos)
+        if not numpy.any(diffs):
+            print "no differences"
+            return
+        diffIs = numpy.where(diffs)  # get indexes of moved atoms
+        for i, index in enumerate(diffIs[0]):
+            print "(#%5d)%5d ->%5d   "%(index, S1.atompos[index],
+                                                  S2.atompos[index]),
+            if i%3 == 2: print
+        print
+        
+    from rkddp.interact import interact ; interact()
+    
     
 
 if __name__ == "__main__":
