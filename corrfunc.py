@@ -226,7 +226,7 @@ class StructCorr(Averager, object):
     def SkArray(self):
         return self.SkArrayAvgs / self._niterSk
 
-def makeSsfList(S, type_, kmag2s, L=15.):
+def makeSsfList(S, type_, kmag2s, L):
     """Create a list of Static Structure Factors to the parameters,
     mainly being the different kmag's.
     """
@@ -237,7 +237,8 @@ def makeSsfList(S, type_, kmag2s, L=15.):
                          type_=type_)
         if len(Ssf.kvecs) == 0:
             continue
-        Ssf.kvecsOrig = Ssf.kvecs.copy()
+        Ssf.kvecsOrig = Ssf.kvecs
+        Ssf.kvecs = Ssf.kvecs.copy()
         Ssf.kvecs *= (2*math.pi / L)
         SsfList.append(Ssf)
     return SsfList
