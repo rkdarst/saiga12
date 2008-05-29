@@ -523,41 +523,76 @@ int cycle(struct SimData *SD, int n) {
 
 
 
-double calc_structfact(struct SimData *SD, 
+double calc_structfact(struct SimData *SD1, struct SimData *SD2,
 		       double *kvecs, int Nk, int type,
-		       int *cords, double *lattShape,
+		       int *cords, 
+		       double *lattShape, int nDim,
 		       double *Skresult) {
   int n1, n2, nk;
   double totalsum = 0;
   int pos1, pos2;
   //double r1[3];
-  double dr[3];
+  double dr[5];  // max number of dims
+  int print=0;
 
-  for (n1=0 ; n1 < SD->N ; n1++) {
-    if ((type != S12_TYPE_ANY) && (SD->atomtype[n1] != type))
+  for (n1=0 ; n1 < SD1->N ; n1++) {
+    //printf("%X %X\n", SD1, SD2);
+    if ((type != S12_TYPE_ANY) && (SD1->atomtype[n1] != type))
       continue;
-    pos1 = SD->atompos[n1];
-    for (n2=n1+1 ; n2 < SD->N ; n2++) {
-      if ((type != S12_TYPE_ANY) && (SD->atomtype[n2] != type))
-	continue;
-      pos2 = SD->atompos[n2];
-      dr[0] = cords[3*pos1 + 0] - cords[3*pos2 + 0];
-      dr[1] = cords[3*pos1 + 1] - cords[3*pos2 + 1];
-      dr[2] = cords[3*pos1 + 2] - cords[3*pos2 + 2];
-      dr[0] -= (floor(dr[0]/lattShape[0] + .5)) *lattShape[0];
-      dr[1] -= (floor(dr[1]/lattShape[1] + .5)) *lattShape[1];
-      dr[2] -= (floor(dr[2]/lattShape[2] + .5)) *lattShape[2];
-	
-      for(nk=0 ; nk < Nk ; nk++) {
-	double dot = dr[0]*kvecs[3*nk + 0] +
-                     dr[1]*kvecs[3*nk + 1] +
-	             dr[2]*kvecs[3*nk + 2];
-	double x = cos(dot);
-	totalsum += x;
-	Skresult[nk] += x;
-      }
+    pos1 = SD1->atompos[n1];
+    //for (n2=n1+1 ; n2 < SD->N ; n2++) {
+    n2 = n1;
+    //if ((type != S12_TYPE_ANY) && (SD->atomtype[n2] != type))
+    //  continue;
+    pos2 = SD2->atompos[n2];
+    if (pos1 == pos2) {
+      totalsum += Nk;
+      for(nk=0 ; nk < Nk ; nk++)
+	Skresult[nk] += 1.;
+      continue;
     }
+    //if (pos1 == pos2)
+    //  print = 0;    else print=1;
+    if(print) printf("  n1:%d  n2:%d  pos1:%d  pos2:%d\n", n1, n2, pos1, pos2);
+    if(print) printf("  cords:  %d %d %d   %d %d %d\n", 
+		     cords[3*pos1+0], cords[3*pos1+1], cords[3*pos1+2],
+		     cords[3*pos2+0], cords[3*pos2+1], cords[3*pos2+2]);
+/*     dr[0] = cords[3*pos1 + 0] - cords[3*pos2 + 0]; */
+/*     dr[1] = cords[3*pos1 + 1] - cords[3*pos2 + 1]; */
+/*     dr[2] = cords[3*pos1 + 2] - cords[3*pos2 + 2]; */
+/*     if(print) printf("  dr: %f %f %f\n", dr[0], dr[1], dr[2]); */
+/*     dr[0] -= (floor(dr[0]/lattShape[0] + .5)) *lattShape[0]; */
+/*     dr[1] -= (floor(dr[1]/lattShape[1] + .5)) *lattShape[1]; */
+/*     dr[2] -= (floor(dr[2]/lattShape[2] + .5)) *lattShape[2]; */
+
+    if(print) printf("  dr: %f %f %f\n", dr[0], dr[1], dr[2]);
+    int d;
+    for (d=0 ; d<nDim ; d++) {
+      //dr[d] = cords[3*pos1 + d] - cords[3*pos2 + d];
+      //dr[d] -= (floor(dr[d]/lattShape[d] + .5)) *lattShape[d];
+      dr[d] =  cords[nDim*pos1 + d] - cords[nDim*pos2 + d];
+      dr[d] -= (floor(dr[d]/lattShape[d] + .5)) *lattShape[d];
+    }
+    
+	
+    for(nk=0 ; nk < Nk ; nk++) {
+/*       double dot = dr[0]*kvecs[3*nk + 0] + */
+/* 	           dr[1]*kvecs[3*nk + 1] + */
+/* 	           dr[2]*kvecs[3*nk + 2] ; */
+      double dot=0;
+      for (d=0 ; d<nDim ; d++) 
+	//dot += dr[d]*kvecs[3*nk+d];
+	dot += dr[d]*kvecs[nDim*nk+d];
+      
+      double x = cos(dot);
+      if(print) printf("  dot:%f  x:%f   [%f %f %f]\n", dot, x,
+		       kvecs[3*nk+0], kvecs[3*nk+1], kvecs[3*nk+2]);
+      totalsum += x;
+      Skresult[nk] += x;
+    }
+    //}
   }
+  //printf("totalsum: %f ", totalsum);
   return(totalsum);
 }
 

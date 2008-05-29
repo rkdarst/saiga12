@@ -85,8 +85,11 @@ def getClib():
         ("energy",                 c_double, (SimData_p,)),
         ("chempotential",          c_double, (SimData_p, c_int)),
         ("cycle",                  c_int,    (SimData_p, c_int)),
-        ("calc_structfact",        c_double, (SimData_p, c_void_p, c_int,
-                           c_int, c_void_p, c_void_p, c_void_p)),
+        ("calc_structfact",        c_double, (SimData_p, SimData_p, # SD1, SD2
+                                        c_void_p, c_int, # *kvecs, Nk
+                                        c_int, c_void_p, # type, *cords
+                                        c_void_p, c_int, # shape, nDim
+                                        c_void_p)),  #*result
         ("addToMLL",               None,     (SimData_p, c_int, c_int)),
         ("removeFromMLL",          None,     (SimData_p, c_int, c_int)),
         ("updateMLLatPos",         None,     (SimData_p, c_int, )),
