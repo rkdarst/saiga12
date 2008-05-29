@@ -26,8 +26,8 @@ class Averager(object):
     def avgStore(self, name,  value):
         """Add an average to lists, to easily compute avgs and stddevs later.
         """
-        if not hasattr(self, "_avgs"):
-            self._avgs = { }
+        #if not hasattr(self, "_avgs"):
+        #    self._avgs = { }
         x = self._avgs.setdefault(name, [0., 0., 0. ])
         x[0] += 1
         x[1] += value
@@ -122,8 +122,6 @@ def getFromCache(S, type_, function):
 
 class StructCorr(Averager, object):
     def __init__(self, S, kmag=None, kmag2=None, type_=None):
-        self._niterSk = 0
-        self._niterNneigh = 0
         if type_ == None:
             type_ = saiga12.S12_TYPE_ANY
         self._type_ = type_
@@ -133,8 +131,14 @@ class StructCorr(Averager, object):
             kmag = math.sqrt(kmag2)
         self.kmag = kmag
         self.makeKvecs(kmag, S)
-        #self.makeCoordLookup(S)
+        self.makeCoordLookup(S)
+        self.reset()
 
+    def reset(self):
+        self.avgReset()
+        self._niterSk = 0
+        self.SkArrayAvgs[:] = 0
+        
     def makeKvecs(self, kmag, S):
         import shelve
         cachepar = str((kmag, len(S.lattShape)))
@@ -166,8 +170,8 @@ class StructCorr(Averager, object):
                 cache[cachepar] = kvecs
                 _kvecCache[cachepar] = kvecs
             del cache
-
         self.kvecs = kvecs
+        #print kvecs
         self.SkArray_ = numpy.zeros(shape=len(kvecs),
                                     dtype=saiga12.c_double)
         self.SkArrayAvgs = numpy.zeros(shape=len(kvecs),
@@ -175,6 +179,8 @@ class StructCorr(Averager, object):
 
     def makeCoordLookup(self, S):
         c = S.coords(numpy.arange(S.lattSize))
+        c = numpy.asarray(c, dtype=saiga12.c_int)
+        #print c.dtype
         if not c.flags.carray:
             c = c.copy()
         #print c, c.flags
@@ -182,7 +188,7 @@ class StructCorr(Averager, object):
         
 
 
-    def staticStructureFactor(self, S1, S2=None):
+    def staticStructureFactor(self, S1, method, S2=None):
         type_ = self._type_
         self.SkArray_[:] = 0
         self._niterSk += 1
@@ -190,35 +196,47 @@ class StructCorr(Averager, object):
             S2 = S1
         N = S1.numberOfType(type_)
 
-        # old method: using my custom C code:
-        ##  lattShape = numpy.asarray(S1.lattShape,
-        ##                            dtype=saiga12.c_double).ctypes.data
-        ##  totalsum = S1.C.calc_structfact(S1.SD_p, self.kvecs.ctypes.data,
-        ##                                  len(self.kvecs), type_,
-        ##                                  self.coordLookup.ctypes.data,
-        ##                                  lattShape,
-        ##                                  self.SkArray_.ctypes.data)
-        ##  totalsum = 0
-        ##  Sk = totalsum / ((N * (N-1)/2.) * len(self.kvecs))
+        #print self.kvecs
+        #print self.kvecs.dtype
+        #sys.exit()
 
-        # Do it using FFTn.
-        # caching code:
+        if method == 0:
+            # old method: using my custom C code:
+            lattShape = numpy.asarray(S1.lattShape,
+                                      dtype=saiga12.c_double).ctypes.data
+            totalsum = S1.C.calc_structfact(S1.SD_p, S2.SD_p,
+                                            self.kvecs.ctypes.data,
+                                            len(self.kvecs), type_,
+                                            self.coordLookup.ctypes.data,
+                                            lattShape, len(S1.lattShape),
+                                            self.SkArray_.ctypes.data)
+            #print totalsum, N, len(self.kvecs), type_
+            Sk = totalsum / (N * len(self.kvecs))
+            #print Sk
 
-        ForwardFFT =  getFromCache(S1, type_, fftn )
-        InverseFFT = getFromCache(S2, type_, ifftn)
+        if method == 1:
+            # Do it using FFTn.
+            # caching code:
+            
+            ForwardFFT =  getFromCache(S1, type_, fftn )
+            InverseFFT = getFromCache(S2, type_, ifftn)
+            
+            totalsum2 = 0.
+            for i, k in enumerate(self.kvecsOrig):
+                k = tuple(k)
+                x = ((InverseFFT[k]) * (ForwardFFT[k])).real * S1.lattSize / N
+                totalsum2 += x
+                self.SkArray_[i] += x
+            Sk2 = totalsum2 / len(self.kvecs)
+            Sk2 = Sk2.real
+            Sk = Sk2
 
-        totalsum2 = 0.
-        for i, k in enumerate(self.kvecsOrig):
-            k = tuple(k)
-            x = ((InverseFFT[k]) * (ForwardFFT[k])).real * S1.lattSize / N
-            totalsum2 += x
-            self.SkArray_[i] += x
-        Sk2 = totalsum2 / len(self.kvecs)
-        Sk2 = Sk2.real
-        Sk = Sk2
         self.avgStore('Sk', Sk)
+        #print self._avgs
 
         self.SkArrayAvgs += self.SkArray_ #/ ((N * (N-1)/2.))
+        #print Sk
+        #print self.SkArray_
         return Sk
 
     def Sk(self):
