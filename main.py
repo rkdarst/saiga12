@@ -94,7 +94,7 @@ def getClib():
         ("removeFromMLL",          None,     (SimData_p, c_int, c_int)),
         ("updateMLLatPos",         None,     (SimData_p, c_int, )),
         ("initMLL",                None,     (SimData_p, )),
-        ("MLLConsistencyCheck",    None,     (SimData_p, )),
+        ("MLLConsistencyCheck",    c_int,    (SimData_p, )),
         ("eddCycle",               c_int,    (SimData_p, c_int)),
         )
     for name, restype, argtypes in cfuncs:
@@ -494,7 +494,7 @@ class Sys(io.IOSys, object):
         #self.conn.shape = lattSize, self.connMax
         
 
-    def eddInit(self):
+    def eddEnable(self):
         self._allocArray("MLL",
                          shape=(self.lattSize*self.connMax),
                          dtype=numpy_int,
@@ -509,11 +509,35 @@ class Sys(io.IOSys, object):
         self.MLLextraTime = 0.
         self.C.initMLL(self.SD_p)
         self._eddEnabled = True
+    def eddDisable(self):
+        if self._eddEnabled:
+            del self.MLL, self.MLLr
+            self._eddEnabled = False
     def eddCycle(self, nraw):
         return self.C.eddCycle(self.SD_p, nraw)
     def eddConsistencyCheck(self):
-        self.C.MLLConsistencyCheck(self.SD_p)
-        
+        if not self._eddEnabled:
+            print "event-driven dynamics is not enabled!"
+            return 0
+        x = self.C.MLLConsistencyCheck(self.SD_p)
+        print "cc:", x
+        return x
+    def eddFindBestMode(self, n=2000):
+
+        self.eddDisable()
+        t = time.time()
+        self.cycle(n)
+        t1 = time.time() - t   # without EDD
+        print 'regular moves:', t1
+
+        self.eddEnable()
+        t = time.time()
+        self.cycle(n)
+        t2 = time.time() - t   # with EDD
+        print 'event driven dynamics:', t2
+        if t1 < t2:
+            print "disabling event driven dynamics"
+            self.eddDisable()
 
     def avgStore(self, name,  value):
         """Add an average to lists, to easily compute avgs and stddevs later.

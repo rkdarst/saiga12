@@ -51,6 +51,12 @@ struct SimData {
   double cumProbDel;
 } ;
 
+struct LList {
+  int n;
+  int elem[30];
+} ;
+#define LListN 30
+
 /* genrand_real1  [0,1]
  * genrand_real2  [0,1)
  * genrand_real3  (0,0)
@@ -600,6 +606,27 @@ double calc_structfact(struct SimData *SD1, struct SimData *SD2,
 
 
 
+inline void LlistAdd(struct LList *llist, int elem) {
+  if (llist->n == LListN) {
+    return ; // We are already full, silently ignore adding it.
+  }
+  llist->elem[llist->n] = elem ;
+  llist->n ++;
+}
+inline int LlistLookup(struct LList *llist, int elem) {
+  int i = llist->n;
+  //printf("Doing LlistLookup: n:%d\n", llist->n);
+  while (i--) {
+    //printf(" ..LlistLookup: %d %d\n", llist->n, i);
+    if (llist->elem[i] == elem)
+      return 1;
+  }
+  return 0;
+}
+
+
+
+
 inline void addToMLL(struct SimData *SD, int pos, int conni) {
   int lookup = pos * SD->connMax + conni;
   if (errorcheck && SD->MLLr[lookup] != -1) {
@@ -630,6 +657,17 @@ inline void updateMLLatPos(struct SimData *SD, int pos) {
   int conni;
   if (debugedd)
     printf("update: pos:%d\n", pos);
+
+  // added in debugging
+  //if (SD->lattsite[pos] == S12_EMPTYSITE) {
+  //  for(conni=0 ; conni < SD->connN[pos] ; conni++) {
+  //    if (SD->MLLr[pos*SD->connMax + conni] != -1) {
+  //	removeFromMLL(SD, pos, conni);
+  //    }
+  //  }
+  //  return;
+  //}
+
   for(conni=0 ; conni < SD->connN[pos] ; conni++) {
     int adjpos = SD->conn[SD->connMax*pos + conni];
     if (debugedd)
@@ -657,6 +695,16 @@ inline void updateMLLatPos(struct SimData *SD, int pos) {
     }
   }
 }
+inline void updateMLLatPos2(struct SimData *SD, int pos, struct LList *llist) {
+  if (LlistLookup(llist, pos))
+    // We are already in the list, so we were already processed--
+    // don't process it again.
+    return;
+  LlistAdd(llist, pos);
+  updateMLLatPos(SD, pos);
+}
+
+
 
 void initMLL(struct SimData *SD) {
   int pos;
@@ -667,16 +715,19 @@ void initMLL(struct SimData *SD) {
       updateMLLatPos(SD, pos);
   }
 }
-void MLLConsistencyCheck(struct SimData *SD) {
+int MLLConsistencyCheck(struct SimData *SD) {
   // first check that all things in MLLr map to the right thing in MLL
   int MLLlocation;
   int moveIndex;
   int connMax = SD->connMax;
+  int retval=0;
   for (moveIndex=0 ; moveIndex<SD->lattSize * connMax ; moveIndex++) {
     if (SD->MLLr[moveIndex] != -1) {
       // if it exists in MLLr, it should be at that point in MLL
-      if (moveIndex != SD->MLL[SD->MLLr[moveIndex]] )
+      if (moveIndex != SD->MLL[SD->MLLr[moveIndex]] ) {
+	retval += 1;
 	printf("error orjlhc\n");
+      }
     }
   }
   // Now check that all things in the MLL map to the right thing in
@@ -684,12 +735,15 @@ void MLLConsistencyCheck(struct SimData *SD) {
   for (MLLlocation=0 ; MLLlocation<(SD->lattSize*connMax) ; MLLlocation++) {
     if (MLLlocation < SD->MLLlen) {
       // if it's less than the list length, then it should be look-up able.
-      if (MLLlocation != SD->MLLr[SD->MLL[MLLlocation]])
+      if (MLLlocation != SD->MLLr[SD->MLL[MLLlocation]]) {
+	retval += 1;
 	printf("error mcaockr\n");
+      }
     }
     else {
       // all these greater ones should be blank
       if (SD->MLL[MLLlocation] != -1) {
+	retval += 1;
 	printf("error rcaohantohk\n");
       }
     }
@@ -702,8 +756,10 @@ void MLLConsistencyCheck(struct SimData *SD) {
     if (SD->lattsite[pos] == S12_EMPTYSITE) {
       // be sure that it is not in any of the lookups.
       for (conni=0 ; conni<SD->connMax ; conni++) {
-	if (SD->MLLr[pos*connMax + conni] != -1)
+	if (SD->MLLr[pos*connMax + conni] != -1) {
+	  retval += 1;
 	  printf("error aroork\n");
+	}
       }
     } else {
       // So we do have a particle here.  Be sure that it is correct...
@@ -711,8 +767,10 @@ void MLLConsistencyCheck(struct SimData *SD) {
       for (conni=0 ; conni<SD->connMax ; conni++) {
 	if (conni >= SD->connN[pos]) {
 	  // if this is above our number of connections, it must be empty
-	  if (SD->MLLr[pos*connMax + conni] != -1)
+	  if (SD->MLLr[pos*connMax + conni] != -1) {
+	    retval += 1;
 	    printf("error pvwho\n");
+	  }
 	  continue;
 	}
 	// this is a real connection.
@@ -720,34 +778,36 @@ void MLLConsistencyCheck(struct SimData *SD) {
 	int adjpos = SD->conn[moveIndex];
 	if (SD->lattsite[adjpos] != S12_EMPTYSITE) {
 	  // there is a neighboring particle, this move is not allowed.
-	  if (SD->MLLr[pos*connMax + conni] != -1)
-	      printf("error jrotaaor, pos:%d conni:%d adjpos:%d\n",
-		     pos, conni, adjpos);
+	  if (SD->MLLr[pos*connMax + conni] != -1) {
+	    retval += 1;
+	    printf("error jrotaaor, pos:%d conni:%d adjpos:%d\n",
+		   pos, conni, adjpos);
+	  }
 	} else {
 	  // there is not a neighboring particle, so we have to do a
 	  // move test.
-
-
 	  moveParticle(SD, pos, adjpos);
 	  if (energy_posNeighborhood(SD, adjpos) == 1/0.) {
 	    // not allowed to move here
-	    if (SD->MLLr[moveIndex] != -1)
+	    if (SD->MLLr[moveIndex] != -1) {
+	      retval += 1;
 	      printf("error rcxaorhcu\n");
+	    }
 	  }
 	  else {
 	    // we are allowed to move there...
-	    if (SD->MLLr[moveIndex] == -1)
+	    if (SD->MLLr[moveIndex] == -1) {
+	      retval += 1;
 	      printf("error ycorkon\n");
+	      printf("... pos:%d adjpos:%d, conni:%d\n", pos, adjpos, conni);
+	    }
 	  }
 	  moveParticle(SD, adjpos, pos);
-
-	  
 	}
       }
-      
     }
   }
-
+  return(retval);
 }
 
 
@@ -755,6 +815,7 @@ int eddCycle(struct SimData *SD, int n) {
   
   int connMax = SD->connMax;
   int naccept = 0;
+  struct LList llist; llist.n = 0;
 
   double maxTime = (double) n;
   double time = SD->MLLextraTime;
@@ -766,8 +827,14 @@ int eddCycle(struct SimData *SD, int n) {
     int newpos = SD->conn[movei]; // movei = connMax*oldpos + moveConni
     if (debugedd)
       printf("move: moving from oldpos:%d to newpos:%d\n", oldpos, newpos);
-    moveParticle(SD, oldpos, newpos);  // should always be valid, else prev prob.
-    
+    moveParticle(SD, oldpos, newpos);  // should always be valid, else
+				       // prev prob.
+    llist.n = 0;
+    LlistAdd(&llist, oldpos);  // these are removed below, in the first loop.
+    //updateMLLatPos(SD, newpos);
+    updateMLLatPos2(SD, newpos, &llist);
+
+
     // Now, to update all data structures.
     int conni;
     // OLDpos neighbors
@@ -783,25 +850,49 @@ int eddCycle(struct SimData *SD, int n) {
       if (SD->lattsite[adjpos] != S12_EMPTYSITE) {
         // our adjecent position is occupied, so it could move to oldpos
         // now (maybe).  Update it.
-        updateMLLatPos(SD, adjpos);
+        //updateMLLatPos(SD, adjpos);
+        updateMLLatPos2(SD, adjpos, &llist);
+	//printf(" . updating neighbor: adjpos:%d\n", adjpos);
+	// So neighbor is occpied, so it can be relayed through a
+	// empty 2nd neighbor to a 3rd neighbor that has a particle in
+	// it.
+	int connii;
+	for(connii=0 ; connii < SD->connN[adjpos] ; connii++) {
+	  int adj2pos = SD->conn[adjpos*connMax + connii];
+	  if (SD->lattsite[adj2pos] == S12_EMPTYSITE) {
+	    //printf(" . examining empty 2nd neighbor: adj2pos:%d\n", adj2pos);
+	    int conniii;
+	    for(conniii=0 ; conniii < SD->connN[adj2pos] ; conniii++) {
+	      int adj3pos = SD->conn[adj2pos*connMax + conniii];
+	      if (SD->lattsite[adj3pos] != S12_EMPTYSITE) {
+		//printf(" . updating 3rd neighbor: adj3pos:%d\n", adj3pos);
+		//updateMLLatPos(SD, adj3pos);
+		updateMLLatPos2(SD, adj3pos, &llist);
+	      }
+	    }
+	  }
+	}
       }
+      //if (0) 1;
       else {
         // The adjecent position was not occupied, so there is no
         // particle there to move.  But the second-neighbors from here
         // *could* move to the adjpos...
         int connii;
         for(connii=0 ; connii < SD->connN[adjpos] ; connii++) {
-  	int adj2pos = SD->conn[adjpos*connMax + connii];
-  	if (SD->lattsite[adj2pos] != S12_EMPTYSITE) {
-  	  updateMLLatPos(SD, adj2pos);
-  	}
+	  int adj2pos = SD->conn[adjpos*connMax + connii];
+	  if (SD->lattsite[adj2pos] != S12_EMPTYSITE) {
+	    //updateMLLatPos(SD, adj2pos);
+	    updateMLLatPos2(SD, adj2pos, &llist);
+	    //printf(" . updating 2nd neighbor: adj2pos:%d\n", adj2pos);
+	  }
         }
       }
     }
   
     // NEWpos stuff
-    // update the new position of the moved particle
-    updateMLLatPos(SD, newpos);
+    //printf(" .=new neighbors:\n");
+    // we already updated the new position of the moved particle above.
     // go over all neighbors...
     for(conni=0 ; conni < SD->connN[newpos] ; conni++) {
       // Handle adjecent particles, which can now move to the center
@@ -810,8 +901,32 @@ int eddCycle(struct SimData *SD, int n) {
       if (SD->lattsite[adjpos] != S12_EMPTYSITE) {
         // our adjecent position is occupied, so our move here might
         // restrict it some... like remove the move to where we are.
-        updateMLLatPos(SD, adjpos);
+        //updateMLLatPos(SD, adjpos);
+        updateMLLatPos2(SD, adjpos, &llist);
+	//printf(" . updating neighbor: adjpos:%d\n", adjpos);
+
+	// So neighbor is occpied, so it can be relayed through a
+	// empty 2nd neighbor to a 3rd neighbor that has a particle in
+	// it.
+	int connii;
+	for(connii=0 ; connii < SD->connN[adjpos] ; connii++) {
+	  int adj2pos = SD->conn[adjpos*connMax + connii];
+	  if (SD->lattsite[adj2pos] == S12_EMPTYSITE) {
+	    //printf(" . examining empty 2nd neighbor: adj2pos:%d\n", adj2pos);
+	    int conniii;
+	    for(conniii=0 ; conniii < SD->connN[adj2pos] ; conniii++) {
+	      int adj3pos = SD->conn[adj2pos*connMax + conniii];
+	      if (SD->lattsite[adj3pos] != S12_EMPTYSITE) {
+		//printf(" . updating 3rd neighbor: adj3pos:%d\n", adj3pos);
+		//updateMLLatPos(SD, adj3pos);
+		updateMLLatPos2(SD, adj3pos, &llist);
+	      }
+	    }
+	  }
+	}
+
       }
+      //if (0) 1;
       else {
         // The adjecent position was not occupied, so there is no
         // particle there to move.  But the second-neighbors from here
@@ -820,8 +935,10 @@ int eddCycle(struct SimData *SD, int n) {
         for(connii=0 ; connii < SD->connN[adjpos] ; connii++) {
   	int adj2pos = SD->conn[adjpos*connMax + connii];
   	if (SD->lattsite[adj2pos] != S12_EMPTYSITE) {
-  	  updateMLLatPos(SD, adj2pos);
-  	}
+	  //printf(" . updating 2nd neighbor: adj2pos:%d\n", adj2pos);
+  	  //updateMLLatPos(SD, adj2pos);
+  	  updateMLLatPos2(SD, adj2pos, &llist);
+	  }
         }
       }
     }
