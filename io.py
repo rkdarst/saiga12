@@ -83,7 +83,23 @@ def io_open(state):
         state = file(state, "rb")
     # if it is a file-object, load from there.
     if hasattr(state, "read") and hasattr(state, "readline"):
-        state = pickle.load(state)
+        # This code is because of a symlink 'saiga12' -> '.' that
+        # existed in my source directories.  It caused some things to
+        # be saved with the class name
+        # saiga12.saiga12.geom.grid.Grid3d.
+        # This class name can't be imported without that symlink... 
+        p = pickle.Unpickler(state)
+        def find_global(module, className):
+            if 'saiga12.geom.grid' in module:
+                import saiga12.geom.grid
+                return getattr(saiga12.geom.grid, className)
+            #exec "import %s"%module in {}, {}
+            mod = __import__(module, globals(), locals(), 'x')
+            return getattr(mod, className)
+            raise
+        p.find_global = find_global
+        state = p.load()
+        #state = pickle.load(state)
     # if we we just unpickled a dictionary, manually reconstruct it...
     if type(state) == dict:
         from saiga12.geom.grid import Grid3d
