@@ -270,41 +270,34 @@ if __name__ == "__main__":
     type_ = int(sys.argv[1])
 
     S = saiga12.io.io_open(file(fname))
-    SsfList = [ ]
 
-    for kmag2 in range(1, 50):
-        kmag = math.sqrt(kmag2)
-    
-        Ssf = StructCorr(kmag2=kmag2,
-                         S=S,
-                         type_=type_)
-        if len(Ssf.kvecs) == 0:
-            continue
-        Ssf.kvecsOrig = Ssf.kvecs.copy()
-        Ssf.kvecs *= (2*math.pi / 15.)
-        SsfList.append(Ssf)
-    
-    
-    thisRun = [ ]
-    
+    maxAllowedK =  50
+    maxKmag = min(max(S.lattShape), maxAllowedK)
+    kmag2s = range(1, maxKmag**2)
+    kmags = [math.sqrt(x) for x in kmag2s]
+    L = S.lattShape[0]
+    SsfList = makeSsfList(S=S, type_=type_,
+                          kmag2s=kmag2s,
+                          L=L)
     for S in (S, ):
         for Ssf in SsfList:
-            #s =
-            Ssf.staticStructureFactor(S)
-            #Ssf.avgStore('ssf', s)
-            #print Ssf._avgs
+            Ssf.staticStructureFactor(S, method=1)
         
+    thisRun = [ ]
     for Ssf in SsfList:
-        thisRun.append((Ssf.kmag, Ssf.Sk()))
-    v_kmag = zip(*thisRun)[0]
-    v_ssf = zip(*thisRun)[1]
+        thisRun.append((Ssf.Sk(), Ssf.kmag))
+    v_kmag = zip(*thisRun)[1]
+    v_ssf = zip(*thisRun)[0]
+
+    thisRun.sort()
+    print "top modes:"
     
-    i = 0
-    #if mu > 10: pch = "x"
-    #else:       pch = "+" #1
-    pch = 1
+    print "%6s %6s %7s %9s"%('kmag', 'Sk', 'kmag/L', 'L/kmag')
+    for Sk, kmag in thisRun[-10:]:
+        print "%6.3f %6.3f %7.5f %9.5f"%(kmag, Sk, kmag/L, L/kmag)
+    
     r.plot(v_kmag, v_ssf,
-           xlab="", ylab="", type="l", col=i+1,
+           xlab="", ylab="", type="l",
            ylim=(0., 15)
            #ylim=(0., 15000)
            )
@@ -313,7 +306,7 @@ if __name__ == "__main__":
 
     for Ssf in SsfList:
         r.points(x=[Ssf.kmag]*len(Ssf.kvecs), y=Ssf.SkArray(),
-                 col=i+1, pch=pch)
+                 col="blue", pch="x")
     
     
     import code ; code.interact(local=locals(), banner="" )
