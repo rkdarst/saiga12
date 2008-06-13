@@ -4,6 +4,7 @@
 import cPickle as pickle
 
 classvars = ("N", "beta", "mctime",
+             "movesPerCycle", "cumProbAdd", "cumProbDel",
              "otherData")
             # "lattSize", "lattShape", "latticeReInitData"
 arrays = ("lattsite", "nneighbors", "atomtype", "atompos", "ntype")
