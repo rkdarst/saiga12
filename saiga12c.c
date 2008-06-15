@@ -945,7 +945,9 @@ int eddCycle(struct SimData *SD, int n) {
     naccept += 1;
     
     // Advance time
-    time += (SD->N * SD->connMax) / (double)SD->MLLlen;
+    double timestep = (SD->N * SD->connMax) / ((double)SD->MLLlen);
+    timestep *= -log(genrand_real2());  // exponential distribution of times.
+    time += timestep;
     //printf("interval: %f\n", (SD->N * SD->connMax) / (double)SD->MLLlen);
   }
   // MLLextraTime is a positive, the amount to increment before our next stop.
