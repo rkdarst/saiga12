@@ -106,6 +106,11 @@ def getClib():
     _clibCache['C'] = C
     return C
 
+def randomSeed(data):
+    C = getClib()
+    C.init_gen_rand(int(hash(data)) + 165)
+    random.seed(int(hash(data)) + 641)
+    
 
 class Sys(io.IOSys, object):
     def __init__(self, N=None):
