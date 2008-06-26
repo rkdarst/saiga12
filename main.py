@@ -1,6 +1,7 @@
 # Richard Darst, April 2008
 from __future__ import division
 
+import copy
 import ctypes
 import math
 import numpy
@@ -527,8 +528,22 @@ class Sys(io.IOSys, object):
         x = self.C.MLLConsistencyCheck(self.SD_p)
         print "cc:", x
         return x
-    def eddFindBestMode(self, n=2000):
+    def eddFindBestMode(self, n=100, nomodify=False):
+        """Enable Event Driven Dynamics, if a test shows it is more efficient.
 
+        `n` is the number of test cycles of a sample to take,
+        defaulting to 100.
+
+        If `copy` is false (default), then the system will be modified
+        (propogated by 2n cycles total).  This is fine if you are in
+        the process of equilibrating the system.  However, if you set
+        `copy` to true, it will make a copy before it 
+        """
+        if copy:
+            origHash = self.hash()
+            origSelf = self
+            self = copy.copy(self)
+        
         self.eddDisable()
         t = time.time()
         self.cycle(n)
@@ -543,6 +558,13 @@ class Sys(io.IOSys, object):
         if t1 < t2:
             print "disabling event driven dynamics"
             self.eddDisable()
+
+        if copy:
+            # enable EDD for the original one, if we need
+            if self._eddEnabled: origSelf.eddEnable()
+            else:                origSelf.eddDisable()
+            if origSelf.hash() != origHash:
+                raise Exception, "Hashes don't match after enabling even driven dynamics - the original system has changed."
 
     def avgStore(self, name,  value):
         """Add an average to lists, to easily compute avgs and stddevs later.
