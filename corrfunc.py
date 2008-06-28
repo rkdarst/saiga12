@@ -222,9 +222,10 @@ class StructCorr(Averager, object):
             InverseFFT = getFromCache(S2, type_, ifftn)
             
             totalsum2 = 0.
+            lattSize = S1.lattSize
             for i, k in enumerate(self.kvecsOrig):
                 k = tuple(k)
-                x = ((InverseFFT[k]) * (ForwardFFT[k])).real * S1.lattSize / N
+                x = ((InverseFFT[k]) * (ForwardFFT[k])).real * lattSize / N
                 totalsum2 += x
                 self.SkArray_[i] += x
             Sk2 = totalsum2 / len(self.kvecs)
