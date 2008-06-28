@@ -626,9 +626,10 @@ class Sys(io.IOSys, object):
     def __getattr__(self, attrname):
         """Wrapper to proxy attribute gets to the C SimData struct
         """
-        if hasattr(self.SD, attrname):
+        try:
             return getattr(self.SD, attrname)
-        raise AttributeError("No Such Attribute: %s"%attrname)
+        except AttributeError:
+            raise AttributeError("No Such Attribute: %s"%attrname)
     def __setattr__(self, name, value):
         """Wrapper to proxy attribute sets to the C SimData struct
         """
