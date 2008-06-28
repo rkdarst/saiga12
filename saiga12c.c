@@ -199,6 +199,18 @@ inline void moveParticle(struct SimData *SD, int oldpos, int newpos) {
 
 
 
+void loadStateFromSave(struct SimData *SD) {
+  int n, pos;
+  for (n=0 ; n<SD->N ; n++) {
+    SD->lattsite[SD->atompos[n]] = n;
+    SD->ntype[SD->atomtype[n]] += 1;
+  }
+  for (pos=0 ; pos<SD->lattSize ; pos++) {
+    SD->nneighbors[pos] = neighbors_pos(SD, pos) ;
+  }
+}
+
+
 
 inline double energy_pos(struct SimData *SD, int pos) {
   /*  Energy of a particle at one particular position.

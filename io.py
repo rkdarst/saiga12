@@ -15,6 +15,7 @@ specialvars = ("hardness", "latticeReInitData", "stateSaveVersion",
 consistencyCheck = False
 
 class IOSys(object):
+    ioSaveVersion = 2
     def io_state(self):
         """Return a dict containing enough state to reconstruct the system.
         """
@@ -22,18 +23,38 @@ class IOSys(object):
         for key in classvars:
             if hasattr(self, key):
                 state[key] = getattr(self, key)
-        for key in arrays:
-            state[key] = getattr(self, key)
         state["latticeReInitData"] = self.latticeReInitData()
-        state["stateSaveVersion"] = 1
-
         # python2.4 can't pickle float("inf"), but 2.5 can.
         if self.hardness == float("inf"):
             state["hardness"] = "inf"
         else:
             state["hardness"] = self.hardness
+        # Saving arrays is different for different methods:
+        state["stateSaveVersion"] = self.ioSaveVersion
+        if self.ioSaveVersion == 1:
+            # save full arrays
+            for key in arrays:
+                state[key] = getattr(self, key)
+        elif self.ioSaveVersion == 2:
+            #print "saving with version 2"
+            # be more clever about the arrays we save
+            import numpy
+            atompos = self.atompos[:self.N]
+            if numpy.max(atompos) < 32768:
+                atompos = numpy.asarray(atompos, dtype=numpy.int16)
+            state["atompos"] = atompos
+            state["atomtype"] = numpy.asarray(self.atomtype[:self.N],
+                                              dtype=numpy.int8)
+        else:
+            raise Exception("Invalid save version when saving: %s",
+                            self.ioSaveVersion)
+
 
         return state
+    def ioSave(self, fname):
+        """Equivalent to pickle.dump(S, file(fname, 'wb'), -1)
+        """
+        pickle.dump(self, file(fname, "wb"), pickle.HIGHEST_PROTOCOL)
     def io_loadState(self, state):
         """Set self's state based on passed dict of state.
         """
@@ -42,13 +63,21 @@ class IOSys(object):
             if not state.has_key(key):
                 continue
             setattr(self, key, state[key])
-        for key in arrays:
-            getattr(self, key)[:] = state[key]
-
         if state["hardness"] == "inf":
             self.hardness == float("inf")
         else:
             self.hardness == state["hardness"]
+        if state['stateSaveVersion'] == 1:
+            for key in arrays:
+                getattr(self, key)[:] = state[key]
+        elif state['stateSaveVersion'] == 2:
+            self.atompos[:self.N]  = state['atompos']
+            self.atomtype[:self.N] = state['atomtype']
+            self.C.loadStateFromSave(self.SD_p)
+        else:
+            raise Exception("Invalid save version when loading: %s",
+                            state['stateSaveVersion'])
+            
 
         if consistencyCheck:
             self.consistencyCheck()

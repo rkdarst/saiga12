@@ -81,6 +81,7 @@ def getClib():
     cfuncs = (
         ("neighbors_pos",          c_int,    (SimData_p, c_int)),
         ("getInsertType",          c_int,    (SimData_p,)),
+        ("loadStateFromSave",      None,     (SimData_p,)),
         ("energy_pos",             c_double, (SimData_p, c_int)),
         ("energy_posNeighborhood", c_double, (SimData_p, c_int) ),
         ("energy",                 c_double, (SimData_p,)),
