@@ -18,8 +18,17 @@ S.addParticleRandomDensity(initialdensity * 1.    , 3)  # B
 S.anneal()
 S.cycle(100)
 
-print S.hash()
-s = pickle.dumps(S)
+import saiga12.io
+#S.ioSaveVersion = 1
+
+
+print S.hash(), hash((tuple(S.nneighbors)))
+print S.ntype
+s = pickle.dumps(S, -1)
+print "save size:", len(s)
 
 S2 = pickle.loads(s)
-print S2.hash()
+print S2.hash(), hash((tuple(S2.nneighbors)))
+print S2.ntype
+S2.consistencyCheck()
+
