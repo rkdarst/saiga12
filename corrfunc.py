@@ -187,7 +187,11 @@ class StructCorr(Averager, object):
         self.coordLookup = c
         
 
-
+    def calcSk(self, S1, S2=None):
+        #Sk takes MUCH longer than Fs
+        self.staticStructureFactor(S1=S1, S2=S2, method=1)
+    def calcFs(self, S1, S2=None):
+        self.staticStructureFactor(S1=S1, S2=S2, method=0)
     def staticStructureFactor(self, S1, method, S2=None):
         type_ = self._type_
         self.SkArray_[:] = 0
