@@ -29,6 +29,10 @@ class IOSys(object):
             state["hardness"] = "inf"
         else:
             state["hardness"] = self.hardness
+        # record history of event-driven dynamics (this won't
+        # automatically enable it, though
+        if hasattr(self, "_eddEnabled"):
+            state['_eddWasEnabled'] = self._eddEnabled
         # Saving arrays is different for different methods:
         state["stateSaveVersion"] = self.ioSaveVersion
         if self.ioSaveVersion == 1:
@@ -67,6 +71,11 @@ class IOSys(object):
             self.hardness == float("inf")
         else:
             self.hardness == state["hardness"]
+        # was event-driven dynamics enabled before?  (note: you *must*
+        # regenerate the move-lists, you can't just set the variable
+        # and call it enabled)
+        if state.has_key('_eddWasEnabled'):
+            self._eddWasEnabled = state['_eddWasEnabled']
         if state['stateSaveVersion'] == 1:
             for key in arrays:
                 getattr(self, key)[:] = state[key]
