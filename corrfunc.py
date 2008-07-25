@@ -120,6 +120,41 @@ def getFromCache(S, type_, function):
     return val
 
 
+def getFftArrays(S, type_, SOverlap=None):
+    # This is getting the FFTs from the cache
+    cachepar = (type_, SOverlap is None)
+    cache = S.__dict__.setdefault("_fftcache", { })
+    val = None
+    if cache.has_key(cachepar):
+        val, mctime = cache[cachepar]
+        # if our mctime has changed (we have advanced in time),
+        # then we need to regenerate the FFTn.
+        if mctime != S.mctime:
+            val = None
+
+    # Do the actual regeneration of the functions:
+    if val is None:
+        #print "calculating", function
+        #lattice = getLattice(S, type_)
+        lattice = S.lattsite.copy()
+        lattice[:] = 0
+        if SOverlap is None:
+            lattice[S.atompos[S.atomtype == type_]] = 1
+            norm = N
+        else:
+            lattice[S       .atompos[S       .atomtype == type_]] += 1
+            lattice[SOverlap.atompos[SOverlap.atomtype == type_]] += 1
+            lattice[lattice != 2] = 0
+            lattice[lattice == 2] = 1
+            norm = N * S.densityOf(type_)
+
+        #from rkddp import interact ; interact.interact()
+        lattice.shape = S.lattShape
+        val = fftn(lattice), ifftn(lattice), norm
+        #val = function(lattice)
+        S._fftcache[cachepar] = val, S.mctime
+    return val
+
 class StructCorr(Averager, object):
     def __init__(self, S, kmag=None, kmag2=None, type_=None):
         if type_ == None:
@@ -187,9 +222,69 @@ class StructCorr(Averager, object):
         self.coordLookup = c
         
 
-    def calcSk(self, S1, S2=None):
+    def calcSk(self, S, SOverlap=None):
         #Sk takes MUCH longer than Fs
-        self.staticStructureFactor(S1=S1, S2=S2, method=1)
+        #self.staticStructureFactor(S1=S1, S2=S2, method=1)
+
+        type_ = self._type_
+        self._niterSk += 1
+        N = S.numberOfType(type_)
+        self.SkArray_[:] = 0
+
+        # This is getting the FFTs from the cache
+        cachepar = (type_, SOverlap is None)
+        cache = S.__dict__.setdefault("_fftcache", { })
+        val = None
+        if cache.has_key(cachepar):
+            val, mctime = cache[cachepar]
+            # if our mctime has changed (we have advanced in time),
+            # then we need to regenerate the FFTn.
+            if mctime != S.mctime:
+                val = None
+        
+        # Do the actual regeneration of the functions:
+        if val is None:
+            #print "calculating", function
+            #lattice = getLattice(S, type_)
+            lattice = S.lattsite.copy()
+            lattice[:] = 0
+            if SOverlap is None:
+                lattice[S.atompos[S.atomtype == type_]] = 1
+                norm = N
+            else:
+                lattice[S       .atompos[S       .atomtype == type_]] += 1
+                lattice[SOverlap.atompos[SOverlap.atomtype == type_]] += 1
+                lattice[lattice != 2] = 0
+                lattice[lattice == 2] = 1
+                norm = N * S.densityOf(type_)
+        
+            #from rkddp import interact ; interact.interact()
+            lattice.shape = S.lattShape
+            val = fftn(lattice), ifftn(lattice), norm
+            #val = function(lattice)
+            S._fftcache[cachepar] = val, S.mctime
+
+        ForwardFFT, InverseFFT, norm = val
+        #ForwardFFT, InverseFFT, norm = getFftArrays(S, type_, SOverlap, )
+        #ForwardFFT = getFromCache(S, type_, fftn )
+        #InverseFFT = getFromCache(S, type_, ifftn)
+            
+        totalsum2 = 0.
+        lattSize = S.lattSize
+        for i, k in enumerate(self.kvecsOrig):
+            k = tuple(k)
+            x = ((InverseFFT[k]) * (ForwardFFT[k])).real * lattSize / norm
+            totalsum2 += x
+            self.SkArray_[i] += x
+        Sk2 = totalsum2 / len(self.kvecs)
+        Sk2 = Sk2.real
+        Sk = Sk2
+
+        self.avgStore('Sk', Sk)
+        self.SkArrayAvgs += self.SkArray_
+
+
+
     def calcFs(self, S1, S2=None):
         self.staticStructureFactor(S1=S1, S2=S2, method=0)
     def staticStructureFactor(self, S1, method, S2=None):
@@ -221,7 +316,7 @@ class StructCorr(Averager, object):
         if method == 1:
             # Do it using FFTn.
             # caching code:
-            
+            raise Exception('use new calcSk method instead.')
             ForwardFFT =  getFromCache(S1, type_, fftn )
             InverseFFT = getFromCache(S2, type_, ifftn)
             
