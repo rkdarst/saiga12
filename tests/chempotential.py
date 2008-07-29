@@ -4,7 +4,7 @@ import math
 import time
 
 import saiga12
-from saiga12.geom.grid2d import Grid2d
+from saiga12.geom.grid import Grid2d
 
 a = b = 100
 beta = 1.
@@ -27,12 +27,12 @@ udpairs = (#(-6.8114, .001),
            ( 1.1914, .6),
            ( 2.8902, .7),)
 
-class Sc(saiga12.Sys, Grid2d):
-    pass
+#class Sc(saiga12.Sys, Grid2d):
+#    pass
 def getS(density=density):
-    S = Sc(N=a*b)
+    S = Grid2d(N=a*b)
     S.beta = beta
-    S.makeconn_2Dgrid(a, b)
+    S.makegrid(a, b)
     S.hardness = 1
     S.addParticleRandomDensity(density, type_=type_)
     S.anneal(False)
@@ -71,25 +71,29 @@ for i in range(len(udpairs)):
     # now do grand canonical (!)
     S.uVTchempotential = uVTchempotential
     #S.setMoveProb(S.N, 10)
-    S.setMoveProb(0, S.N)
+    S.setCycleMoves(shift=0, insertdel=S.N)
     for i in range(1000):
         if i in (5000, ):
             S.resetAvgs()
         S.cycle(1)
-        S.storeAvg("density", S.density)
-        mu = S.chempotential()
+        S.avgStore("density", S.density)
+        # warning: calling this function automatically stores it in an
+        # averaging function.  If you do the chempotential for
+        # different types, you want to have it not storet it.  See the
+        # method code.
+        mu = S.chempotential(inserttype=type_)
         #print S.uVTchempotential
         if False:
             print i, S.energy(), S.N, \
                   "  %.4f %.4f %.4f %.4f "%(S.density, S.avg("density"),
-                                            S.stddev("density"),
-                                            S.secondmoment("density")), \
+                                            S.avgStddev("density"),
+                                            S.avgSecondmoment("density")), \
                   " %1.4f %1.4f "%(mu, S.avg("chempotential"))
-            S.consistencyCheck(type_=type_)
+            S.consistencyCheck()
     print i, S.energy(), S.N, \
           "  %.4f %.4f %.4f %.4f "%(S.density, S.avg("density"),
-                                    S.stddev("density"),
-                                    S.secondmoment("density")), \
+                                    S.avgStddev("density"),
+                                    S.avgSecondmoment("density")), \
               " %1.4f %1.4f %1.4f"%(mu, S.avg("chempotential"),
-                                    S.stddev("chempotential"))
+                                    S.avgStddev("chempotential"))
 
