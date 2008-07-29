@@ -213,7 +213,10 @@ class Sys(io.IOSys, object):
     def consistencyCheck(self, type_=3):
         """Check of internal data structures.
 
-        Shouldn't be needed in production, only during testing of code changes.
+        Shouldn't be needed in production, only during testing of code
+        changes.
+
+        type_ is unused
         """
         if False:
             print self.lattsite
@@ -479,9 +482,9 @@ class Sys(io.IOSys, object):
                       (hardness, self.energy()), \
                   self.N
             hardness += 1
-            print "\033[2A\r"
+            if verbose: print "\033[2A\r"
             #self.printLattice()
-        print
+        if verbose: print
         self.hardness = inf
     def chempotential(self, inserttype, store=True):
         """Chemical potential of the system, test inserting at every site.
