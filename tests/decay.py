@@ -3,7 +3,7 @@ import sys
 import time
 
 import saiga12
-from saiga12.geom.grid2d import Grid2d, Grid3d
+from saiga12.geom.grid import Grid2d, Grid3d
 
 #class Sc(saiga12.Sys, Grid3d):
 #    pass
@@ -13,8 +13,8 @@ N = a*b*c
 density = .58
 type_ = 3
 
-MaxTime = 100000
-skip = 50
+MaxTime = 1000
+skip = 5
 iterations = 100
 
 S = Grid3d(N=N)
@@ -25,9 +25,9 @@ S.addParticleRandomDensity(density, type_=type_)
 S.anneal()
 S.hardness = saiga12.inf
 S.inserttype = type_
-S.setCycleMoves()
+S.setCycleMoves()   # defaults to translating (canonical), shift=self.N
 
-S.cycle(100000) #  equilibrate
+S.cycle(100) #  equilibrate
 
 corrfunc = { }
 
