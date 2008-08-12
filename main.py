@@ -445,6 +445,22 @@ class Sys(io.IOSys, object):
               self.hardness, self.lattSize, 
               )
         return hash(x)
+    def copy(self):
+        """Return a independent copy of the System object.
+
+        Essentially, this is the equivalent of pickling and unpickling
+        the System object (I think).  This does make independent data
+        arrays, so that you can propogate one in time without the
+        other one changing.  To see what is preserved and what isn't,
+        look at the io.py methods.
+
+        I have seen this from some tests I did, however, I make *no
+        guarentees* about how well this method works.  You should
+        explicitely test yourself if the systems are connected in some
+        way.
+        """
+        return copy.copy(self)
+                                                
     def numberOfType(self, type_):
         """Return the number of lattice sites with type type_
 
