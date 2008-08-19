@@ -958,7 +958,8 @@ int eddCycle(struct SimData *SD, int n) {
     
     // Advance time
     double timestep = (SD->N * SD->connMax) / ((double)SD->MLLlen);
-    timestep *= -log(genrand_real2());  // exponential distribution of times.
+    timestep *= -log(genrand_real3());  // exponential distribution of times.
+                                        // genrand_real3()  -> (0, 1)
     time += timestep;
     //printf("interval: %f\n", (SD->N * SD->connMax) / (double)SD->MLLlen);
   }
