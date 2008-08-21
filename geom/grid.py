@@ -57,16 +57,15 @@ class GridNd(saiga12.Sys):
         self._initArrays(lattSize=lattSize,
                          connMax=len(self._neighborlist))
 
-        if grid_datacache.has_key(dimensions):
-            self.conn[:] = grid_datacache[dimensions][0]
-            self.connN[:] = grid_datacache[dimensions][1]
+        connCacheKey = (self.__class__.__name__, dimensions)
+        if grid_datacache.has_key(connCacheKey):
+            self.conn[:] = grid_datacache[connCacheKey][0]
+            self.connN[:] = grid_datacache[connCacheKey][1]
             return
         # x is our 2D array of maps of shapes
         x = numpy.arange(lattSize)
         x.shape = dimensions
-        # celllist is a list of all possible (x,y) coordinates.
-        #celllist = [ ]
-        #self.fillcelllist(celllist, dimensions)
+        #
         dimranges = [ range(i) for i in dimensions ]
         celllist = [ tuple(zz) for zz in cartesianproduct(*dimranges)]
 
@@ -80,11 +79,24 @@ class GridNd(saiga12.Sys):
                 self.connN[cur] += 1
         #self.printLattice(x)
         #print self.conn
-        grid_datacache[dimensions] = self.conn, self.connN
+        grid_datacache[connCacheKey] = self.conn, self.connN
     def distance(self, index0, index1):
         """Distance between any two lattice points.
         """
         return numpy.sqrt(self.distance2(index0, index1))
+    def distance2(self, index0, index1):
+        """Distance-squared between any two lattice points.
+
+        This works for arbitrary dimensions, as well as arrays!
+        """
+        coords0 = self.coords(index0)
+        coords1 = self.coords(index1)
+        lindistances = coords0 - coords1
+        # v-- this 
+        delta = (numpy.floor(lindistances/self.lattShape + .5)) *self.lattShape
+        lindistances = lindistances - delta
+        dists2 = numpy.sum(lindistances * lindistances, axis=-1)
+        return dists2
     def latticeReInitData(self):
         """Get state data needed to re-create our grid.
         """
@@ -97,33 +109,30 @@ class GridNd(saiga12.Sys):
 
 
 class SquareGrid(GridNd):
+    """Class to make rectangular cartesion grid in any dimension.
+
+    Must be subclassed and have connection data added to it.
+    """
     def coords(self, index):
+        """Mapping from lattice indexa to coordinates in real space.
+
+        'index' is sort of misnamed here-- it should be 'pos' to be
+        consistent with the rest of the code.  However, 'index'
+        reminds you that it's simply an integer labeling, not really a
+        *position*.
+
+        This method is a replacement for grid_coords()
+        """
         c = numpy.asarray(coords(self.lattShape, index),
                              dtype=saiga12.numpy_double)
-        # should I really copy this ? 
-        c = c.transpose().copy()
+        c = c.transpose()
+        # should I really copy this ?
+        if not c.flags.c_contiguous:
+            c = c.copy()
         return c
-    def distance2(self, index0, index1):
-        """Distance-squared between any two lattice points.
-
-        This works for arbitrary dimensions, as well as arrays!
+    def gridIndex(self, coords):
+        """Mapping from coordinates in real space to lattice index
         """
-        coords0 = numpy.asarray(coords(self.lattShape, index0),
-                               dtype=saiga12.numpy_double)
-        coords1 = numpy.asarray(coords(self.lattShape, index1),
-                               dtype=saiga12.numpy_double)
-        coords0 = coords0.transpose()
-        coords1 = coords1.transpose()
-        lindistances = coords0 - coords1
-        # v-- this 
-        delta = (numpy.floor(lindistances/self.lattShape + .5)) *self.lattShape
-        lindistances = lindistances - delta
-        dists2 = numpy.sum(lindistances * lindistances, axis=-1)
-        return dists2
-    # .distance method is defined above, and simply sqrt's distance2
-    def grid_coords(self, pos):
-        return coords(self.lattShape, pos)
-    def grid_index(self, coords):
         return index(self.lattShape, coords)
 
 class Grid2d(SquareGrid):
@@ -133,14 +142,6 @@ class Grid2d(SquareGrid):
          ( 0,-1 ),
          (-1, 0 ),
          ))
-    #def fillcelllist(self, celllist, dimensions):
-    #    a = dimensions[0]
-    #    b = dimensions[1]
-    #    for ai in range(a):
-    #        for bi in range(b):
-    #            celllist.append((ai, bi))
-
-
 
     def printLattice(self, lattice=None):
         if lattice is None:
@@ -180,11 +181,3 @@ class Grid3d(SquareGrid):
          ( 0, 0, 1 ),
          ( 0, 0,-1 ),
          ))
-    #def fillcelllist(self, celllist, dimensions):
-    #    a = dimensions[0]
-    #    b = dimensions[1]
-    #    c = dimensions[1]
-    #    for ai in range(a):
-    #        for bi in range(b):
-    #            for ci in range(c):
-    #                celllist.append((ai, bi, ci))

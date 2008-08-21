@@ -55,7 +55,7 @@ class VizSystem(object):
             #print self.S.lattShape
             for i in range(self.S.N):
                 pos = self.S.atompos[i]
-                coords = self.S.grid_coords(pos)
+                coords = self.S.coords(pos)
                 display.append(visual.sphere(pos=coords,
                                              radius=.25, #r, not d
                                              color=c[self.S.atomtype[i]]))
