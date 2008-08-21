@@ -301,13 +301,14 @@ class StructCorr(Averager, object):
 
         if method == 0:
             # old method: using my custom C code:
-            lattShape = numpy.asarray(S1.lattShape,
-                                      dtype=saiga12.c_double).ctypes.data
+            physicalShape = numpy.asarray(S1.physicalShape,
+                                          dtype=saiga12.c_double).ctypes.data
             totalsum = S1.C.calc_structfact(S1.SD_p, S2.SD_p,
                                             self.kvecs.ctypes.data,
                                             len(self.kvecs), type_,
                                             self.coordLookup.ctypes.data,
-                                            lattShape, len(S1.lattShape),
+                                            physicalShape,
+                                            len(S1.physicalShape),
                                             self.SkArray_.ctypes.data)
             #print totalsum, N, len(self.kvecs), type_
             Sk = totalsum / (N * len(self.kvecs))

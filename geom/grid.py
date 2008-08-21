@@ -52,6 +52,7 @@ class GridNd(saiga12.Sys):
     def makegrid(self, *dimensions):
         lattSize = reduce(lambda x,y: x*y, dimensions) # product of numbers
         self.lattShape = dimensions
+        self.physicalShape = self._makePhysicalShape(self.lattShape)
         # v-- used for re-initilizing the lattice.
 
         self._initArrays(lattSize=lattSize,
@@ -80,6 +81,19 @@ class GridNd(saiga12.Sys):
         #self.printLattice(x)
         #print self.conn
         grid_datacache[connCacheKey] = self.conn, self.connN
+    def _makePhysicalShape(self, lattShape):
+        """Return the physical size, used for periodic boundary conditions.
+
+        lattShape happens to be equal to the periodicities in every
+        dimension for rectangular cartesion grids, however, that isn't
+        true for other grid arrangements.  This function should
+        tranform a lattShape to the physical periodicity size in
+        cartesian 3d space.
+
+        For square rectangular grids, that is easy-- it is just the
+        same lattShape.
+        """
+        return lattShape
     def distance(self, index0, index1):
         """Distance between any two lattice points.
         """
@@ -93,7 +107,8 @@ class GridNd(saiga12.Sys):
         coords1 = self.coords(index1)
         lindistances = coords0 - coords1
         # v-- this 
-        delta = (numpy.floor(lindistances/self.lattShape + .5)) *self.lattShape
+        delta = (numpy.floor(lindistances/self.physicalShape + .5)) * \
+                self.physicalShape
         lindistances = lindistances - delta
         dists2 = numpy.sum(lindistances * lindistances, axis=-1)
         return dists2

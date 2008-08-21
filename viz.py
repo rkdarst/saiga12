@@ -13,13 +13,13 @@ class VizSystem(object):
         if visual is None:
             print "visual module was not imported, visual siletly deactivated."
             return
-        visual.scene.center = numpy.asarray(self.S.lattShape) / 2.
+        visual.scene.center = numpy.asarray(self.S.physicalShape) / 2.
         radius = .02
-        if len(self.S.lattShape) == 2:
-            x, y = self.S.lattShape
+        if len(self.S.physicalShape) == 2:
+            x, y = self.S.physicalShape
             z = 0
         else:
-            x,y,z = self.S.lattShape
+            x,y,z = self.S.physicalShape
         c = visual.color.blue
         visual.cylinder(pos=(0,0,0), axis=(x, 0, 0), radius=radius, color=c)
         visual.cylinder(pos=(0,y,0), axis=(x, 0, 0), radius=radius, color=c)
