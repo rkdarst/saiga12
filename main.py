@@ -68,7 +68,7 @@ def getClib():
     if _clibCache.has_key("C"):
         C = _clibCache['C']
         return C
-    filename = 'saiga12c.so'
+    filename = 'saiga12c'
     C = numpy.ctypeslib.load_library(filename,
                                      os.path.dirname(__file__))
     if neighlist:
