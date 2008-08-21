@@ -139,6 +139,24 @@ class Sys(io.IOSys, object):
         #SD.partpos   = self.partpos.ctypes.data
         #self.partpos[:] = S12_EMPTYSITE
 
+    def _allocArray(self, name, **args):
+        """Allocate an array in a way usable by both python and C.
+
+        `name` is the name of the array to allocate: it will be
+        self.`name` and self.SD.`name`.  `**args` are arguments passed
+        to `numpy.zeros` to allocate the arrays.
+
+        If you want to initilize the array to something, you have to
+        do it afterwards, like this:
+        self.lattsite[:] = S12_EMPTYSITE
+        """
+        # This code can be hard to understand, since we can't use the
+        # name, but it is equivalent to this for the name `lattsite`:
+        ##  self.__dict__["lattsite"] = numpy.zeros(**args)
+        ##  self.SD.lattsite = self.lattsite.ctypes.data
+        self.__dict__[name]=numpy.zeros(**args)
+        setattr(self.SD, name, getattr(self, name).ctypes.data)
+
     def _initArrays(self, lattSize, connMax):
         """Function to initilize various data structures.
 
@@ -148,45 +166,30 @@ class Sys(io.IOSys, object):
         self.connMax = connMax
         maxTypes = connMax + 1  # we don't use zero  [1, N+1)
 
-        # nneighbors   (the only reason these comments are here is to
-                      # make it easier to pick out the separations by eye)
-        self.__dict__["nneighbors"]=numpy.zeros(shape=(lattSize),
-                                          dtype=numpy_int)
-        self.SD.nneighbors = self.nneighbors.ctypes.data
-
+        # nneighbors
+        self._allocArray("nneighbors", shape=(lattSize),
+                                       dtype=numpy_int)
         # conn
-        self.__dict__["conn"]=numpy.zeros(shape=(lattSize, self.connMax),
-                                          dtype=numpy_int)
-        self.SD.conn = self.conn.ctypes.data
-        self.conn.shape = lattSize, self.connMax
-
+        self._allocArray("conn", shape=(lattSize, self.connMax),
+                                 dtype=numpy_int)
         # connN
-        self.__dict__["connN"] = numpy.zeros(shape=(lattSize),
-                                             dtype=numpy_int)
-        self.SD.connN = self.connN.ctypes.data
-
+        self._allocArray("connN", shape=(lattSize),
+                                  dtype=numpy_int)
         # lattsite
-        self.__dict__["lattsite"] = numpy.zeros(shape=(self.lattSize),
-                                                dtype=numpy_int)
-        self.SD.lattsite = self.lattsite.ctypes.data
+        self._allocArray("lattsite", shape=(self.lattSize),
+                                     dtype=numpy_int)
         self.lattsite[:] = S12_EMPTYSITE
-
-        # atomtype                                        # lattSize is NMax
-        self.__dict__["atomtype"] = numpy.zeros(shape=(self.lattSize),
-                                                dtype=numpy_int)
-        self.SD.atomtype = self.atomtype.ctypes.data
+        # atomtype                          # lattSize is NMax
+        self._allocArray("atomtype", shape=(self.lattSize),
+                                     dtype=numpy_int)
         self.atomtype[:] = S12_EMPTYSITE
-
-        # atomtype                                       # lattSize is NMax
-        self.__dict__["atompos"] = numpy.zeros(shape=(self.lattSize),
-                                               dtype=numpy_int)
-        self.SD.atompos = self.atompos.ctypes.data
+        # atompos
+        self._allocArray("atompos", shape=(self.lattSize),
+                                    dtype=numpy_int)
         self.atompos[:] = S12_EMPTYSITE
-
-        # atomtype                                        # lattSize is NMax
-        self.__dict__["ntype"] = numpy.zeros(shape=(maxTypes),
-                                             dtype=numpy_int)
-        self.SD.ntype = self.ntype.ctypes.data
+        # ntype
+        self._allocArray("ntype", shape=(maxTypes),
+                                  dtype=numpy_int)
 
         
         
@@ -514,10 +517,6 @@ class Sys(io.IOSys, object):
             self.avgStore("chempotential", mu)
         return mu
 
-    def _allocArray(self, name, **args):
-        self.__dict__[name]=numpy.zeros(**args)
-        setattr(self.SD, name, getattr(self, name).ctypes.data)
-        #self.conn.shape = lattSize, self.connMax
         
 
     def eddEnable(self):
