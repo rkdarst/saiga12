@@ -68,9 +68,8 @@ def getClib():
     if _clibCache.has_key("C"):
         C = _clibCache['C']
         return C
-    filename = 'saiga12c'
-    C = numpy.ctypeslib.load_library(filename,
-                                     os.path.dirname(__file__))
+    filename = 'saiga12c.so'
+    C = ctypes.cdll[os.path.join(os.path.dirname(__file__), filename)]
     if neighlist:
         C.addParticle.restype = None
         C.addParticle.argtypes = SimData_p, c_int, c_int
