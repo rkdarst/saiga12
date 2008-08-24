@@ -44,7 +44,14 @@ def index(dims, coords):
                   zip(dims, coords),
                   0)
 
-grid_datacache = { }
+# These globals are used to cache various dynamically-generated data.
+# It is useful to do this, since you often have many copies of the
+# exact same size system, so all this data is the same.  One warning:
+# this means that modifying the data might modify it for ALL objects--
+# right now this only applies to the coordinate data, but later be
+# changed to apply to the connection data also.
+grid_datacache = { }   # conn and connN
+coord_datacache = { }  # coords
 
 
 class GridNd(saiga12.Sys):
@@ -148,13 +155,15 @@ class SquareGrid(GridNd):
 
         This method is a replacement for grid_coords()
         """
-        c = numpy.asarray(coords(self.lattShape, index),
-                             dtype=saiga12.numpy_double)
-        c = c.transpose()
-        # should I really copy this ?
-        if not c.flags.c_contiguous:
-            c = c.copy()
-        return c
+        coordCacheKey = (self.__class__.__name__, self.lattShape)
+        if not coord_datacache.has_key(coordCacheKey):
+            c = numpy.asarray(coords(self.lattShape,
+                                     numpy.arange(self.lattSize)),
+                              dtype=saiga12.numpy_double)
+            c = c.transpose()
+            coord_datacache[coordCacheKey] = c.copy()
+        index = numpy.asarray(index)
+        return coord_datacache[coordCacheKey][index]
     def gridIndex(self, coords):
         """Mapping from coordinates in real space to lattice index
         """
