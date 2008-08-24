@@ -71,6 +71,18 @@ class GridNd(saiga12.Sys):
         celllist = [ tuple(zz) for zz in cartesianproduct(*dimranges)]
 
         celllist = numpy.asarray(celllist)
+        self._makegrid_convolve(celllist, x, dimensions)
+        
+        #self.printLattice(x)
+        #print self.conn
+        grid_datacache[connCacheKey] = self.conn, self.connN
+    def _makegrid_convolve(self, celllist, x, dimensions):
+        """Convolve the neighborlist across the lattice sites.
+
+        This has been split into a separate function since some grid
+        objects need to override it (for example, due to different
+        handling of alternate rows).
+        """
         for c in celllist:
             for n in self._neighborlist:
                 cur = x[tuple(c)]
@@ -78,9 +90,7 @@ class GridNd(saiga12.Sys):
                 i = self.connN[cur]
                 self.conn[cur, i] = neighbor
                 self.connN[cur] += 1
-        #self.printLattice(x)
-        #print self.conn
-        grid_datacache[connCacheKey] = self.conn, self.connN
+        
     def _makePhysicalShape(self, lattShape):
         """Return the physical size, used for periodic boundary conditions.
 
