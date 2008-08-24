@@ -113,12 +113,15 @@ class GridNd(saiga12.Sys):
         return lattShape
     def distance(self, index0, index1):
         """Distance between any two lattice points.
+
+        Depends on distance2 to work.
         """
         return numpy.sqrt(self.distance2(index0, index1))
     def distance2(self, index0, index1):
         """Distance-squared between any two lattice points.
 
         This works for arbitrary dimensions, as well as arrays!
+        Depends on a functioning coords() method to work.
         """
         coords0 = self.coords(index0)
         coords1 = self.coords(index1)
@@ -131,10 +134,14 @@ class GridNd(saiga12.Sys):
         return dists2
     def latticeReInitData(self):
         """Get state data needed to re-create our grid.
+
+        Used in pickling.
         """
         return self.lattShape
     def latticeReInit(self, latticeReInitData):
         """Recreate our grid arrays using the data from above.
+
+        Used when un-pickling.
         """
         self.makegrid(*latticeReInitData)
 
