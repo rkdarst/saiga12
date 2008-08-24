@@ -1,5 +1,6 @@
 # Richard Darst, April 2008
 
+import math
 import numpy
 from saiga12.common import *
 import saiga12
@@ -222,3 +223,221 @@ class Grid3d(SquareGrid):
          ( 0, 0, 1 ),
          ( 0, 0,-1 ),
          ))
+
+class GridHex2d(GridNd):
+    #_neighborlist = numpy.asarray(
+    #    (
+    #     ( 1,  0 ),
+    #     (-1,  0 ),
+    #     ( 0,  1 ),
+    #     ( 0, -1 ),
+    #
+    #     (-1, +1 ),
+    #     (+1, -1 ),
+    #     ))
+
+    # this must have the right length, but isn't used here:
+    _neighborlist = [ None ] * 6   
+    
+    def _makePhysicalShape(self, lattShape):
+        return numpy.multiply(lattShape,
+                              (1, math.sqrt(3)/2))
+    def _makegrid_convolve(self, celllist, x, dimensions):
+        if dimensions[1]%2 != 0:
+            raise Exception("Second dimension must be multiple of two.")
+        neighborlist_Orig = ( ( 1,  0 ), (-1,  0 ),
+                              ( 0,  1 ), ( 0, -1 ), )
+        neighborlist_evenY = ( (-1,  1 ),
+                               (-1, -1 ), )
+        neighborlist_oddY =  ( ( 1,  1 ),
+                               ( 1, -1 ), )
+
+        for c in celllist:
+            y = c[1]
+            neighborlist = list(neighborlist_Orig) # make a copy
+            # We need every other y-row to be different:
+            if y%2 == 0:
+                neighborlist += neighborlist_evenY
+            else:
+                neighborlist += neighborlist_oddY
+            for n in neighborlist:
+                cur = x[tuple(c)]
+                neighbor = x[tuple(numpy.mod(c+n, dimensions))]
+                i = self.connN[cur]
+                self.conn[cur, i] = neighbor
+                self.connN[cur] += 1
+    def coords(self, index):
+        """Mapping from lattice index to coordinates in real space.
+
+        'index' is sort of misnamed here-- it should be 'pos' to be
+        consistent with the rest of the code.  However, 'index'
+        reminds you that it's simply an integer labeling, not really a
+        *position*.
+
+        This method is a replacement for grid_coords()
+        """
+        coordCacheKey = (self.__class__.__name__, self.lattShape)
+        if not coord_datacache.has_key(coordCacheKey):
+            c = numpy.asarray(coords(self.lattShape,
+                                     numpy.arange(self.lattSize)),
+                              dtype=saiga12.numpy_double)
+            hexmat = numpy.asarray(((  1,        0         ),
+                                    (  0,  math.sqrt(3)/2) )  )
+            c = numpy.dot(hexmat, c)
+            c = c.transpose()
+            c[1::2,0] +=  .5
+            coord_datacache[coordCacheKey] = c.copy()
+        index = numpy.asarray(index)
+        return coord_datacache[coordCacheKey][index]
+
+    # The print lattice methods here are the same as for the 2d grid--
+    # they should probably be unified sometime.
+    def printLattice(self, lattice=None):
+        if lattice is None:
+            lattice = self.lattsite.reshape(self.lattShape)
+        for row in lattice:
+            for e in row:
+                if e == S12_EMPTYSITE:
+                    e = "__"
+                print "%2s"%e,
+            print
+
+    def printLatticeLocal(self, pos, width=2, lattice=None):
+        center = pos//self.lattShape[1], pos%self.lattShape[1]
+        if lattice is None:
+            lattice = self.lattsite.reshape(self.lattShape)
+        # iterate over rows
+        #lattice = lattice[center[0]-width:center[0]+width+1,
+        #                   center[1]-width:center[1]+width+1]
+        print "lattice centered on pos %s %s:"%(pos, center)
+        for rown in range(center[0]-width, center[0]+width+1):
+            for coln in range(center[1]-width, center[1]+width+1):
+                #print "xxx", rown, coln
+                e = lattice[rown%self.lattShape[0],
+                            coln%self.lattShape[1]]
+                if e == S12_EMPTYSITE:
+                    e = "__"
+                print "%2s"%e,
+            print
+
+
+class GridHex3d(GridNd):
+    #_neighborlist = numpy.asarray(
+    #    (( 1,  0,  0), (-1,  0,  0), # a
+    #     ( 0,  1,  0), ( 0, -1,  0), # b
+    #     (-1, +1,  0), (+1, -1,  0), # c
+    #
+    #     ( 0,  0,  1), ( 0,  0, -1), # d
+    #     (-1,  0, +1), (+1,  0, -1), # e
+    #     ( 0, -1, +1), ( 0, +1, -1), # f
+    #     ))
+
+    # this must have the right length, but isn't used here:
+    _neighborlist = [ None ] * 12
+
+    def _makePhysicalShape(self, lattShape):
+        """Set the periodic box size.
+        """
+        return numpy.multiply(lattShape,
+                              (1, math.sqrt(3)/2, math.sqrt(6)/3))
+
+    def _makegrid_convolve(self, celllist, x, dimensions):
+        if dimensions[1]%2 != 0 or dimensions[2]%2 != 0:
+            raise Exception("Second and third dims must be multiples of two.")
+        neighborlist_Orig = ( ( 1,  0,  0), (-1,  0,  0), # a
+                              ( 0,  1,  0), ( 0, -1,  0), # b
+                              ( 0,  0,  1), ( 0,  0, -1), # d
+                              )
+
+        neighborlist_evenY = ( (-1,  1,  0),  # c
+                               (-1, -1,  0),)
+        neighborlist_oddY =  ( (+1,  1,  0),  # c
+                               (+1, -1,  0),)
+
+        # These neighborlists are found via magic.
+        neighborlist_evenZ = ( (-1, +1, +1), (-1,  0, +1), # e
+                               (-1, +1, -1), (-1,  0, -1), # f
+            )
+        neighborlist_oddZ =  ( (+1, -1, +1), (+1,  0, +1), # e
+                               (+1, -1, -1), (+1,  0, -1), # f
+            )
+        neighborlist_evenZb= ( (0, +1, +1), (-1,  0, +1), # e
+                               (0, +1, -1), (-1,  0, -1), # f
+            )
+        neighborlist_oddZb=  ( (0, -1, +1), (+1,  0, +1), # e
+                               (0, -1, -1), (+1,  0, -1), # f
+            )
+        def xor(a, b):
+            return ((a and not b) or (not a and b)) == True
+        for c in celllist:
+            y = c[1]
+            z = c[2]
+            neighborlist = list(neighborlist_Orig) # make a copy
+            if y%2 == 0:
+                neighborlist += neighborlist_evenY
+            else:
+                neighborlist += neighborlist_oddY
+
+            if z%2 == 1 and y%2==0:
+                neighborlist += neighborlist_oddZb
+            elif z%2 == 0 and y%2==1:
+                neighborlist += neighborlist_evenZb
+            elif z%2 == 0:
+                neighborlist += neighborlist_evenZ
+            else:
+                neighborlist += neighborlist_oddZ
+            for n in neighborlist:
+                cur = x[tuple(c)]
+                neighbor = x[tuple(numpy.mod(c+n, dimensions))]
+                i = self.connN[cur]
+                self.conn[cur, i] = neighbor
+                self.connN[cur] += 1
+    def coords(self, index):
+        """Mapping from lattice indexa to coordinates in real space.
+
+        'index' is sort of misnamed here-- it should be 'pos' to be
+        consistent with the rest of the code.  However, 'index'
+        reminds you that it's simply an integer labeling, not really a
+        *position*.
+
+        This method is a replacement for grid_coords()
+        """
+        coordCacheKey = (self.__class__.__name__, self.lattShape)
+        if not coord_datacache.has_key(coordCacheKey):
+            c = numpy.asarray(coords(self.lattShape,
+                                     numpy.arange(self.lattSize)),
+                              dtype=saiga12.numpy_double)
+
+            # Linear transform -- just shrink the coordinates down.
+            # Offsets still need to be adjusted below.
+            hexmat = numpy.asarray(((1,              0  ,  0                ),
+                                    (0,  math.sqrt(3)/2.,  0                ),
+                                    (0,                0,  math.sqrt(6)/3 )))
+            c = numpy.dot(hexmat, c)
+            c = c.transpose()
+            lattShape = self.lattShape
+            c.shape = lattShape[0], lattShape[1], lattShape[2], 3
+
+            # adjust x offset by .5 for every other y layer
+            c[:, 1::2, :, 0] +=  .5
+            # adjust z offset by the proper amount for ever other z layer
+            c[:, :, 1::2, :2] +=  (.5, -math.sqrt(3)/6)
+
+            c.shape = product(lattShape), 3
+            self._coordCache = c.copy()
+            coord_datacache[coordCacheKey] = c.copy()
+        index = numpy.asarray(index)
+        return coord_datacache[coordCacheKey][index]
+
+    def printLattice(self, lattice=None):
+        # expanded for 3d.
+        if lattice is None:
+            lattice = self.lattsite.reshape(self.lattShape)
+        for plane in lattice:
+            for row in plane:
+                for e in row:
+                    if e == S12_EMPTYSITE:
+                        e = "__"
+                    print "%2s"%e,
+                print
+            print "----------------------------------------------"
