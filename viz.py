@@ -58,7 +58,7 @@ class VizSystem(object):
                 coords = self.S.coords(pos)
                 display.append(visual.sphere(pos=coords,
                                              radius=.25, #r, not d
-                                             color=c[self.S.atomtype[i]]))
+                         color=c.get(self.S.atomtype[i], visual.color.white)))
                 display[-1].opacity = .2
                 self._display = display
         else:
