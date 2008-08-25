@@ -382,7 +382,7 @@ if __name__ == "__main__":
                           L=L)
     for S in (S, ):
         for Ssf in SsfList:
-            Ssf.staticStructureFactor(S, method=1)
+            Ssf.calcSk(S)
         
     thisRun = [ ]
     for Ssf in SsfList:
