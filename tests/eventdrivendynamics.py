@@ -48,3 +48,4 @@ for i in xrange(100):
     S1.cycle(100)
     S2.cycle(100)
     print i, S1.mctime, S1.naccept, S2.mctime, S2.naccept
+S2.eddConsistencyCheck()

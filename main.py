@@ -30,6 +30,8 @@ class SimData(ctypes.Structure):
         ("ntype", c_void_p),      # number of each atomtype.
         #("NMax", c_int),         # lattSize is NMax
         ("hardness", c_double),   # hardness of the hard spheres
+        ("cycleMode", c_int),     # 1=MC, 2=kob-andersen
+        ("energyMode", c_int),    # 1=BM, 2=all zero
 
         ("uVTchempotential", c_double),
         ("inserttype", c_int),
@@ -93,10 +95,16 @@ def getClib():
                                         c_void_p)),  #*result
         ("addToMLL",               None,     (SimData_p, c_int, c_int)),
         ("removeFromMLL",          None,     (SimData_p, c_int, c_int)),
-        ("updateMLLatPos",         None,     (SimData_p, c_int, )),
-        ("initMLL",                None,     (SimData_p, )),
-        ("MLLConsistencyCheck",    c_int,    (SimData_p, )),
-        ("eddCycle",               c_int,    (SimData_p, c_int)),
+
+        ("EddBM_updateLatPos",     None,     (SimData_p, c_int, )),
+        ("EddBM_init",             None,     (SimData_p, )),
+        ("EddBM_consistencyCheck", c_int,    (SimData_p, )),
+        ("EddBM_cycle",            c_int,    (SimData_p, c_int)),
+
+        ("EddKA_updateLatPos",     None,     (SimData_p, c_int, )),
+        ("EddKA_init",             None,     (SimData_p, )),
+        ("EddKA_consistencyCheck", c_int,    (SimData_p, )),
+        ("EddKA_cycle",            c_int,    (SimData_p, c_int)),
         )
     for name, restype, argtypes in cfuncs:
         getattr(C, name).restype  = restype
@@ -114,7 +122,8 @@ def randomSeed(data):
     
 
 class Sys(io.IOSys, object):
-    def __init__(self, N=None):
+    def __init__(self, N=None, cycleMode="montecarlo",
+                 energyMode="birolimezard"):
 
         SD = SimData()
         self.__dict__["SD"] = SD
@@ -133,10 +142,56 @@ class Sys(io.IOSys, object):
         self.resetTime()
         self.avgReset()
         self.setCycleMoves(shift=1)  # this must be reset once N is known.
+        # setCycleMode must be second, since some of the modes
+        # automatically set energy mode to 'zero'
+        self.setEnergyMode(energyMode=energyMode)
+        self.setCycleMode(cycleMode=cycleMode)
 
         #self.partpos = numpy.zeros(shape=(self.NMax), dtype=numpy_int)
         #SD.partpos   = self.partpos.ctypes.data
         #self.partpos[:] = S12_EMPTYSITE
+    def setCycleMode(self, cycleMode):
+        """Set the dynamics cycle mode.
+
+        Options are:
+        'montecarlo'  -- Normal monte carlo dynamics.
+                         Has translate and grand canonical modes.
+                         Event driven dynamics is *only* for brioli-mezard
+                           type systems.
+        'kobandersen' -- Kob-Andersen kinetically constrained glass dynamics.
+                         This automatically sets energymode to zero.
+                         There *is* event-driven dynamics in this mode.
+        """
+        self.cycleModeStr = cycleMode
+        if cycleMode.lower() == 'montecarlo':
+            self.cycleMode = 1
+            # event driven dynamics only work for brioli-mezard dynamics!
+            self._eddInit = self.C.EddBM_init
+            self._eddUupdateLatPos = self.C.EddBM_updateLatPos
+            self._eddConsistencyCheck = self.C.EddBM_consistencyCheck
+            self._eddCycle = self.C.EddBM_cycle
+            
+        elif cycleMode.lower() == 'kobandersen':
+            self.cycleMode = 2
+            self._eddInit = self.C.EddKA_init
+            self._eddUpdateLatPos = self.C.EddKA_updateLatPos
+            self._eddConsistencyCheck = self.C.EddKA_consistencyCheck
+            self._eddCycle = self.C.EddKA_cycle
+            self.setEnergyMode('zero')
+        else:
+            raise Exception("Unknown cycle mode: %s", cycleMode)
+    def setEnergyMode(self, energyMode):
+        """Set the energy calculation mode.
+
+        Options are:
+        'birolimezard' -- Biroli-Mezard lattice glass model dynamics
+        'zero'         -- energy is always zero (but no overlaps)
+        """
+        if energyMode.lower() == 'birolimezard':
+            self.energyMode = 1
+        if energyMode.lower() == 'zero':
+            self.energyMode = 2
+    
 
     def _allocArray(self, name, **args):
         """Allocate an array in a way usable by both python and C.
@@ -327,7 +382,7 @@ class Sys(io.IOSys, object):
         """
         moves = int(n * self.movesPerCycle)
         if self._eddEnabled:
-            self.naccept += self.C.eddCycle(self.SD_p, moves)
+            self.naccept += self._eddCycle(self.SD_p, moves)
         else:
             self.naccept += self.C.cycle(self.SD_p, moves)
         self.mctime += n
@@ -338,7 +393,8 @@ class Sys(io.IOSys, object):
         are set via self.setCycleMoves().
         """
         self.mctime = 0
-    def setCycleMoves(self, shift=None, insertdel=0):
+    def setCycleMoves(self, mode=None,
+                      shift=0, insertdel=0):
         """Sets moves executed each cycle.
 
         To run GCE, do:
@@ -350,11 +406,19 @@ class Sys(io.IOSys, object):
           multiple particle types:
             - use self.setInsertTypes()
         """
-        if type(shift) == str and shift.lower() == 'gce':
-            shift = 0
-            insertdel = self.N
-        if shift is None:
+        # This is for backwards compatibility
+        if type(mode) in (int, float):
+            shift = mode
+            mode = None
+        if mode == 'canonical':
             shift = self.N
+        elif mode == 'grandcanonical':
+            insertdel = self.N
+        # If nothing is set, default to canonical.
+        if shift + insertdel == 0:
+            shift = self.N
+
+        # Now set the cumulative probabilities.
         self.movesPerCycle = shift + insertdel
 
         self.cumProbAdd = (insertdel/2.) / self.movesPerCycle
@@ -531,22 +595,22 @@ class Sys(io.IOSys, object):
         self.MLLr[:] = -1
         self.MLLlen = 0
         self.MLLextraTime = 0.
-        self.C.initMLL(self.SD_p)
+        self._eddInit(self.SD_p)
         self._eddEnabled = True
     def eddDisable(self):
         if self._eddEnabled:
             del self.MLL, self.MLLr
             self._eddEnabled = False
     def eddCycle(self, nraw):
-        return self.C.eddCycle(self.SD_p, nraw)
+        return self._eddCycle(self.SD_p, nraw)
     def eddConsistencyCheck(self):
         if not self._eddEnabled:
-            print "event-driven dynamics is not enabled!"
+            print "event-driven dynamics is not enabled! (can't c. check)"
             return 0
-        x = self.C.MLLConsistencyCheck(self.SD_p)
-        print "cc:", x
+        x = self._eddConsistencyCheck(self.SD_p)
+        print "consistency check:", x
         return x
-    def eddFindBestMode(self, n=100, nomodify=False):
+    def eddFindBestMode(self, n=None, nomodify=False):
         """Enable Event Driven Dynamics, if a test shows it is more efficient.
 
         `n` is the number of test cycles of a sample to take,
@@ -557,6 +621,10 @@ class Sys(io.IOSys, object):
         the process of equilibrating the system.  However, if you set
         `copy` to true, it will make a copy before it 
         """
+        if self.cycleModeStr == 'montecarlo':
+            n = 100
+        elif self.cycleModeStr == 'kobandersen':
+            n=5000
         if copy:
             origHash = self.hash()
             origSelf = self
