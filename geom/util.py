@@ -46,7 +46,7 @@ def checkConnDistances(S, distanceShouldBe=1, setType=None,
 
     density=.999
     type_ = 12
-    S = GridHex3d()
+    S = Grid3dHCP()
     S.addParticleRandomDensity(density, type_=type_)
 
     """

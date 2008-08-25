@@ -225,18 +225,11 @@ class Grid3d(SquareGrid):
          ))
 
 class GridHex2d(GridNd):
-    #_neighborlist = numpy.asarray(
-    #    (
-    #     ( 1,  0 ),
-    #     (-1,  0 ),
-    #     ( 0,  1 ),
-    #     ( 0, -1 ),
-    #
-    #     (-1, +1 ),
-    #     (+1, -1 ),
-    #     ))
+    """Hexagonal two-dimensional grid.
 
-    # this must have the right length, but isn't used here:
+    Y dimension must be multiples of two.  To make the grid, call
+    .makegrid(x, y).
+    """
     _neighborlist = [ None ] * 6   
     
     def _makePhysicalShape(self, lattShape):
@@ -321,16 +314,12 @@ class GridHex2d(GridNd):
             print
 
 
-class GridHex3d(GridNd):
-    #_neighborlist = numpy.asarray(
-    #    (( 1,  0,  0), (-1,  0,  0), # a
-    #     ( 0,  1,  0), ( 0, -1,  0), # b
-    #     (-1, +1,  0), (+1, -1,  0), # c
-    #
-    #     ( 0,  0,  1), ( 0,  0, -1), # d
-    #     (-1,  0, +1), (+1,  0, -1), # e
-    #     ( 0, -1, +1), ( 0, +1, -1), # f
-    #     ))
+class Grid3dHCP(GridNd):
+    """Hexagonal close-packed grid.
+
+    Y and Z dimensions must be multiples of two.  To make the grid,
+    call .makegrid(x, y, z).
+    """
 
     # this must have the right length, but isn't used here:
     _neighborlist = [ None ] * 12
@@ -354,21 +343,20 @@ class GridHex3d(GridNd):
         neighborlist_oddY =  ( (+1,  1,  0),  # c
                                (+1, -1,  0),)
 
-        # These neighborlists are found via magic.
-        neighborlist_evenZ = ( (-1, +1, +1), (-1,  0, +1), # e
-                               (-1, +1, -1), (-1,  0, -1), # f
-            )
-        neighborlist_oddZ =  ( (+1, -1, +1), (+1,  0, +1), # e
-                               (+1, -1, -1), (+1,  0, -1), # f
-            )
-        neighborlist_evenZb= ( (0, +1, +1), (-1,  0, +1), # e
-                               (0, +1, -1), (-1,  0, -1), # f
-            )
-        neighborlist_oddZb=  ( (0, -1, +1), (+1,  0, +1), # e
-                               (0, -1, -1), (+1,  0, -1), # f
-            )
-        def xor(a, b):
-            return ((a and not b) or (not a and b)) == True
+        # These neighborlists can be found by realizing that every
+        # even/odd y/z layer is different, drawing out the actual
+        # configuration (since you did so much work checking the
+        # coordinates function, you now know where any site `i` is
+        # placed).  Then, go through and very carefully figure out
+        # what is next to every site.  Use pictures.
+        neighborlist_evenZevenY = ( (-1, +1, +1), (-1,  0, +1), # e
+                                    (-1, +1, -1), (-1,  0, -1),)# f
+        neighborlist_oddZevenY  = ( ( 0, -1, +1), (+1,  0, +1), # e
+                                    ( 0, -1, -1), (+1,  0, -1),)# f
+        neighborlist_evenZoddY  = ( ( 0, +1, +1), (-1,  0, +1), # e
+                                    ( 0, +1, -1), (-1,  0, -1),)# f
+        neighborlist_oddZoddY   = ( (+1, -1, +1), (+1,  0, +1), # e
+                                    (+1, -1, -1), (+1,  0, -1),)# f
         for c in celllist:
             y = c[1]
             z = c[2]
@@ -378,14 +366,14 @@ class GridHex3d(GridNd):
             else:
                 neighborlist += neighborlist_oddY
 
-            if z%2 == 1 and y%2==0:
-                neighborlist += neighborlist_oddZb
-            elif z%2 == 0 and y%2==1:
-                neighborlist += neighborlist_evenZb
-            elif z%2 == 0:
-                neighborlist += neighborlist_evenZ
-            else:
-                neighborlist += neighborlist_oddZ
+            if z%2 == 1 and y%2==0:   # oddZ evenY
+                neighborlist += neighborlist_oddZevenY
+            elif z%2 == 0 and y%2==1: # evenZ oddY
+                neighborlist += neighborlist_evenZoddY
+            elif z%2 == 0:            # evenZ evenY
+                neighborlist += neighborlist_evenZevenY
+            else:                     # oddZ oddY
+                neighborlist += neighborlist_oddZoddY
             for n in neighborlist:
                 cur = x[tuple(c)]
                 neighbor = x[tuple(numpy.mod(c+n, dimensions))]
