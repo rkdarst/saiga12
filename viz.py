@@ -7,6 +7,7 @@ import visual
 class VizSystem(object):
     def __init__(self, S):
         self.S = S
+        self._otherObjects = [ ]
 
     def vizMakeBox(self):
         """Put the simulation box on the visual display"""
@@ -21,20 +22,22 @@ class VizSystem(object):
         else:
             x,y,z = self.S.physicalShape
         c = visual.color.blue
-        visual.cylinder(pos=(0,0,0), axis=(x, 0, 0), radius=radius, color=c)
-        visual.cylinder(pos=(0,y,0), axis=(x, 0, 0), radius=radius, color=c)
-        visual.cylinder(pos=(0,0,z), axis=(x, 0, 0), radius=radius, color=c)
-        visual.cylinder(pos=(0,y,z), axis=(x, 0, 0), radius=radius, color=c)
+        self._otherObjects.extend((
+        visual.cylinder(pos=(0,0,0), axis=(x, 0, 0), radius=radius, color=c),
+        visual.cylinder(pos=(0,y,0), axis=(x, 0, 0), radius=radius, color=c),
+        visual.cylinder(pos=(0,0,z), axis=(x, 0, 0), radius=radius, color=c),
+        visual.cylinder(pos=(0,y,z), axis=(x, 0, 0), radius=radius, color=c),
         
-        visual.cylinder(pos=(0,0,0), axis=(0, y, 0), radius=radius, color=c)
-        visual.cylinder(pos=(x,0,0), axis=(0, y, 0), radius=radius, color=c)
-        visual.cylinder(pos=(0,0,z), axis=(0, y, 0), radius=radius, color=c)
-        visual.cylinder(pos=(x,0,z), axis=(0, y, 0), radius=radius, color=c)
+        visual.cylinder(pos=(0,0,0), axis=(0, y, 0), radius=radius, color=c),
+        visual.cylinder(pos=(x,0,0), axis=(0, y, 0), radius=radius, color=c),
+        visual.cylinder(pos=(0,0,z), axis=(0, y, 0), radius=radius, color=c),
+        visual.cylinder(pos=(x,0,z), axis=(0, y, 0), radius=radius, color=c),
         
-        visual.cylinder(pos=(0,0,0), axis=(0, 0, z), radius=radius, color=c)
-        visual.cylinder(pos=(x,0,0), axis=(0, 0, z), radius=radius, color=c)
-        visual.cylinder(pos=(0,y,0), axis=(0, 0, z), radius=radius, color=c)
-        visual.cylinder(pos=(x,y,0), axis=(0, 0, z), radius=radius, color=c)
+        visual.cylinder(pos=(0,0,0), axis=(0, 0, z), radius=radius, color=c),
+        visual.cylinder(pos=(x,0,0), axis=(0, 0, z), radius=radius, color=c),
+        visual.cylinder(pos=(0,y,0), axis=(0, 0, z), radius=radius, color=c),
+        visual.cylinder(pos=(x,y,0), axis=(0, 0, z), radius=radius, color=c),
+        ))
     vizColors = {
         0: visual.color.red,    # (1,0,0)
         1: visual.color.white,
@@ -71,6 +74,8 @@ class VizSystem(object):
         display = self._display
         for i in range(len(self._display)):
             display[i].visible = 0
+        for obj in self._otherObjects:
+            obj.visible = 0
                     
 if __name__ == "__main__":
     import saiga12.io
