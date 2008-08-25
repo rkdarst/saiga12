@@ -1,6 +1,6 @@
 import numpy
 
-def findAsymmetry(S):
+def findAsymmetry(S, doAssert=False):
     """Find if position B not connected to A, if A is connected to B.
 
     This iterates through all lattice positions.  Look at all of it's
@@ -12,6 +12,8 @@ def findAsymmetry(S):
         for i, adjPos in enumerate(conn):
             if n not in S.conn[adjPos]:
                 print "missing connection: %s is connected to %s (%s), but %s is not connected to %s"%(n, adjPos, i, adjPos, n)
+            assert (not doAssert) or \
+                   n in S.conn[adjPos], "Asymmetric connection: see above"
 
 
 
@@ -28,17 +30,19 @@ def drawConn(V, S, pos, whichi=None):
         if whichi is not None and i not in whichi:
             continue
         end = S.coords(adjpos)
-        visual.arrow(pos=start, axis=end - start, shaftwidth=.1,
-                     headlength=.5, fixedwidth=1
-                     )
+        V._otherObjects.append(
+            visual.arrow(pos=start, axis=end - start, shaftwidth=.1,
+                         headlength=.5, fixedwidth=1
+                         ))
 
 
-def checkConnDistances(S, distanceShouldBe=1, setType=None):
+def checkConnDistances(S, distanceShouldBe=1, setType=None,
+                       doAssert=False):
     """For every latt
 
     If `settype` is given, then change the atomtype of a particle at
     that position to the given type.  This can help to get a visual
-    indication of what is connected improperly.
+    indication of what is connected improperly (by color).
 
     density=.999
     type_ = 12
@@ -48,6 +52,12 @@ def checkConnDistances(S, distanceShouldBe=1, setType=None):
     """
     for i in range(S.lattSize):
         x = S.distance(i, S.conn[i])
+        # print connection distances
+        print i, x
+        # change atomtype if it's wrong
         if setType and numpy.any(numpy.abs(x - distanceShouldBe) > 1e-5):
             S.atomtype[S.lattsite[i]] = setType
-        print i, x
+            print i
+        assert (not doAssert) or \
+               not numpy.any(numpy.abs(x - distanceShouldBe) > 1e-5), \
+               "Connection distances outside of normal parameters"
