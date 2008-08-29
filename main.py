@@ -45,6 +45,8 @@ class SimData(ctypes.Structure):
         ("MLL", c_void_p),        # Move Lookup List, for event-driven dynamics
         ("MLLr",c_void_p),        # Move Lookup List, reverse
         ("MLLlen", c_int),     # MLL length
+        ("MLL_down", c_void_p),     # Move Lookup List, down spins (FA model)
+        ("MLLlen_down", c_int),     # MLL length
         ("MLLextraTime", c_double), # time-surplus
         
         
@@ -178,6 +180,13 @@ class Sys(io.IOSys, object):
             self._eddConsistencyCheck = self.C.EddKA_consistencyCheck
             self._eddCycle = self.C.EddKA_cycle
             self.setEnergyMode('zero')
+        elif cycleMode.lower() == 'fredricksonandersen':
+            self.cycleMode = 3
+            self._eddInit = self.C.EddFA_init
+            self._eddUpdateLatPos = self.C.EddFA_updateLatPos
+            self._eddConsistencyCheck = self.C.EddFA_consistencyCheck
+            self._eddCycle = self.C.EddFA_cycle
+            self.setEnergyMode('zero')
         else:
             raise Exception("Unknown cycle mode: %s", cycleMode)
     def setEnergyMode(self, energyMode):
@@ -189,7 +198,8 @@ class Sys(io.IOSys, object):
         """
         if energyMode.lower() == 'birolimezard':
             self.energyMode = 1
-        if energyMode.lower() == 'zero':
+        if energyMode.lower() in ('zero', 'kobandersen',
+                                  'fredricksonandersen'):
             self.energyMode = 2
     
 
@@ -583,14 +593,14 @@ class Sys(io.IOSys, object):
         
 
     def eddEnable(self):
-        self._allocArray("MLL",
-                         shape=(self.lattSize*self.connMax),
-                         dtype=numpy_int,
-                         )
-        self._allocArray("MLLr",
-                         shape=(self.lattSize, self.connMax),
-                         dtype=numpy_int,
-                         )
+        MLLsize = self.lattSize*self.connMax
+        if self.cycleModeStr == 'fredricksonandersen':
+            MLLsize = self.lattSize
+            self._allocArray("MLL_down", shape=MLLsize, dtype=numpy_int)
+            self.MLL_down [:] = -1
+        self._allocArray("MLL", shape=MLLsize, dtype=numpy_int)
+        self._allocArray("MLLr", shape=MLLsize, dtype=numpy_int)
+
         self.MLL [:] = -1
         self.MLLr[:] = -1
         self.MLLlen = 0
