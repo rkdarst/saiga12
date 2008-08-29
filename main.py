@@ -608,7 +608,7 @@ class Sys(io.IOSys, object):
             print "event-driven dynamics is not enabled! (can't c. check)"
             return 0
         x = self._eddConsistencyCheck(self.SD_p)
-        print "consistency check:", x
+        #print "consistency check:", x
         return x
     def eddFindBestMode(self, n=None, nomodify=False):
         """Enable Event Driven Dynamics, if a test shows it is more efficient.
