@@ -177,6 +177,19 @@ class SquareGrid(GridNd):
         """
         return index(self.lattShape, coords)
 
+class Grid1d(SquareGrid):
+    _neighborlist = numpy.asarray(
+        ((-1, ),
+         ( 1, ),
+         ))
+    def printLattice(self, lattice=None):
+        if lattice is None:
+            lattice = self.lattsite.reshape(self.lattShape)
+        for e in lattice:
+            if e == S12_EMPTYSITE:
+                e = "__"
+            print "%2s"%e,
+
 class Grid2d(SquareGrid):
     _neighborlist = numpy.asarray(
         (( 0, 1 ),
