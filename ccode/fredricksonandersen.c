@@ -3,16 +3,16 @@ int cycleFA(struct SimData *SD, int n) {
   int i_trial;
   int naccept = 0;
 
+  int N = SD->N;   // initial N value, use SD->N for instantaneous
   double c = 1./(1. + exp(SD->beta));
   //printf("beta:%f c:%f\n", SD->beta, c);
   double wUp = 1-(c);
   double wDown = c;
-  double maxTime = N*n;
-  double time ;
+  //double maxTime = N*n;
+  //double time ;
 
   //for (i_trial=0 ; i_trial<(n*SD->N) ; i_trial++) {
-  int N = SD->N;
-  for (i_trial=0 ; naccept<(N*n) ; 1 ) {
+  for (i_trial=0 ; naccept<(N*n) ; i_trial++ ) {
 
     // otherwise, do a regular move (this should be the most common
     // case and thus inlined)
@@ -42,15 +42,18 @@ int cycleFA(struct SimData *SD, int n) {
     
     double rand = genrand_real2();
     if (state == 1 && rand < wUp) {
-      printf("accepting FA move: %d up -> down\n", pos);
+      if(debugedd) 
+	printf("accepting FA move: %d up -> down\n", pos);
       naccept += 1;
       delParticle(SD, pos);
     } else if (state == 0 && rand < wDown) {
-      printf("accepting FA move: %d down -> up\n", pos);
+      if(debugedd) 
+	printf("accepting FA move: %d down -> up\n", pos);
       naccept += 1;
       addParticle(SD, pos, SD->inserttype);
     } else {
-      printf("rejecting FA move FA move: %d (was %d)\n", pos, state);
+      if(debugedd) 
+	printf("rejecting FA move FA move: %d (was %d)\n", pos, state);
     }
   }
 
@@ -67,11 +70,15 @@ inline void FAaddToMLL(struct SimData *SD, char which, int pos) {
     if (which != 'u' && which != 'd')
       printf("error: which is not 'u' or 'd': %c", which);
   if (which == 'u') {
+    if(debugedd) 
+      printf("up list: %c %d\n", which, pos);
     MLL    =   SD->MLL;
     //MLLr   =   SD->MLLr;
     MLLlen = &(SD->MLLlen);
   }
   else {
+    if(debugedd) 
+      printf("down list: %c %d\n", which, pos);
     MLL    =   SD->MLL_down;
     //MLLr   =   SD->MLLr_down;
     MLLlen = &(SD->MLLlen_down);
@@ -139,9 +146,13 @@ inline void EddFA_updateLatPos(struct SimData *SD, int pos) {
 
 
   int state = SD->lattsite[pos] != S12_EMPTYSITE;
-  //printf("state is: %d (should be 0 or 1)\n", state);
+  if(debugedd) 
+    printf("state is: %d (should be 0 or 1)\n", state);
   if (state == 1) {
     int atomtype = SD->atomtype[SD->lattsite[pos]];
+    if(debugedd) 
+      printf("pos:%d nneighbors:%d atomtype:%d\n", pos, SD->nneighbors[pos],
+	     atomtype);
     if (SD->nneighbors[pos] >= atomtype)
       isAllowedMove = 1;
   }
@@ -199,7 +210,7 @@ int EddFA_consistencyCheck(struct SimData *SD) {
       // if it exists in MLLr, it should be at that point in MLL
       if (state == 1 && moveIndex != SD->MLL[SD->MLLr[moveIndex]] ) {
 	retval += 1;
-	printf("error orjlhc\n");
+	printf("error orjlhc: mi:%d\n", moveIndex);
       } else if (state==0 && moveIndex != SD->MLL_down[SD->MLLr[moveIndex]]) {
 	retval += 1;
 	printf("error cakrt\n");
@@ -257,13 +268,13 @@ int EddFA_consistencyCheck(struct SimData *SD) {
 	// It can flip up -- be sure it's in the right list.
         if (SD->MLLr[pos] == -1) {
 	  retval += 1;
-	  printf("error aroork: pos:%d\n", pos);
+	  printf("error aroork: not mobile but in MLLr: pos:%d\n", pos);
         }
       } else {
 	// be sure that it is not in any of the lookups.
         if (SD->MLLr[pos] != -1) {
 	  retval += 1;
-	  printf("error vorcktno: pos:%d\n", pos);
+	  printf("error vorcktno: not mobile but in MLLr: pos:%d\n", pos);
         }
       }
     } else {
