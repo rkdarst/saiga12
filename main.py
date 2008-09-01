@@ -59,6 +59,7 @@ class SimData(ctypes.Structure):
         ("nneighbors", c_void_p), # num of neighbers
         ("atomtype", c_void_p),   # lookup of atomnumber->atomtype
         ("atompos", c_void_p),    # lookup of atomnumber->latt position
+        ("persist", c_void_p),    # lookup of atomnumber->latt position
 
         ("cumProbAdd", c_double),
         ("cumProbDel", c_double),
@@ -187,6 +188,9 @@ class Sys(io.IOSys, object):
             self._eddConsistencyCheck = self.C.EddFA_consistencyCheck
             self._eddCycle = self.C.EddFA_cycle
             self.setEnergyMode('zero')
+            self._allocArray("persist", shape=(self.lattSize),
+                             dtype=numpy_int)
+            self.persist[:] = 0
         else:
             raise Exception("Unknown cycle mode: %s", cycleMode)
     def setEnergyMode(self, energyMode):

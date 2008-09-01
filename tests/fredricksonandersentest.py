@@ -6,7 +6,7 @@ import resource
 
 from saiga12.geom.grid import Grid2d, Grid3d
 
-dim = 3, 3
+dim = 30, 30
 density = .5
 type_ = 1
 
@@ -16,13 +16,12 @@ S1.addParticleRandomDensity(density, type_=type_)
 S1.setCycleMoves(1)
 S1.inserttype = type_
 
-S2 = Grid2d(cycleMode='fredricksonandersen', energyMode='fredricksonandersen')
-S2.makegrid(*dim)
-S2.addParticleRandomDensity(density, type_=type_)
+S2 = Grid2d(cycleMode='fredricksonandersen', lattice=dim,
+            inserttype=type_, initialDensities={type_: density})
+#S2.makegrid(*dim)
+#S2.addParticleRandomDensity(density, type_=type_)
 S2.setCycleMoves(1)
-S2.eddEnable()
-S2.inserttype = type_
-
+#S2.eddEnable()
 
 #t1 = resource.getrusage(resource.RUSAGE_SELF).ru_utime
 
@@ -36,11 +35,12 @@ S2.inserttype = type_
 #    #print S.MLLr
 #    #print S.lattsite
 #    S2.eddConsistencyCheck()
-#    print i, S2.mctime, S2.naccept, numpy.sum(S2.lattsite != -1 ), S2.energy(), S2.hash()
+#    print i, S2.mctime, S2.naccept, S2.N, S2.energy(), S2.hash()
 #import sys ; sys.exit()
 
 
-cycleTime = 10000
+cycleTime = 100
+S2.resetTime()
 #S2.eddFindBestMode()
 for i in xrange(10):
     S1.printLattice()
@@ -53,8 +53,8 @@ for i in xrange(10):
     #S2.printLattice()
     
     print "-->", i, "  ", \
-          S1.mctime, S1.N, S1.naccept, "  ", \
           S2.mctime, S2.N, S2.naccept, "cc:", S2.eddConsistencyCheck()
+          #S1.mctime, S1.N, S1.naccept, "  ", \
     #raw_input('> ')
 
 #print "time:", resource.getrusage(resource.RUSAGE_SELF).ru_utime-t1

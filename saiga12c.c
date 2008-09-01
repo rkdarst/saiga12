@@ -50,6 +50,7 @@ struct SimData {
   int *nneighbors;
   int *atomtype;
   int *atompos;
+  int *persist;
 
   double cumProbAdd;
   double cumProbDel;

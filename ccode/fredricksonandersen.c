@@ -355,6 +355,7 @@ int EddFA_cycle(struct SimData *SD, int n) {
       FAremoveFromMLL(SD, 'd', pos);
       addParticle(SD, pos, SD->inserttype);
       FAaddToMLL(SD, 'u', pos);
+      SD->persist[pos] = 1;
     }
     else {
       // pick some up spin to flip down
@@ -365,6 +366,7 @@ int EddFA_cycle(struct SimData *SD, int n) {
       FAremoveFromMLL(SD, 'u', pos);
       delParticle(SD, pos);
       FAaddToMLL(SD, 'd', pos);
+      SD->persist[pos] = 1;
     }
 
     //llist.n = 0;
