@@ -378,6 +378,21 @@ class Sys(io.IOSys, object):
             print "We already have too many particles in the system."
             return
         self.addParticleRandom(extra, type_=type_)
+    def addParticles(self, densities):
+        """Add particles of various types and densities to the system.
+
+        densities must be a dictionary, with keys being types and
+        values being densities of that type:
+        {type1: density1,
+         type2: density2,
+         ... }
+        """
+        cumulDensity = 0.
+        for type_ in sorted(densities.keys()):
+            cumulDensity += densities[type_]
+            self.addParticleRandomDensity(cumulDensity, type_=type_)
+
+
     def cycle(self, n=1):
         """Run MC trial moves for once cycle.
 
