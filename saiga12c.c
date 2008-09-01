@@ -129,7 +129,9 @@ inline int atomType(struct SimData *SD, int pos) {
 
 #ifdef neighlist
 inline void addParticle(struct SimData *SD, int pos, int type) {
-  if (errorcheck) if (SD->lattsite[pos] != S12_EMPTYSITE) exit(61);
+  if (errorcheck) if (SD->lattsite[pos] != S12_EMPTYSITE) { 
+      printf("error: inserting atom at not empty site location: %d\n", pos);
+      exit(61); }
   
   ////SD->lattsite[pos] = type;
   SD->lattsite[pos] = SD->N;     // atomnumberings start at zero.
@@ -144,7 +146,9 @@ inline void addParticle(struct SimData *SD, int pos, int type) {
   SD->N++;
 }
 inline void delParticle(struct SimData *SD, int pos) {
-  if (errorcheck) if (SD->lattsite[pos] == S12_EMPTYSITE) exit(62);
+  if (errorcheck) if (SD->lattsite[pos] == S12_EMPTYSITE) {
+      printf("error: removing atom at empty site location: %d\n", pos);
+      exit(62); }
   int i;
   for (i=0 ; i<SD->connN[pos] ; i++) {
     int neighpos = SD->conn[SD->connMax*pos + i];
@@ -173,8 +177,12 @@ inline void delParticle(struct SimData *SD, int pos) {
   SD->N--;
 }
 inline void moveParticle(struct SimData *SD, int oldpos, int newpos) {
-  if (errorcheck) if (SD->lattsite[newpos] != S12_EMPTYSITE) exit(63);
-  if (errorcheck) if (SD->lattsite[oldpos] == S12_EMPTYSITE) exit(64);
+  if (errorcheck) if (SD->lattsite[newpos] != S12_EMPTYSITE) {
+      printf("error: move atom to not empty site location: %d\n", newpos);
+      exit(63); }
+  if (errorcheck) if (SD->lattsite[oldpos] == S12_EMPTYSITE) {
+      printf("error: move atom from empty site location: %d\n", oldpos);
+      exit(64); }
   SD->lattsite[newpos] = SD->lattsite[oldpos];
   SD->lattsite[oldpos] = S12_EMPTYSITE;
   SD->atompos[SD->lattsite[newpos]] = newpos;
@@ -294,7 +302,9 @@ int cycleMC_GCadd(struct SimData *SD, int pos) {
       return(0);
     }
   }
-  if (errorcheck) if (SD->lattsite[pos] != S12_EMPTYSITE) exit(57);
+  if (errorcheck) if (SD->lattsite[pos] != S12_EMPTYSITE) {
+      printf("error: GCadd atom at not empty location: %d\n", pos);
+      exit(57); }
   
   int inserttype;
   double inserttype_prob, uVTchempotential;
@@ -350,7 +360,9 @@ int cycleMC_GCdel(struct SimData *SD, int pos) {
 /*     } while (SD->lattsite[pos] == S12_EMPTYSITE); */
     pos = SD->atompos[ (int)(SD->N * genrand_real2()) ];
   }
-  if (errorcheck) if (SD->lattsite[pos] == S12_EMPTYSITE) exit(56);
+  if (errorcheck) if (SD->lattsite[pos] == S12_EMPTYSITE) {
+      printf("error: GCdel: removing particle from empty lattsite: %d", pos);
+      exit(56); }
 
   int inserttype;
   double inserttype_prob, uVTchempotential;
