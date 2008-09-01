@@ -10,18 +10,21 @@ dim = 30, 30
 density = .5
 type_ = 1
 
-S1 = Grid2d(cycleMode='fredricksonandersen', energyMode='fredricksonandersen')
-S1.makegrid(*dim)
-S1.addParticleRandomDensity(density, type_=type_)
-S1.setCycleMoves(1)
-S1.inserttype = type_
+#S1 = Grid2d(cycleMode='fredricksonandersen', energyMode='fredricksonandersen')
+#S1.setCycleMode('fredricksonandersen')
+#S1.makegrid(*dim)
+#S1.addParticleRandomDensity(density, type_=type_)
+#S1.setCycleMoves(1)
+#S1.inserttype = type_
+#S1.eddEnable()
 
-S2 = Grid2d(cycleMode='fredricksonandersen', lattice=dim,
-            inserttype=type_, initialDensities={type_: density})
-#S2.makegrid(*dim)
-#S2.addParticleRandomDensity(density, type_=type_)
+S2 = Grid2d()
+S2.makegrid(*dim)
+S2.inserttype = type_
+S2.setCycleMode('fredricksonandersen')
+S2.addParticles({type_: density})
 S2.setCycleMoves(1)
-#S2.eddEnable()
+S2.eddEnable()
 
 #t1 = resource.getrusage(resource.RUSAGE_SELF).ru_utime
 
@@ -43,8 +46,8 @@ cycleTime = 100
 S2.resetTime()
 #S2.eddFindBestMode()
 for i in xrange(10):
-    S1.printLattice()
-    S1.cycle(cycleTime)
+    #S1.printLattice()
+    #S1.cycle(cycleTime)
     S2.cycle(cycleTime)
     #print i, S1.mctime, S1.naccept
 
