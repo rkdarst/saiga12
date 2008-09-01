@@ -125,9 +125,7 @@ def randomSeed(data):
     
 
 class Sys(io.IOSys, object):
-    def __init__(self, N=None, inserttype=None, lattice=None,
-                 cycleMode="montecarlo", energyMode="birolimezard",
-                 initialDensities=None):
+    def __init__(self, N=None):
 
         SD = SimData()
         self.__dict__["SD"] = SD
@@ -138,8 +136,7 @@ class Sys(io.IOSys, object):
         self.hardness = float("inf")
         self.cumProbAdd = 0
         self.cumProbDel = 0
-        if inserttype is not None: self.inserttype = inserttype
-        else:                      self.inserttype = S12_EMPTYSITE
+        self.inserttype = S12_EMPTYSITE
         self.widominserttype = S12_EMPTYSITE
         self.naccept = 0
         self._eddEnabled = False
@@ -148,25 +145,6 @@ class Sys(io.IOSys, object):
         self.avgReset()
         self.setCycleMoves(shift=1)  # this must be reset once N is known.
 
-        if lattice != None:
-            self.makegrid(*lattice)
-
-        # setCycleMode must be second, since some of the modes
-        # automatically set energy mode to 'zero'
-        self.setEnergyMode(energyMode=energyMode)
-        self.setCycleMode(cycleMode=cycleMode)
-
-        if initialDensities is not None:
-            for type_ in sorted(initialDensities.keys()):
-                self.addParticleRandomDensity(initialDensities[type_],
-                                              type_=type_)
-
-        if cycleMode.lower() == 'fredricksonandersen':
-            self.eddEnable()
-
-        #self.partpos = numpy.zeros(shape=(self.NMax), dtype=numpy_int)
-        #SD.partpos   = self.partpos.ctypes.data
-        #self.partpos[:] = S12_EMPTYSITE
     def setCycleMode(self, cycleMode):
         """Set the dynamics cycle mode.
 
