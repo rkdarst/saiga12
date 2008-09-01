@@ -192,6 +192,7 @@ class Sys(io.IOSys, object):
         'birolimezard' -- Biroli-Mezard lattice glass model dynamics
         'zero'         -- energy is always zero (but no overlaps)
         """
+        self.energyModeStr = energyMode
         if energyMode.lower() == 'birolimezard':
             self.energyMode = 1
         if energyMode.lower() in ('zero', 'kobandersen',
