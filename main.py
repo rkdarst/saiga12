@@ -530,7 +530,11 @@ class Sys(io.IOSys, object):
         state after some changes."""
         x = ( tuple(self.lattsite.flat),
               tuple(self.conn.flat), tuple(self.connN.flat),
-              self.hardness, self.lattSize, 
+              self.hardness, self.lattSize,
+              self.beta, self.cumProbAdd, self.cumProbDel, self.inserttype,
+              self.movesPerCycle,
+              self.cycleMode, self.energyMode,
+              self.cycleModeStr, self.energyModeStr
               )
         return hash(x)
     def copy(self):
