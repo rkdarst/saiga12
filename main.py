@@ -145,6 +145,9 @@ class Sys(io.IOSys, object):
         self.avgReset()
         self.setCycleMoves(shift=1)  # this must be reset once N is known.
 
+        self.setCycleMode('montecarlo')
+        self.setEnergyMode('briolimezard')
+
     def setCycleMode(self, cycleMode):
         """Set the dynamics cycle mode.
 
@@ -530,10 +533,10 @@ class Sys(io.IOSys, object):
         state after some changes."""
         x = ( tuple(self.lattsite.flat),
               tuple(self.conn.flat), tuple(self.connN.flat),
-              self.hardness, self.lattSize,
+              self.hardness, self.lattSize, tuple(self.ntype),
               self.beta, self.cumProbAdd, self.cumProbDel, self.inserttype,
               self.movesPerCycle,
-              self.cycleMode, self.energyMode,
+              self.cycleMode,    self.energyMode,
               self.cycleModeStr, self.energyModeStr
               )
         return hash(x)
