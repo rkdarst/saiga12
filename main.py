@@ -593,11 +593,13 @@ class Sys(io.IOSys, object):
         
 
     def eddEnable(self):
+        assert self.lattSize != 0, "lattSize is zero... is the grid initialized?"
         MLLsize = self.lattSize*self.connMax
         if self.cycleModeStr == 'fredricksonandersen':
             MLLsize = self.lattSize
             self._allocArray("MLL_down", shape=MLLsize, dtype=numpy_int)
             self.MLL_down [:] = -1
+            assert self.inserttype != S12_EMPTYSITE, "inserttype is still S12_EMPTYSITE... likely you shouldn't initialize until you specify the type of particle to insert."
         self._allocArray("MLL", shape=MLLsize, dtype=numpy_int)
         self._allocArray("MLLr", shape=MLLsize, dtype=numpy_int)
 
