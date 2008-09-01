@@ -1,5 +1,9 @@
 int cycleFA(struct SimData *SD, int n) {
-  
+
+  printf("error: Using FA without event driven dynamics does NOT WORK(yet)\n");
+  printf("Enable event-driven dynamics (.eddEnable())\n");
+  exit(94);
+
   int i_trial;
   int naccept = 0;
 
