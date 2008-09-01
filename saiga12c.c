@@ -793,16 +793,17 @@ inline void EddFA_updateLatPos(struct SimData *SD, int pos);
 void ctest(struct SimData *SD) {
   int i;
 
+  printf("N: %d\n", SD->N);
   printf("printing atomtype\n");
   //longX *atomtype = SD->atomtype;
-  for (i=0 ; i<24 ; i++) {
+  for (i=0 ; i<SD->lattSize ; i++) {
     //printf("%d ", atomtype[i]);
     printf("%d ", SD->atomtype[i]);
   } printf("\n");
 
   printf("printing lattsite\n");
   //longX *lattsite = SD->lattsite;
-  for (i=0 ; i<24 ; i++) {
+  for (i=0 ; i<SD->lattSize ; i++) {
     //printf("%d ", lattsite[i]);
     printf("%d ", SD->lattsite[i]);
 
