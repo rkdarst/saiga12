@@ -623,7 +623,7 @@ class Sys(io.IOSys, object):
         if self.cycleModeStr == 'fredricksonandersen':
             MLLsize = self.lattSize
             self._allocArray("MLL_down", shape=MLLsize, dtype=numpy_int)
-            self.MLL_down [:] = -1
+            self.MLL_down[:] = -1
             assert self.inserttype != S12_EMPTYSITE, "inserttype is still S12_EMPTYSITE... likely you shouldn't initialize until you specify the type of particle to insert."
         self._allocArray("MLL", shape=MLLsize, dtype=numpy_int)
         self._allocArray("MLLr", shape=MLLsize, dtype=numpy_int)
@@ -631,6 +631,7 @@ class Sys(io.IOSys, object):
         self.MLL [:] = -1
         self.MLLr[:] = -1
         self.MLLlen = 0
+        self.MLLlen_down = 0
         self.MLLextraTime = 0.
         self._eddInit(self.SD_p)
         self._eddEnabled = True
