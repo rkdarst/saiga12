@@ -15,7 +15,7 @@ type_ = 3
 
 MaxTime = 1000
 skip = 5
-iterations = 100
+iterations = 10
 
 S = Grid3d(N=N)
 S.beta = 1.
