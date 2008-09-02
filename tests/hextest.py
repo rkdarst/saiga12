@@ -40,15 +40,17 @@ checkConnDistances(S, 1, setType=2, doAssert=True)
 # See if any connections are not symmetric:
 findAsymmetry(S, doAssert=True)
 
-V = saiga12.viz.VizSystem(S)
-V.vizMakeBox()
-V.vizDisplay()
+if not globals().has_key("noviz"):
+    V = saiga12.viz.VizSystem(S)
+    V.vizMakeBox()
+    V.vizDisplay()
 
-# draw connections:
-drawConn(V, S, pos=1, )
-#drawConn(V, S, 1, whichi=(8, 10))
+    # draw connections:
+    drawConn(V, S, pos=1, )
+    #drawConn(V, S, 1, whichi=(8, 10))
 
-interact(local=locals(), banner="")
+if __name__ == "__main__":
+    interact(local=locals(), banner="")
 
 
 
@@ -67,12 +69,14 @@ checkConnDistances(S, 1, setType=2, doAssert=True)
 
 findAsymmetry(S, doAssert=True)
 
-V = saiga12.viz.VizSystem(S)
-V.vizMakeBox()
-V.vizDisplay()
+if not globals().has_key("noviz"):
+    V = saiga12.viz.VizSystem(S)
+    V.vizMakeBox()
+    V.vizDisplay()
 
-# draw connections:
-drawConn(V, S, pos=1, )
-#drawConn(V, S, 1, whichi=(8, 10))
+    # draw connections:
+    drawConn(V, S, pos=1, )
+    #drawConn(V, S, 1, whichi=(8, 10))
 
-interact(local=locals(), banner="")
+if __name__ == "__main__":
+    interact(local=locals(), banner="")

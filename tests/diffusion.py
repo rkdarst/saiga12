@@ -20,13 +20,14 @@ startpos = S.getPos()
 #print startpos
 print "."
 
+cycleStep = 100
 S.setCycleMoves(10)
-for i in range(10000):
+for i in range(10000/cycleStep):
     endpos = S.getPos()
     d = S.distance(endpos, startpos)
     print sum(d) / S.N
     #print endpos
-    S.cycle()
+    S.cycle(cycleStep)
     
 #print S.lattsite
 #print S.atompos

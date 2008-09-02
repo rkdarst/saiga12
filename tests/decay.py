@@ -46,8 +46,8 @@ for ii in range(iterations):
         sys.stdout.flush()
 
     # do it every time, so see it build up slowly.
-    logfile = file("logfile.txt", "w")
-    for mctime in sorted(corrfunc.keys()):
-        print >> logfile, mctime, sum(corrfunc[mctime])/len(corrfunc[mctime])
-    logfile.flush()
+    #logfile = file("logfile.txt", "w")
+    #for mctime in sorted(corrfunc.keys()):
+    #    print >> logfile, mctime, sum(corrfunc[mctime])/len(corrfunc[mctime])
+    #logfile.flush()
     

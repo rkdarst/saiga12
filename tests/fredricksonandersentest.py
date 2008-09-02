@@ -62,4 +62,4 @@ for i in xrange(10):
 
 #print "time:", resource.getrusage(resource.RUSAGE_SELF).ru_utime-t1
 
-S2.eddConsistencyCheck()
+assert S2.eddConsistencyCheck() == 0

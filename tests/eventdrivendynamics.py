@@ -15,13 +15,13 @@ S.addParticle(pos=9, type_=3)
 #S.addParticleRandomDensity(.7, type_=3)
 #S.setCycleMoves()
 
-print "E:", S.energy()
+assert S.energy() == 0
 S.eddEnable()
 S.lattsite.shape = S.lattShape
-print S.MLL
-print S.MLLr
-print S.lattsite
-print S.conn
+#print S.MLL
+#print S.MLLr
+#print S.lattsite
+#print S.conn
 
 print
 for i in range(10):
@@ -32,20 +32,22 @@ for i in range(10):
     S.eddConsistencyCheck()
     print i, S.mctime, S.naccept, numpy.sum(S.lattsite != -1 ), S.energy(), S.hash()
 
-
 S1 = Grid2d()
 S1.makegrid(25, 25)
-S1.addParticleRandomDensity(.7, type_=3)
+S1.addParticleRandomDensity(.5, type_=3)
 S1.setCycleMoves()
 
 S2 = Grid2d()
 S2.makegrid(25, 25)
-S2.addParticleRandomDensity(.7, type_=3)
+S2.addParticleRandomDensity(.5, type_=3)
 S2.setCycleMoves()
 S2.eddEnable()
 
-for i in xrange(100):
+for i in xrange(10):
     S1.cycle(100)
     S2.cycle(100)
     print i, S1.mctime, S1.naccept, S2.mctime, S2.naccept
-S2.eddConsistencyCheck()
+    if i > 10:
+        assert abs(S1.naccept - S2.naccept) / float(S1.naccept) < .01, \
+               "BM Event-driven dyn test, naccept is getting too misaligned"
+assert S2.eddConsistencyCheck() == 0
