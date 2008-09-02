@@ -5,7 +5,8 @@ import cPickle as pickle
 
 classvars = ("N", "beta", "mctime",
              "movesPerCycle", "cumProbAdd", "cumProbDel",
-             "otherData")
+             "otherData", "cycleModeStr", "energyModeStr",
+             "inserttype")
             # "lattSize", "lattShape", "latticeReInitData"
 arrays = ("lattsite", "nneighbors", "atomtype", "atompos", "ntype")
             # self.conn, self.connN, self.connMax (not array),
@@ -44,7 +45,7 @@ class IOSys(object):
             # be more clever about the arrays we save
             import numpy
             atompos = self.atompos[:self.N]
-            if numpy.max(atompos) < 32768:
+            if len(atompos) > 0 and numpy.max(atompos) < 32768:
                 atompos = numpy.asarray(atompos, dtype=numpy.int16)
             state["atompos"] = atompos
             state["atomtype"] = numpy.asarray(self.atomtype[:self.N],
@@ -86,7 +87,13 @@ class IOSys(object):
         else:
             raise Exception("Invalid save version when loading: %s",
                             state['stateSaveVersion'])
-            
+        #if state.has_key("energyModeStr"):
+        #    self.setEnergyMode(self.energyModeStr)
+        if state.has_key("cycleModeStr"):
+            self.setCycleMode(self.cycleModeStr)
+        if self.cycleModeStr == "fredricksonandersen":
+            self.eddEnable()
+        
 
         if consistencyCheck:
             self.consistencyCheck()
