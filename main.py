@@ -132,6 +132,9 @@ class Sys(io.IOSys, object):
         self.C = getClib()
         self.SD_p = ctypes.pointer(SD)
 
+        # Start off lattSize as negative -- if it is used before it is
+        # set, then hopefully it will raise some errors.
+        self.lattSize = -1
         self.beta = 1.
         self.hardness = float("inf")
         self.cumProbAdd = 0
@@ -183,6 +186,9 @@ class Sys(io.IOSys, object):
             self._eddConsistencyCheck = self.C.EddFA_consistencyCheck
             self._eddCycle = self.C.EddFA_cycle
             self.setEnergyMode('zero')
+            if self.lattSize <= 0:
+                raise Exception, ("lattSize is not set-- you must set up "+
+                                 "your arrays before enabling F-A dynamics")
             self._allocArray("persist", shape=(self.lattSize),
                              dtype=numpy_int)
             self.persist[:] = 0
@@ -612,7 +618,7 @@ class Sys(io.IOSys, object):
         
 
     def eddEnable(self):
-        assert self.lattSize != 0, "lattSize is zero... is the grid initialized?"
+        assert self.lattSize > 0, "lattSize <= zero... is grid initialized?"
         MLLsize = self.lattSize*self.connMax
         if self.cycleModeStr == 'fredricksonandersen':
             MLLsize = self.lattSize
