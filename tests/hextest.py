@@ -16,7 +16,6 @@ except ImportError:
 
 a = b = c = 6
 density=.9999
-type_ = 12
 
 
 # 
@@ -24,7 +23,7 @@ type_ = 12
 #
 S = Grid3dHCP()
 S.makegrid(a, b, c)
-S.addParticleRandomDensity(density, type_=type_)
+S.addParticleRandomDensity(density, type_=12)
 
 # set the first two particles on the x-axis to be a different color:
 S.atomtype[S.lattsite[0]] = 3
@@ -59,7 +58,7 @@ if __name__ == "__main__":
 #
 S = GridHex2d()
 S.makegrid(a, b)
-S.addParticleRandomDensity(density, type_=type_)
+S.addParticleRandomDensity(density, type_=6)
 
 # set the first two particles on the x-axis to be a different color:
 S.atomtype[S.lattsite[0]] = 3

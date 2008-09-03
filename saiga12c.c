@@ -21,6 +21,7 @@ struct SimData {
   double beta;
   int N;
   int *ntype;
+  int ntypeMax;
   //int NMax;  // lattSize is NMax
   double hardness;
   int cycleMode;   // see python for definition
@@ -132,6 +133,10 @@ inline void addParticle(struct SimData *SD, int pos, int type) {
   if (errorcheck) if (SD->lattsite[pos] != S12_EMPTYSITE) { 
       printf("error: inserting atom at not empty site location: %d\n", pos);
       exit(61); }
+  if (errorcheck) if (type > SD->ntypeMax) {
+    printf("Inserting particle of type greater than ntypeMax\n");
+    exit(60);
+  }
   
   ////SD->lattsite[pos] = type;
   SD->lattsite[pos] = SD->N;     // atomnumberings start at zero.

@@ -28,6 +28,7 @@ class SimData(ctypes.Structure):
         ("beta", c_double),
         ("N", c_int),             # total number of particles
         ("ntype", c_void_p),      # number of each atomtype.
+        ("ntypeMax", c_int),      # Maximum allowable particle type.
         #("NMax", c_int),         # lattSize is NMax
         ("hardness", c_double),   # hardness of the hard spheres
         ("cycleMode", c_int),     # 1=MC, 2=kob-andersen
@@ -234,7 +235,7 @@ class Sys(io.IOSys, object):
         """
         self.lattSize = lattSize
         self.connMax = connMax
-        maxTypes = connMax + 1  # we don't use zero  [1, N+1)
+        self.ntypeMax = connMax  # valid types are [0, connMax]
 
         # nneighbors
         self._allocArray("nneighbors", shape=(lattSize),
@@ -258,7 +259,7 @@ class Sys(io.IOSys, object):
                                     dtype=numpy_int)
         self.atompos[:] = S12_EMPTYSITE
         # ntype
-        self._allocArray("ntype", shape=(maxTypes),
+        self._allocArray("ntype", shape=(self.ntypeMax),
                                   dtype=numpy_int)
 
         
@@ -268,7 +269,10 @@ class Sys(io.IOSys, object):
         """Add particle at lattice site `pos`.
 
         This does minimal checks, and then calls the proper C
-        function.  You really should be doing this from C, not python."""
+        function.  You really should be doing this from C, not python.
+
+        The maximum type of particles is self.ntypesMax, which is currently
+        0 to connMax (inclusive)."""
         if self.N >= self.lattSize:
             print "ERROR: No more room to insert particles"
         if pos < 0 or pos >= self.lattSize:
