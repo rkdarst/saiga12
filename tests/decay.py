@@ -14,6 +14,7 @@ density = .58
 type_ = 3
 
 MaxTime = 1000
+if globals().has_key('short'): MaxTime = 50
 skip = 5
 iterations = 10
 

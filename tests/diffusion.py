@@ -20,9 +20,12 @@ startpos = S.getPos()
 #print startpos
 print "."
 
+maxTime = 10000
+if globals().has_key('short'): maxTime = 100
+
 cycleStep = 100
 S.setCycleMoves(10)
-for i in range(10000/cycleStep):
+for i in range(maxTime/cycleStep):
     endpos = S.getPos()
     d = S.distance(endpos, startpos)
     print sum(d) / S.N

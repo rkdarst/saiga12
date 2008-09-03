@@ -20,9 +20,11 @@ S1.setCycleMoves()
 
 t1 = resource.getrusage(resource.RUSAGE_SELF).ru_utime
 
+cycleTime = 100
+if globals().has_key('short'): cycleTime = 5
 for i in xrange(20):
-    S1.cycle(100)
-    #S2.cycle(100)
+    S1.cycle(cycleTime)
+    #S2.cycle(cycleTime)
     print i, S1.mctime, S1.naccept
     #print i, S1.mctime, S1.naccept, S2.mctime, S2.naccept
 

@@ -19,7 +19,9 @@ S.anneal()
 #print S.atompos
 S.setCycleMoves(1)
 
-for i in range(1000):
+iterations = 1000
+if globals().has_key('short'): iterations = 10
+for i in range(iterations):
     #print
     #print
     #print

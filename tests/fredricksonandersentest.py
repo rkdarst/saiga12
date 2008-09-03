@@ -43,6 +43,7 @@ S2.eddEnable()
 
 
 cycleTime = 100
+if globals().has_key('short'): cycleTime = 5
 S2.resetTime()
 #S2.eddFindBestMode()
 for i in xrange(10):

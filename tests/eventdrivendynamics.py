@@ -43,9 +43,11 @@ S2.addParticleRandomDensity(.5, type_=3)
 S2.setCycleMoves()
 S2.eddEnable()
 
-for i in xrange(10):
-    S1.cycle(100)
-    S2.cycle(100)
+cycleTime = 100
+if globals().has_key('short'): cycleTime = 20
+for i in xrange(15):
+    S1.cycle(cycleTime)
+    S2.cycle(cycleTime)
     print i, S1.mctime, S1.naccept, S2.mctime, S2.naccept
     if i > 10:
         assert abs(S1.naccept - S2.naccept) / float(S1.naccept) < .01, \

@@ -259,7 +259,7 @@ class Sys(io.IOSys, object):
                                     dtype=numpy_int)
         self.atompos[:] = S12_EMPTYSITE
         # ntype
-        self._allocArray("ntype", shape=(self.ntypeMax),
+        self._allocArray("ntype", shape=(self.ntypeMax+1),
                                   dtype=numpy_int)
 
         

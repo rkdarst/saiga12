@@ -27,6 +27,7 @@ S2.eddEnable()
 #t1 = resource.getrusage(resource.RUSAGE_SELF).ru_utime
 
 cycleTime = 1000
+if globals().has_key('short'): cycleTime = 20
 #S2.eddFindBestMode()
 for i in xrange(10):
     S1.cycle(cycleTime)
