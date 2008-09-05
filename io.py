@@ -2,6 +2,8 @@
 
 #import shelve
 import cPickle as pickle
+import zlib
+import numpy
 
 classvars = ("N", "beta", "mctime",
              "movesPerCycle", "cumProbAdd", "cumProbDel",
@@ -53,6 +55,14 @@ class IOSys(object):
         else:
             raise Exception("Invalid save version when saving: %s",
                             self.ioSaveVersion)
+        # way of saving persistence arrays
+        if self.persist is not None:
+            persist = (0,  # save version
+                       zlib.compress(pickle.dumps(    # compressed array
+                         numpy.asarray(self.persist, dtype=numpy.bool_),
+                         -1), 6)
+                       )
+            state["persist"] = persist
 
 
         return state
@@ -93,6 +103,11 @@ class IOSys(object):
             self.setCycleMode(self.cycleModeStr)
         if self.cycleModeStr == "fredricksonandersen":
             self.eddEnable()
+        if state.has_key("persist"):
+            version, persist = state["persist"]
+            persist = zlib.decompress(persist)
+            persist = pickle.loads(persist)
+            self.persist[:] = persist
         
 
         if consistencyCheck:

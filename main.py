@@ -541,8 +541,11 @@ class Sys(io.IOSys, object):
 
         This can be used to see if two systems are in exactly the same
         state after some changes."""
+        if self.persist is not None:  persist = tuple(self.persist)
+        else:                         persist = None
         x = ( tuple(self.lattsite.flat),
               tuple(self.conn.flat), tuple(self.connN.flat),
+              persist,
               self.hardness, self.lattSize, tuple(self.ntype),
               self.beta, self.cumProbAdd, self.cumProbDel, self.inserttype,
               self.movesPerCycle,
