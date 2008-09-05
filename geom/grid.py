@@ -189,6 +189,16 @@ class Grid1d(SquareGrid):
             if e == S12_EMPTYSITE:
                 e = "__"
             print "%2s"%e,
+    def printLatticeDots(self, lattice=None):
+        if lattice is None:
+            lattice = self.lattsite.reshape(self.lattShape)
+        result = [ ]
+        for e in lattice:
+            if e == S12_EMPTYSITE:
+                result.append("_")
+            else:
+                result.append("%s"%self.atomtype[e])
+        print "".join(result)
 
 class Grid2d(SquareGrid):
     _neighborlist = numpy.asarray(
@@ -207,6 +217,18 @@ class Grid2d(SquareGrid):
                     e = "__"
                 print "%2s"%e,
             print
+    def printLatticeDots(self, lattice=None):
+        if lattice is None:
+            lattice = self.lattsite.reshape(self.lattShape)
+        result = [ ]
+        for row in lattice:
+            for e in row:
+                if e == S12_EMPTYSITE:
+                    result.append("_")
+                else:
+                    result.append("%s"%self.atomtype[e])
+            result.append("\n")
+        print "".join(result[:-1]) # exclude trailing newline
 
     def printLatticeLocal(self, pos, width=2, lattice=None):
         center = pos//self.lattShape[1], pos%self.lattShape[1]
