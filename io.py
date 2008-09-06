@@ -8,7 +8,7 @@ import numpy
 classvars = ("N", "beta", "mctime",
              "movesPerCycle", "cumProbAdd", "cumProbDel",
              "otherData", "cycleModeStr", "energyModeStr",
-             "inserttype")
+             "inserttype", "_dontSetCycleMoves")
             # "lattSize", "lattShape", "latticeReInitData"
 arrays = ("lattsite", "nneighbors", "atomtype", "atompos", "ntype")
             # self.conn, self.connN, self.connMax (not array),

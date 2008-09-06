@@ -449,6 +449,10 @@ class Sys(io.IOSys, object):
             shift = self.N
         elif mode == 'grandcanonical':
             insertdel = self.N
+        if hasattr(self, "_dontSetCycleMoves"):
+            # the F-A model is defined intensively already
+            shift = 1
+            insertdel = 0
         # If nothing is set, default to canonical.
         if shift + insertdel == 0:
             shift = self.N
@@ -672,6 +676,8 @@ class Sys(io.IOSys, object):
             n = 100
         elif self.cycleModeStr == 'kobandersen':
             n=5000
+        elif self.cycleModeStr == 'fredricksonandersen':
+            return # it should always be enabled for FA.
         if copy:
             origHash = self.hash()
             origSelf = self
