@@ -4,7 +4,10 @@ import math, numpy
 import time
 
 import saiga12
-import saiga12.viz
+try:
+    import saiga12.viz
+except ImportError:
+    pass
 from saiga12.geom.grid import GridHex2d, Grid3dHCP
 
 from saiga12.geom.util import findAsymmetry, drawConn, checkConnDistances
