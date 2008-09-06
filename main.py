@@ -388,7 +388,7 @@ class Sys(io.IOSys, object):
         target = int(round(self.lattSize * density))
         extra = target - self.N
         if extra <= 0:
-            print "We already have too many particles in the system."
+            raise Exception("We already have too many particles in the system.")
             return
         self.addParticleRandom(extra, type_=type_)
     def addParticles(self, densities):
