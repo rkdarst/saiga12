@@ -621,7 +621,9 @@ class Sys(io.IOSys, object):
         if store and mu != inf:
             self.avgStore("chempotential", mu)
         return mu
-
+    def persistFunction(self):
+        return (self.lattSize - sum(self.persist)) / float(self.lattSize)
+    
         
 
     def eddEnable(self):
