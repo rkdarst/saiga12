@@ -626,7 +626,7 @@ class Sys(io.IOSys, object):
             self.avgStore("chempotential", mu)
         return mu
     def persistFunction(self):
-        return (self.lattSize - sum(self.persist)) / float(self.lattSize)
+        return (self.lattSize - numpy.sum(self.persist)) / float(self.lattSize)
     
         
 
