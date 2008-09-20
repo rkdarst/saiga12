@@ -153,7 +153,7 @@ class SquareGrid(GridNd):
 
     Must be subclassed and have connection data added to it.
     """
-    def coords(self, index):
+    def coords(self, index=None):
         """Mapping from lattice indexa to coordinates in real space.
 
         'index' is sort of misnamed here-- it should be 'pos' to be
@@ -162,6 +162,8 @@ class SquareGrid(GridNd):
         *position*.
 
         This method is a replacement for grid_coords()
+
+        if index is None, return all coordinates.
         """
         coordCacheKey = (self.__class__.__name__, self.lattShape)
         if not coord_datacache.has_key(coordCacheKey):
@@ -170,6 +172,8 @@ class SquareGrid(GridNd):
                               dtype=saiga12.numpy_double)
             c = c.transpose()
             coord_datacache[coordCacheKey] = c.copy()
+        if index is None:
+            return coord_datacache[coordCacheKey]
         index = numpy.asarray(index)
         return coord_datacache[coordCacheKey][index]
     def gridIndex(self, coords):
@@ -294,7 +298,7 @@ class GridHex2d(GridNd):
                 i = self.connN[cur]
                 self.conn[cur, i] = neighbor
                 self.connN[cur] += 1
-    def coords(self, index):
+    def coords(self, index=None):
         """Mapping from lattice index to coordinates in real space.
 
         'index' is sort of misnamed here-- it should be 'pos' to be
@@ -315,6 +319,8 @@ class GridHex2d(GridNd):
             c = c.transpose()
             c[1::2,0] +=  .5
             coord_datacache[coordCacheKey] = c.copy()
+        if index is None:
+            return coord_datacache[coordCacheKey]
         index = numpy.asarray(index)
         return coord_datacache[coordCacheKey][index]
 
@@ -415,7 +421,7 @@ class Grid3dHCP(GridNd):
                 i = self.connN[cur]
                 self.conn[cur, i] = neighbor
                 self.connN[cur] += 1
-    def coords(self, index):
+    def coords(self, index=None):
         """Mapping from lattice indexa to coordinates in real space.
 
         'index' is sort of misnamed here-- it should be 'pos' to be
@@ -449,6 +455,8 @@ class Grid3dHCP(GridNd):
             c.shape = product(lattShape), 3
             self._coordCache = c.copy()
             coord_datacache[coordCacheKey] = c.copy()
+        if index is None:
+            return coord_datacache[coordCacheKey]
         index = numpy.asarray(index)
         return coord_datacache[coordCacheKey][index]
 
