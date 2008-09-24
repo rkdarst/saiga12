@@ -163,6 +163,12 @@ class Sys(io.IOSys, object):
         'kobandersen' -- Kob-Andersen kinetically constrained glass dynamics.
                          This automatically sets energymode to zero.
                          There *is* event-driven dynamics in this mode.
+        'fredricksonandersen' -- Fredrickson-Andersen kinetically
+                         constrained glass dynamics.  This automatically
+                         sets energymode to zero.  There is *only*
+                         event-driven dynamics in this mode.  You must make
+                         the grid (to set lattSize) before enabling FA
+                         dynamics.
         """
         self.cycleModeStr = cycleMode
         if cycleMode.lower() == 'montecarlo':
