@@ -12,8 +12,8 @@ class TestSequenceFunctions(unittest.TestCase):
     #        execfile(x)
     #def testChemPotential(self):
     #    execfile("tests/chempotential.py", {})
-    #def testCorrFunc(self):
-    #    execfile("tests/corrfunctest.py", {})
+    def testCorrFunc(self):
+        execfile("tests/corrfunctest.py", {'noviz':True})
     def testDecay(self):
         # writes out to logfile.txt, don't use this test.
         execfile("tests/decay.py", {})

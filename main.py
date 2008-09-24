@@ -96,7 +96,7 @@ def getClib():
                                         c_void_p, c_int, # *kvecs, Nk
                                         c_int, c_void_p, # type, *cords
                                         c_void_p, c_int, # shape, nDim
-                                        c_void_p)),  #*result
+                                        c_void_p, c_void_p)),#*result,SkByAtom
         ("addToMLL",               None,     (SimData_p, c_int, c_int)),
         ("removeFromMLL",          None,     (SimData_p, c_int, c_int)),
 

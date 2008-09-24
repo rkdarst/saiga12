@@ -3,82 +3,77 @@
 import math
 import numpy
 
-
+from saiga12.geom.grid import Grid3d
 import saiga12.io
 import saiga12.corrfunc
 
-from rpy import r
+S = Grid3d()
+S.makegrid(15, 15, 15)
+S.addParticles({1:.25})
+S.setCycleMoves('grandcanonical')
+S.setInsertType({1:(1, 5)})
+print S.N
+for i in range(5):
+    S.cycle(100)
+    print S.N
+S.setCycleMoves('canonical')
+print S.N
+type_ = 1
 
-       # (mu, type_)
-runs = ((1.0, 1),
-        (1.0, 3),
-        #(5.0, None),
-        #(11.0,None),
-        (11.0, 1),
-        (11.0, 3),
-        )
-iterations = -1
+def assertwithin(a, b, ratio=.01):
+    assert abs(   (a-b) / ((a+b)/2)   )  < ratio
 
-for i, (mu, type_) in enumerate(runs):
+SkList = saiga12.corrfunc.StructCorrList(
+    S=S, kmag2s=range(1, 50), type_=type_)
 
-    fname = "/home/richard/research/lgm/bm/crstl-1d-2-runs/"\
-            "output_mu1.0/trj_mu1.0_mctime00005.ugh"
-    S = saiga12.io.io_open(file(fname))
-    SsfList = [ ]
-    for kmag2 in range(1, 50):
-        Ssf = saiga12.corrfunc.StructCorr(kmag2=kmag2,
-                                          S=S,
-                                          type_=type_)
-        if len(Ssf.kvecs) == 0:
-            continue
-        Ssf.kvecsOrig = Ssf.kvecs.copy()
-        Ssf.kvecs *= (2*math.pi / 15.)
-        SsfList.append(Ssf)
+FsList = saiga12.corrfunc.StructCorrList(
+    S=S, kmag2s=range(1, 50), type_=type_)
 
 
-    print mu
-    thisRun = [ ]
-
-    def generateFrame():
-        import glob
-        fnames = "/home/richard/research/lgm/bm/crstl-1d-2-runs/output_mu%s/trj_mu%s_mctime*.ugh"%(mu, mu)
-        fnames= glob.glob(fnames)
-        fnames.sort()
-        for i, fname in enumerate(fnames):
-            #print fname
-            if i == iterations: return
-            S = saiga12.io.io_open(file(fname))
-            #from rkddp.interact import interact ; interact()
-            yield S
-
-    for S in generateFrame():
-        for Ssf in SsfList:
-            #s =
-            Ssf.staticStructureFactor(S)
-            #Ssf.avgStore('ssf', s)
-            #print Ssf._avgs
-        
-    for Ssf in SsfList:
-        thisRun.append((Ssf.kmag, Ssf.Sk()))
-    v_kmag = zip(*thisRun)[0]
-    v_ssf = zip(*thisRun)[1]
-
-    if mu > 10: pch = "x"
-    else:       pch = "+" #1
-    if i == 0:
-        r.plot(v_kmag, v_ssf,
-               xlab="", ylab="", type="l", col=i+1,
-               ylim=(0., 15)
-               #ylim=(0., 15000)
-               )
-        for kmag in v_kmag:
-            r.abline(v=kmag, lty=3, col="lightgray")
-    else:
-        r.lines(v_kmag, v_ssf, type="l", col=i+1)
-    for Ssf in SsfList:
-        r.points(x=[Ssf.kmag]*len(Ssf.kvecs), y=Ssf.SkArray(),
-                 col=i+1, pch=pch)
+for i in range(25):
+    Sold = S.copy()
+    S.cycle(100)
+    print i
     
+    SkList.calcSk(S)
+    FsList.calcFs(S, Sold)
 
-import code ; code.interact(local=locals(), banner="" )
-    
+
+
+v_kmag = SkList.kmags()
+v_ssf = SkList.SkAverages()
+v_bykvec = SkList.SkArraysByKvec()
+# test that the different ways of calculating are within tolerances of
+# each other
+for a, c in zip(v_ssf, v_bykvec):
+    c = numpy.average(c)
+    assertwithin(a, c)
+if not globals().has_key('noviz'):
+    from rpy import r
+    SkList.plotSk()
+    SkList.plotVertical()
+    SkList.plotSkByKvec()
+    import code ; code.interact(local=locals(), banner="" )
+
+
+v_kmag = FsList.kmags()
+v_ssf = FsList.SkAverages()
+v_byatom = FsList.SkArraysByAtom()
+v_bykvec = FsList.SkArraysByKvec()
+# test that the different ways of calculating are within tolerances of
+# each other
+for a, b, c in zip(v_ssf, v_byatom, v_bykvec):
+    b = numpy.average(b)
+    c = numpy.average(c)
+    assertwithin(a, b)
+    assertwithin(b, c)
+    assertwithin(a, c)
+
+if not globals().has_key('noviz'):
+    from rpy import r
+    FsList.plotSk()
+    FsList.plotVertical()
+    FsList.plotSkByKvec()
+    FsList.plotSkByAtom()
+    import code ; code.interact(local=locals(), banner="")
+

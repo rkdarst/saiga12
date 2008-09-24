@@ -5,7 +5,7 @@ import math
 import numpy
 
 import saiga12
-from geom.grid import cartesianproduct, coords
+from saiga12.geom.grid import cartesianproduct
 
 try:
     from rkddp.interact import interact
@@ -89,9 +89,6 @@ class ConvolvingCorrelation(Averager, object):
     def addItemSingleFrame(self, name, func):
         self._singleFrameItems[name] = func
 
-class StructCorrAll(Averager, object):
-    def __init__(self, S, ):
-        pass
 
 
 def getLattice(S, type_):
@@ -155,29 +152,42 @@ def getFftArrays(S, type_, SOverlap=None):
         S._fftcache[cachepar] = val, S.mctime
     return val
 
-class StructCorr(Averager, object):
-    def __init__(self, S, kmag=None, kmag2=None, type_=None):
-        if type_ == None:
-            type_ = saiga12.S12_TYPE_ANY
+class StructCorr(object):
+    def __init__(self, S, type_, L, kmag2):
         self._type_ = type_
-
+        
         # the only importance of S is the shape.
-        if kmag2 is not None:
-            kmag = math.sqrt(kmag2)
-        self.kmag = kmag
-        self.makeKvecs(kmag, S)
+        self.kmag = math.sqrt(kmag2)
+        self.makeKvecs(kmag2, S)
+        self.kvecsOrig = self.kvecs
+        self.kvecs = self.kvecs.copy()
+        self.kvecs *= (2*math.pi / L)
         self.makeCoordLookup(S)
+
+        #self.SkArrayAvgs    = numpy.zeros(shape=len(kvecs),
+        #                                  dtype=saiga12.c_double)
+        self._SkArrayByKvec    = numpy.zeros(shape=len(self.kvecs),
+                                             dtype=saiga12.c_double)
+        self._SkArrayByKvecTMP = numpy.zeros(shape=len(self.kvecs),
+                                             dtype=saiga12.c_double)
+        self._SkArrayByAtom    = numpy.zeros(shape=S.N,
+                                             dtype=saiga12.c_double)
+        self._SkArrayByAtomTMP = numpy.zeros(shape=S.N,
+                                             dtype=saiga12.c_double)
         self.reset()
 
     def reset(self):
-        self.avgReset()
+        #self.avgReset()
+        self._SkTotal = 0.
         self._niterSk = 0
-        self.SkArrayAvgs[:] = 0
+        #self.SkArrayAvgs[:] = 0
+        self._SkArrayByKvec[:] = 0
+        self._SkArrayByAtom[:] = 0
         
-    def makeKvecs(self, kmag, S):
+    def makeKvecs(self, kmag2, S):
         import shelve
-        cachepar = str((kmag, len(S.lattShape)))
-        kmax = int(math.ceil(kmag))
+        cachepar = str((kmag2, len(S.lattShape)))
+        kmax = int(math.ceil(math.sqrt(kmag2)))
 
         if _kvecCache.has_key(cachepar):
             kvecs = _kvecCache[cachepar]
@@ -193,27 +203,26 @@ class StructCorr(Averager, object):
                 full = [ x for x in range(-kmax, kmax+1) ]
                 half = [ x for x in range(0, kmax+1) ]
                 
-                if len(S.lattShape) == 2:
+                if len(S.lattShape) == 1:
+                    kvecs = cartesianproduct(half, )
+                elif len(S.lattShape) == 2:
                     kvecs = cartesianproduct(full, half)
                 elif len(S.lattShape) == 3:
                     kvecs = cartesianproduct(full, full, half)
                 kvecs = numpy.asarray([ _ for _ in kvecs ],
                                       dtype=saiga12.c_double)
                 magnitudes2 = numpy.sum(kvecs * kvecs, axis=1)
-                kvecs = kvecs[magnitudes2 == kmag*kmag]
+                kvecs = kvecs[magnitudes2 == kmag2]
             
                 cache[cachepar] = kvecs
                 _kvecCache[cachepar] = kvecs
             del cache
         self.kvecs = kvecs
         #print kvecs
-        self.SkArray_ = numpy.zeros(shape=len(kvecs),
-                                    dtype=saiga12.c_double)
-        self.SkArrayAvgs = numpy.zeros(shape=len(kvecs),
-                                       dtype=saiga12.c_double)
 
     def makeCoordLookup(self, S):
-        c = S.coords(numpy.arange(S.lattSize))
+        # DANGER -- only works for integer coordinates (so far!
+        c = S.coords()
         c = numpy.asarray(c, dtype=saiga12.c_int)
         #print c.dtype
         if not c.flags.carray:
@@ -223,13 +232,18 @@ class StructCorr(Averager, object):
         
 
     def calcSk(self, S, SOverlap=None):
+        """Static Structure Factor
+
+        SOverlap is used for only taking a subset where there is an
+        overlap, used for the Q analysis.
+        """
+        # this used to be method 1
         #Sk takes MUCH longer than Fs
         #self.staticStructureFactor(S1=S1, S2=S2, method=1)
 
         type_ = self._type_
         self._niterSk += 1
         N = S.numberOfType(type_)
-        self.SkArray_[:] = 0
 
         # This is getting the FFTs from the cache
         cachepar = (type_, SOverlap is None)
@@ -246,8 +260,9 @@ class StructCorr(Averager, object):
         if val is None:
             #print "calculating", function
             #lattice = getLattice(S, type_)
-            lattice = S.lattsite.copy()
-            lattice[:] = 0
+            #lattice = S.lattsite.copy()
+            #lattice[:] = 0
+            lattice = numpy.zeros(S.lattsite.size)
             if SOverlap is None:
                 lattice[S.atompos[S.atomtype == type_]] = 1
                 norm = N
@@ -275,75 +290,145 @@ class StructCorr(Averager, object):
             k = tuple(k)
             x = ((InverseFFT[k]) * (ForwardFFT[k])).real * lattSize / norm
             totalsum2 += x
-            self.SkArray_[i] += x
+            self._SkArrayByKvec[i] += x
         Sk2 = totalsum2 / len(self.kvecs)
         Sk2 = Sk2.real
         Sk = Sk2
 
-        self.avgStore('Sk', Sk)
-        self.SkArrayAvgs += self.SkArray_
+        self._SkTotal += Sk
 
 
 
-    def calcFs(self, S1, S2=None):
-        self.staticStructureFactor(S1=S1, S2=S2, method=0)
-    def staticStructureFactor(self, S1, method, S2=None):
+    def calcFs(self, S1, S2):
+        """Intermediate scattering function
+        """
+        # this used to be method 0
+        # old method: self.staticStructureFactor(S1=S1, S2=S2, method=0)
+
+        self._SkArrayByKvecTMP[:] = 0
+        self._SkArrayByAtomTMP[:] = 0
         type_ = self._type_
-        self.SkArray_[:] = 0
         self._niterSk += 1
-        if S2 == None:
-            S2 = S1
         N = S1.numberOfType(type_)
+        if S1.N != self._SkArrayByAtomTMP.size:
+            raise Exception, "Number of atoms has changed... "\
+                  "Fs assumes you aren't doing that."
 
-        #print self.kvecs
-        #print self.kvecs.dtype
-        #sys.exit()
+        physicalShape = numpy.asarray(S1.physicalShape,
+                                      dtype=saiga12.c_double).ctypes.data
+        totalsum = S1.C.calc_structfact(S1.SD_p, S2.SD_p,
+                                        self.kvecs.ctypes.data,
+                                        len(self.kvecs), type_,
+                                        self.coordLookup.ctypes.data,
+                                        physicalShape,
+                                        len(S1.physicalShape),
+                                        #self._SkArray.ctypes.data,
+                                        #self._SkArrayByAtom.ctypes.data)
+                                        self._SkArrayByKvecTMP.ctypes.data,
+                                        self._SkArrayByAtomTMP.ctypes.data)
+        Sk = totalsum / (N * len(self.kvecs))
+        self._SkTotal += Sk
 
-        if method == 0:
-            # old method: using my custom C code:
-            physicalShape = numpy.asarray(S1.physicalShape,
-                                          dtype=saiga12.c_double).ctypes.data
-            totalsum = S1.C.calc_structfact(S1.SD_p, S2.SD_p,
-                                            self.kvecs.ctypes.data,
-                                            len(self.kvecs), type_,
-                                            self.coordLookup.ctypes.data,
-                                            physicalShape,
-                                            len(S1.physicalShape),
-                                            self.SkArray_.ctypes.data)
-            #print totalsum, N, len(self.kvecs), type_
-            Sk = totalsum / (N * len(self.kvecs))
-            #print Sk
+        self._SkArrayByKvecTMP /= N
+        self._SkArrayByAtomTMP /= len(self.kvecs)
 
-        if method == 1:
-            # Do it using FFTn.
-            # caching code:
-            raise Exception('use new calcSk method instead.')
-            ForwardFFT =  getFromCache(S1, type_, fftn )
-            InverseFFT = getFromCache(S2, type_, ifftn)
-            
-            totalsum2 = 0.
-            lattSize = S1.lattSize
-            for i, k in enumerate(self.kvecsOrig):
-                k = tuple(k)
-                x = ((InverseFFT[k]) * (ForwardFFT[k])).real * lattSize / N
-                totalsum2 += x
-                self.SkArray_[i] += x
-            Sk2 = totalsum2 / len(self.kvecs)
-            Sk2 = Sk2.real
-            Sk = Sk2
-
-        self.avgStore('Sk', Sk)
-        #print self._avgs
-
-        self.SkArrayAvgs += self.SkArray_ #/ ((N * (N-1)/2.))
-        #print Sk
-        #print self.SkArray_
-        return Sk
+        self._SkArrayByKvec += self._SkArrayByKvecTMP
+        self._SkArrayByAtom += self._SkArrayByAtomTMP
+        return {'average':Sk,
+                'byKvec':self._SkArrayByKvecTMP,
+                'byAtom':self._SkArrayByAtomTMP}
 
     def Sk(self):
-        return self.avg('Sk')
-    def SkArray(self):
-        return self.SkArrayAvgs / self._niterSk
+        return self._SkTotal /  self._niterSk
+    def SkArraysByKvec(self):
+        return self._SkArrayByKvec / self._niterSk
+    def SkArraysByAtom(self):
+        return self._SkArrayByAtom / self._niterSk
+
+
+    def staticStructureFactor(self, S1, method, S2=None):
+        print "don't use the staticStructureFactor method anymore."
+        if method == 0:
+            self.calcFs(S1, S2)
+        elif method == 1:
+            if S2 is not None and S1 is not S2:
+                raise
+            self.calcSk(S1)
+        else:
+            raise
+
+
+class StructCorrList(object):
+    def __init__(self, S, type_=saiga12.S12_TYPE_ANY,
+                 kmag2s=None, kmags=None, L=None):
+        if L is None:
+            L = S.lattShape[0]  # assumes square!
+        if kmags is not None:
+            kmag2s = [ kmag*kmag for kmag in kmags ]
+
+        SsfList = [ ]
+        SsfDict = { }
+            
+        for kmag2 in kmag2s:
+            Ssf = StructCorr(kmag2=kmag2, S=S, type_=type_, L=L)
+            if len(Ssf.kvecs) == 0:
+                continue
+            SsfList.append(Ssf)
+            SsfDict[math.sqrt(kmag2)] = Ssf
+        self.SsfList = SsfList
+        self.SsfDict = SsfDict
+
+    def calcSk(self, S, SOverlap=None):
+        for Ssf in self.SsfList:
+            Ssf.calcSk(S=S, SOverlap=SOverlap)
+    def calcFs(self, S1, S2=None):
+        for Ssf in self.SsfList:
+            Ssf.calcFs(S1=S1, S2=S2)
+    def reset(self):
+        for Ssf in self.SsfList:
+            Ssf.reset()
+    def kmags(self):
+        return tuple( Ssf.kmag      for Ssf in self.SsfList )
+    def SkAverages(self):
+        return tuple( Ssf.Sk()      for Ssf in self.SsfList )
+    def SkArraysByKvec(self):
+        return tuple( Ssf.SkArraysByKvec() for Ssf in self.SsfList )
+    def SkArraysByAtom(self):
+        return tuple( Ssf.SkArraysByAtom() for Ssf in self.SsfList )
+
+
+    def plotSk(self, xlab='', ylab='', type='l', col=1, ylim=(0, 15),
+               **other):
+        from rpy import r
+        r.plot(self.kmags(), self.SkAverages(),
+               xlab=xlab, ylab=ylab, type=type, col=col,
+               ylim=ylim, **other
+               )
+    def plotVertical(self, lty=3, col='lightgray', **other):
+        from rpy import r
+        for kmag in self.kmags():
+            r.abline(v=kmag, lty=lty, col=col, **other)
+    def plotSkByKvec(self, col='blue', pch='+', function=numpy.average,
+                     **other):
+        from rpy import r
+        for kmag, SkArray in zip(self.kmags(), self.SkArraysByKvec()):
+            if function is not None:
+                SkArray = function(SkArray)
+            try: len_ = len(SkArray)
+            except: len_ = 1
+            r.points(x=[kmag]*len_, y=SkArray,
+                     col=col, pch=pch, **other)
+    def plotSkByAtom(self, col='green', pch='x', function=numpy.average,
+                     **other):
+        from rpy import r
+        for kmag, SkArray in zip(self.kmags(), self.SkArraysByAtom()):
+            if function is not None:
+                SkArray = function(SkArray)
+            try: len_ = len(SkArray)
+            except: len_ = 1
+            r.points(x=[kmag]*len_, y=SkArray,
+                     col=col, pch=pch, **other)
+
 
 def makeSsfList(S, type_, kmag2s, L):
     """Create a list of Static Structure Factors to the parameters,
@@ -356,9 +441,9 @@ def makeSsfList(S, type_, kmag2s, L):
                          type_=type_)
         if len(Ssf.kvecs) == 0:
             continue
-        Ssf.kvecsOrig = Ssf.kvecs
-        Ssf.kvecs = Ssf.kvecs.copy()
-        Ssf.kvecs *= (2*math.pi / L)
+        #Ssf.kvecsOrig = Ssf.kvecs
+        #Ssf.kvecs = Ssf.kvecs.copy()
+        #Ssf.kvecs *= (2*math.pi / L)
         SsfList.append(Ssf)
     return SsfList
 
@@ -368,7 +453,10 @@ if __name__ == "__main__":
     from rpy import r
     
     fname = sys.argv[2]
-    type_ = int(sys.argv[1])
+    try:
+        type_ = int(sys.argv[1])
+    except ValueError:
+        type_ = saiga12.S12_TYPE_ANY
 
     S = saiga12.io.io_open(file(fname))
 
@@ -376,38 +464,44 @@ if __name__ == "__main__":
     maxKmag = min(max(S.lattShape), maxAllowedK)
     kmag2s = range(1, maxKmag**2)
     kmags = [math.sqrt(x) for x in kmag2s]
-    L = S.lattShape[0]
-    SsfList = makeSsfList(S=S, type_=type_,
-                          kmag2s=kmag2s,
-                          L=L)
-    for S in (S, ):
-        for Ssf in SsfList:
-            Ssf.calcSk(S)
-        
-    thisRun = [ ]
-    for Ssf in SsfList:
-        thisRun.append((Ssf.Sk(), Ssf.kmag))
-    v_kmag = zip(*thisRun)[1]
-    v_ssf = zip(*thisRun)[0]
 
-    thisRun.sort()
+    StructCorr = StructCorrList(S=S, type_=type_,
+                                kmag2s=kmag2s,)
+    L = S.lattShape[0]
+    for S in (S, ):
+        StructCorr.calcSk(S)
+        
+    v_kmag = StructCorr.kmags()
+    v_sk = StructCorr.SkAverages()
+
+    #thisRun.sort()
     print "top modes:"
     
     print "%6s %6s %7s %9s"%('kmag', 'Sk', 'kmag/L', 'L/kmag')
-    for Sk, kmag in thisRun[-10:]:
+    for Sk, kmag in zip(v_sk, v_kmag)[-10:]:
         print "%6.3f %6.3f %7.5f %9.5f"%(kmag, Sk, kmag/L, L/kmag)
     
-    r.plot(v_kmag, v_ssf,
+    r.plot(v_kmag, v_sk,
            xlab="", ylab="", type="l",
            ylim=(0., 15)
            #ylim=(0., 15000)
            )
+    # plots a line at each k-vector point.
     for kmag in v_kmag:
         r.abline(v=kmag, lty=3, col="lightgray")
-
-    for Ssf in SsfList:
-        r.points(x=[Ssf.kmag]*len(Ssf.kvecs), y=Ssf.SkArray(),
+    # plots each individual k-vector
+    for kmag, SkArray in zip(v_kmag, StructCorr.SkArrays()):
+        r.points(x=[kmag]*len(SkArray), y=SkArray,
                  col="blue", pch="x")
+    # plots the standard deviation of the by-kvector lists.
+    for kmag, SkArray in zip(v_kmag, StructCorr.SkArrays()):
+        r.points(x=kmag, y=numpy.std(SkArray),
+                 col="red", pch="s")
+    # plots it using the average of all k-vectors -- this should line up
+    # exactly
+    #for kmag, SkArray in zip(v_kmag, StructCorr.SkArrays()):
+    #    r.points(x=kmag, y=numpy.average(SkArray),
+    #             col="green", pch="x")
     
     
     import code ; code.interact(local=locals(), banner="" )
