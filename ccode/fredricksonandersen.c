@@ -1,4 +1,4 @@
-int cycleFA(struct SimData *SD, int n) {
+int cycleFA(struct SimData *SD, double n) {
 
   printf("error: Using FA without event driven dynamics does NOT WORK(yet)\n");
   printf("Enable event-driven dynamics (.eddEnable())\n");
@@ -327,7 +327,7 @@ int EddFA_consistencyCheck(struct SimData *SD) {
 
 
 
-int EddFA_cycle(struct SimData *SD, int n) {
+int EddFA_cycle(struct SimData *SD, double n) {
   if (SD->MLLlen == 0 && SD->MLLlen_down == 0) {
     printf("EddFA_cycle: error, move list length is zero\n");
     exit(12);

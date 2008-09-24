@@ -149,7 +149,7 @@ int EddBM_consistencyCheck(struct SimData *SD) {
 }
 
 
-int EddBM_cycle(struct SimData *SD, int n) {
+int EddBM_cycle(struct SimData *SD, double n) {
   if (SD->MLLlen == 0) {
     printf("EddBM_cycle: error, move list length is zero\n");
     exit(12);

@@ -452,13 +452,13 @@ double chempotential(struct SimData *SD, int inserttype) {
 
 
 
-int cycleMC(struct SimData *SD, int n);
-int cycleKA(struct SimData *SD, int n);
-int cycleFA(struct SimData *SD, int n);
+int cycleMC(struct SimData *SD, double n);
+int cycleKA(struct SimData *SD, double n);
+int cycleFA(struct SimData *SD, double n);
 inline int cycleKA_translate(struct SimData *SD);
 
 
-int cycle(struct SimData *SD, int n) {
+int cycle(struct SimData *SD, double n) {
   // If there is no cycle mode set (defaults to empty zero), we should
   // have an error.
   if (SD->cycleMode == 1)
@@ -567,7 +567,7 @@ inline int cycleMC_translate(struct SimData *SD) {
     return(0);    // Return zero, representing accepting no move
 }
 
-int cycleMC(struct SimData *SD, int n) {
+int cycleMC(struct SimData *SD, double n) {
 
   int i_trial;
   int naccept = 0;
@@ -602,7 +602,7 @@ int cycleMC(struct SimData *SD, int n) {
 
 
 
-int cycleKA(struct SimData *SD, int n) {
+int cycleKA(struct SimData *SD, double n) {
 
   int i_trial;
   int naccept = 0;

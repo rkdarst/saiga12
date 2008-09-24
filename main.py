@@ -91,7 +91,7 @@ def getClib():
         ("energy_posNeighborhood", c_double, (SimData_p, c_int) ),
         ("energy",                 c_double, (SimData_p,)),
         ("chempotential",          c_double, (SimData_p, c_int)),
-        ("cycle",                  c_int,    (SimData_p, c_int)),
+        ("cycle",                  c_int,    (SimData_p, c_double)),
         ("calc_structfact",        c_double, (SimData_p, SimData_p, # SD1, SD2
                                         c_void_p, c_int, # *kvecs, Nk
                                         c_int, c_void_p, # type, *cords
@@ -103,12 +103,17 @@ def getClib():
         ("EddBM_updateLatPos",     None,     (SimData_p, c_int, )),
         ("EddBM_init",             None,     (SimData_p, )),
         ("EddBM_consistencyCheck", c_int,    (SimData_p, )),
-        ("EddBM_cycle",            c_int,    (SimData_p, c_int)),
+        ("EddBM_cycle",            c_int,    (SimData_p, c_double)),
 
         ("EddKA_updateLatPos",     None,     (SimData_p, c_int, )),
         ("EddKA_init",             None,     (SimData_p, )),
         ("EddKA_consistencyCheck", c_int,    (SimData_p, )),
-        ("EddKA_cycle",            c_int,    (SimData_p, c_int)),
+        ("EddKA_cycle",            c_int,    (SimData_p, c_double)),
+
+        ("EddFA_updateLatPos",     None,     (SimData_p, c_int, )),
+        ("EddFA_init",             None,     (SimData_p, )),
+        ("EddFA_consistencyCheck", c_int,    (SimData_p, )),
+        ("EddFA_cycle",            c_int,    (SimData_p, c_double)),
         )
     for name, restype, argtypes in cfuncs:
         getattr(C, name).restype  = restype

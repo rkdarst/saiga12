@@ -164,7 +164,7 @@ int EddKA_consistencyCheck(struct SimData *SD) {
   }
   return(retval);
 }
-int EddKA_cycle(struct SimData *SD, int n) {
+int EddKA_cycle(struct SimData *SD, double n) {
   if (SD->MLLlen == 0) {
     printf("EddKA_cycle: error, move list length is zero\n");
     exit(12);
