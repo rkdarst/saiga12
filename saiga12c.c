@@ -11,7 +11,7 @@
 #include "SFMT.h"
 
 #define S12_EMPTYSITE (-1)
-#define S12_TYPE_ANY (-1)
+#define S12_TYPE_ANY (-2)
 
 int debug = 0;
 int errorcheck = 0;  // print errors if inconsistent

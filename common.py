@@ -4,4 +4,4 @@
 
 S12_EMPTYSITE = -1
 inf = float("inf")
-S12_TYPE_ANY = -1
+S12_TYPE_ANY = -2
