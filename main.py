@@ -667,7 +667,7 @@ class Sys(io.IOSys, object):
         x = self._eddConsistencyCheck(self.SD_p)
         #print "consistency check:", x
         return x
-    def eddFindBestMode(self, n=None, nomodify=False):
+    def eddFindBestMode(self, n=None, nomodify=False, quiet=False):
         """Enable Event Driven Dynamics, if a test shows it is more efficient.
 
         `n` is the number of test cycles of a sample to take,
@@ -681,7 +681,7 @@ class Sys(io.IOSys, object):
         if self.cycleModeStr == 'montecarlo':
             n = 100
         elif self.cycleModeStr == 'kobandersen':
-            n=5000
+            n = 100
         elif self.cycleModeStr == 'fredricksonandersen':
             return # it should always be enabled for FA.
         if copy:
@@ -693,15 +693,15 @@ class Sys(io.IOSys, object):
         t = time.time()
         self.cycle(n)
         t1 = time.time() - t   # without EDD
-        print 'regular moves:', t1
+        if not quiet: print 'regular moves:', t1
 
         self.eddEnable()
         t = time.time()
         self.cycle(n)
         t2 = time.time() - t   # with EDD
-        print 'event driven dynamics:', t2
+        if not quiet: print 'event driven dynamics:', t2
         if t1 < t2:
-            print "disabling event driven dynamics"
+            if not quiet: print "disabling event driven dynamics"
             self.eddDisable()
 
         if copy:
