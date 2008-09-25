@@ -4,6 +4,9 @@ import numpy
 
 from saiga12.geom.grid import Grid2d
 
+def within(a, b, ratio=.01):
+    return abs(   (a-b) / ((a+b)/2.)   )  < ratio
+
 a, b = 4, 4
 S = Grid2d()
 S.makegrid(a, b)
@@ -49,7 +52,12 @@ for i in xrange(15):
     S1.cycle(cycleTime)
     S2.cycle(cycleTime)
     print i, S1.mctime, S1.naccept, S2.mctime, S2.naccept
-    if i > 10:
-        assert abs(S1.naccept - S2.naccept) / float(S1.naccept) < .01, \
+    if i > 5:
+        assert within(S1.naccept, S2.naccept, ratio=.05), \
                "BM Event-driven dyn test, naccept is getting too misaligned"
+        assert S1.naccept > 0, \
+               "BM EDD test not running!"
+        assert S2.naccept > 0, \
+               "BM EDD test not running!"
+
 assert S2.eddConsistencyCheck() == 0

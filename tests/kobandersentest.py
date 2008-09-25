@@ -6,6 +6,9 @@ import resource
 
 from saiga12.geom.grid import Grid2d, Grid3d
 
+def within(a, b, ratio=.01):
+    return abs(   (a-b) / ((a+b)/2.)   )  < ratio
+
 dim = 25, 25 #15, 15
 density = .7
 type_ = 2
@@ -41,9 +44,13 @@ for i in xrange(10):
     
     print "-->", i, "  ", S1.mctime, S1.naccept, "  ", S2.mctime, S2.naccept, S2.eddConsistencyCheck()
     #raw_input('> ')
-    if i > 10:
-        assert abs(S1.naccept - S2.naccept) / float(S1.naccept) < .01, \
+    if i > 5:
+        assert within(S1.naccept, S2.naccept, ratio=.05), \
                "Kob-Andersen test, naccept is getting too misaligned"
+        assert S1.naccept > 0, \
+               "Kob-Andersen test not running!"
+        assert S2.naccept > 0, \
+               "Kob-Andersen test not running!"
 
 #print "time:", resource.getrusage(resource.RUSAGE_SELF).ru_utime-t1
 assert S2.eddConsistencyCheck() == 0

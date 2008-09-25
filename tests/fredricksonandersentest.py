@@ -10,12 +10,12 @@ dim = 30, 30
 density = .5
 type_ = 1
 
-#S1 = Grid2d(cycleMode='fredricksonandersen', energyMode='fredricksonandersen')
-#S1.setCycleMode('fredricksonandersen')
+#S1 = Grid2d()
 #S1.makegrid(*dim)
-#S1.addParticleRandomDensity(density, type_=type_)
-#S1.setCycleMoves(1)
 #S1.inserttype = type_
+#S1.setCycleMode('fredricksonandersen')
+#S1.addParticles({type_: density})
+#S1.setCycleMoves(1)
 #S1.eddEnable()
 
 S2 = Grid2d()
@@ -59,6 +59,8 @@ for i in xrange(10):
     print "-->", i, "  ", \
           S2.mctime, S2.N, S2.naccept, "cc:", S2.eddConsistencyCheck()
           #S1.mctime, S1.N, S1.naccept, "  ", \
+    assert S2.naccept > 0, \
+               "Fredrickson-Andersen test not running!"
     #raw_input('> ')
 
 #print "time:", resource.getrusage(resource.RUSAGE_SELF).ru_utime-t1
