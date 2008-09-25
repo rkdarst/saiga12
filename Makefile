@@ -14,4 +14,13 @@ saiga12c.o: saiga12c.c ccode/kobandersen.c ccode/fredricksonandersen.c\
 SFMT.o: SFMT.c SFMT.h
 	gcc ${opts} -c -DMEXP=19937 -include SFMT-params.h SFMT.c
 
+test:
+	python tests/unittests_run.py
+
+# add this line to _darcs/prefs/prefs to have darcs auto-test on record:
+# test make darcs-test
+darcs-test: saiga12c.so
+	mkdir run-dir 
+	ln -s .. run-dir/saiga12 
+	PYTHONPATH=${PWD}/run-dir/ python tests/unittests_run.py
 
