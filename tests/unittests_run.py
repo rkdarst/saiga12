@@ -42,6 +42,8 @@ class TestSequenceFunctions(unittest.TestCase):
         execfile("tests/timing.py", {})
     #def testviztest(self):
     #    execfile("tests/viztest.py", {})
+    def testScripts(self):
+        execfile("tests/scripttest.py", {})
 
 print unittest.main()
 
