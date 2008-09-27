@@ -359,6 +359,8 @@ class Sys(io.IOSys, object):
         (invhardness) to make it not hard, add the particles (since it
         isn't hard anymore, the energy won't become infinite), and
         then use the `anneal` method."""
+        if type(n) not in (int, float, long):
+            raise Exception("n must be of a numeric type, try .addParticles?")
         # make a list of all unoccupied lattice sites.
         spots = \
               list(numpy.arange(self.lattSize)[self.lattsite == S12_EMPTYSITE])
