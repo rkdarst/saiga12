@@ -155,7 +155,7 @@ class Sys(io.IOSys, object):
         self.setCycleMoves(shift=1)  # this must be reset once N is known.
 
         self.setCycleMode('montecarlo')
-        self.setEnergyMode('briolimezard')
+        self.setEnergyMode('birolimezard')
 
     def setCycleMode(self, cycleMode):
         """Set the dynamics cycle mode.
@@ -163,7 +163,7 @@ class Sys(io.IOSys, object):
         Options are:
         'montecarlo'  -- Normal monte carlo dynamics.
                          Has translate and grand canonical modes.
-                         Event driven dynamics is *only* for brioli-mezard
+                         Event driven dynamics is *only* for biroli-mezard
                            type systems.
         'kobandersen' -- Kob-Andersen kinetically constrained glass dynamics.
                          This automatically sets energymode to zero.
@@ -178,7 +178,7 @@ class Sys(io.IOSys, object):
         self.cycleModeStr = cycleMode
         if cycleMode.lower() == 'montecarlo':
             self.cycleMode = 1
-            # event driven dynamics only work for brioli-mezard dynamics!
+            # event driven dynamics only work for biroli-mezard dynamics!
             self._eddInit = self.C.EddBM_init
             self._eddUupdateLatPos = self.C.EddBM_updateLatPos
             self._eddConsistencyCheck = self.C.EddBM_consistencyCheck
@@ -216,9 +216,11 @@ class Sys(io.IOSys, object):
         self.energyModeStr = energyMode
         if energyMode.lower() == 'birolimezard':
             self.energyMode = 1
-        if energyMode.lower() in ('zero', 'kobandersen',
+        elif energyMode.lower() in ('zero', 'kobandersen',
                                   'fredricksonandersen'):
             self.energyMode = 2
+        else:
+            raise Exception("Unknown energy mode: %s", energyMode)
     
 
     def _allocArray(self, name, **args):
