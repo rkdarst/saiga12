@@ -67,8 +67,6 @@ class SimData(ctypes.Structure):
         ]
 SimData_p = ctypes.POINTER(SimData)
 
-neighlist = 1
-
 _clibCache = { }
 def getClib():
     if _clibCache.has_key("C"):
@@ -76,15 +74,17 @@ def getClib():
         return C
     filename = 'saiga12c.so'
     C = ctypes.cdll[os.path.join(os.path.dirname(__file__), filename)]
-    if neighlist:
-        C.addParticle.restype = None
-        C.addParticle.argtypes = SimData_p, c_int, c_int
+    C.addParticle.restype = None
+    C.addParticle.argtypes = SimData_p, c_int, c_int
 
-        C.delParticle.restype = None
-        C.delParticle.argtypes = SimData_p, c_int
+    C.delParticle.restype = None
+    C.delParticle.argtypes = SimData_p, c_int
 
     cfuncs = (
         ("neighbors_pos",          c_int,    (SimData_p, c_int)),
+        ("addParticle",            None,    (SimData_p, c_int, c_int)),
+        ("delParticle",            None,    (SimData_p, c_int)),
+        ("moveParticle",           None,    (SimData_p, c_int, c_int)),
         ("getInsertType",          c_int,    (SimData_p,)),
         ("loadStateFromSave",      None,     (SimData_p,)),
         ("energy_posLocal",             c_double, (SimData_p, c_int)),
@@ -292,13 +292,9 @@ class Sys(io.IOSys, object):
             print "ERROR: Lattice position is out of bounds"
         if self.lattsite[pos] != S12_EMPTYSITE:
             print "ERROR: lattice site already occupied"
-        #if not neighlist:   self.lattsite[pos] = type_
-        #else:               self.C.addParticle(self.SD_p, pos, type_)
         self.C.addParticle(self.SD_p, pos, type_)
     def delParticle(self, pos):
         """Delete particle at lattice site `pos`"""
-        #if not neighlist:  self.lattsite[pos] = S12_EMPTYSITE
-        #else:              self.delParticle(pos)
         self.C.delParticle(self.SD_p, pos)
     def consistencyCheck(self, type_=3):
         """Check of internal data structures.
@@ -380,12 +376,8 @@ class Sys(io.IOSys, object):
             i = random.randrange(len(spots))
             pos = spots.pop(i)
             #print "inserting at site:", pos
-            #if not neighlist:      self.lattsite[pos] = type_
-            #else:                  self.addParticle(pos, type_)
             self.addParticle(pos, type_)
             if self.energy_pos(pos) == float("inf"):
-                #if not neighlist:  self.lattsite[pos] = S12_EMPTYSITE
-                #else:              self.delParticle(pos)
                 self.delParticle(pos)
                 continue
             inserted += 1

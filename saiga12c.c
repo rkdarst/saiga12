@@ -74,7 +74,6 @@ struct LList {
  */
 
 
-#define neighlist 
 void ctest(struct SimData *SD);
 
 /* Given lattice point `pos`, how many adjacent atoms does it have?
@@ -133,7 +132,6 @@ inline int atomType(struct SimData *SD, int pos) {
 }
 
 
-#ifdef neighlist
 inline void addParticle(struct SimData *SD, int pos, int type) {
   if (errorcheck) if (SD->lattsite[pos] != S12_EMPTYSITE) { 
       printf("error: inserting atom at not empty site location: %d\n", pos);
@@ -206,19 +204,6 @@ inline void moveParticle(struct SimData *SD, int oldpos, int newpos) {
     SD->nneighbors[neighpos] ++;
   }
 }
-#else
-
-        inline void addParticle(struct SimData *SD, int pos, int type) {
-          SD->lattsite[pos] = type;
-        }
-        inline void delParticle(struct SimData *SD, int pos) {
-          SD->lattsite[pos] = S12_EMPTYSITE;
-        }
-
-        //#define addParticle(x, y, z) (x)->lattsite[y] = (z);
-        // #define delParticle(x, y) (x)->lattsite[y] = S12_EMPTYSITE;
-
-#endif
 
 
 
