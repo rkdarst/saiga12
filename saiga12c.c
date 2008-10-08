@@ -14,7 +14,7 @@
 #define S12_TYPE_ANY (-2)
 
 int debug = 0;
-int errorcheck = 0;  // print errors if inconsistent
+int errorcheck = 1;  // print errors if inconsistent
 int debugedd = 0;    // print out info always
 
 struct SimData {
