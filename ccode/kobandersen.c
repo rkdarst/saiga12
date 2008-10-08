@@ -175,6 +175,14 @@ int EddKA_cycle(struct SimData *SD, double n) {
 
   double maxTime = (double) n;
   double time = SD->MLLextraTime;
+  if (time == -1.) {
+    // pre-move, advance time until the first event.  Otherwise we
+    // always end up moving right at time == 0
+    double timestep = (SD->N * SD->connMax) / ((double)SD->MLLlen);
+    timestep *= -log(genrand_real3());
+    time = timestep;
+  }
+
   //printf("eddKA_cycle: time:%f maxTime%f\n", time, maxTime);
   while (time < maxTime) {
 

@@ -654,7 +654,7 @@ class Sys(io.IOSys, object):
         self.MLLr[:] = -1
         self.MLLlen = 0
         self.MLLlen_down = 0
-        self.MLLextraTime = 0.
+        self.MLLextraTime = -1.
         self._eddInit(self.SD_p)
         self._eddEnabled = True
     def eddDisable(self):

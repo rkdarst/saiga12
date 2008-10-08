@@ -345,9 +345,18 @@ int EddFA_cycle(struct SimData *SD, double n) {
   double wUp = 1-(c);
   double wDown = c;
 
+  double wTot = SD->MLLlen_down * wDown   +   SD->MLLlen * wUp;
+  if (time == -1.) {
+    // pre-move, advance time until the first event.  Otherwise we
+    // always end up moving right at time == 0
+    double timestep = 1./wTot;
+    timestep *= -log(genrand_real3());
+    time = timestep;
+  }
+
   while (time < maxTime) {
     int pos;
-    double wTot = SD->MLLlen_down * wDown   +   SD->MLLlen * wUp;
+    wTot = SD->MLLlen_down * wDown   +   SD->MLLlen * wUp;
     double rand = genrand_real2() * wTot;
 
     if (rand < (SD->MLLlen_down)*wDown) {
@@ -384,7 +393,6 @@ int EddFA_cycle(struct SimData *SD, double n) {
     naccept += 1;
     
     // Advance time
-    //double timestep = (SD->N * SD->connMax) / ((double)SD->MLLlen);
     double timestep = 1./wTot;
     timestep *= -log(genrand_real3());  // exponential distribution of times.
                                         // genrand_real3()  -> (0, 1)
