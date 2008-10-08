@@ -25,7 +25,7 @@ inline void EddBM_updateLatPos(struct SimData *SD, int pos) {
     else {
       // we know it is empty, try moving and see if energy becomes inf.
       moveParticle(SD, pos, adjpos);
-      if (energy_posNeighborhood(SD, adjpos) == 1/0.)
+      if (energy_pos(SD, adjpos) == 1/0.)
 	isAllowedMove = 0;
       moveParticle(SD, adjpos, pos);
     }
@@ -125,7 +125,7 @@ int EddBM_consistencyCheck(struct SimData *SD) {
 	  // there is not a neighboring particle, so we have to do a
 	  // move test.
 	  moveParticle(SD, pos, adjpos);
-	  if (energy_posNeighborhood(SD, adjpos) == 1/0.) {
+	  if (energy_pos(SD, adjpos) == 1/0.) {
 	    // not allowed to move here
 	    if (SD->MLLr[moveIndex] != -1) {
 	      retval += 1;

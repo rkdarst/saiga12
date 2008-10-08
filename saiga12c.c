@@ -12,6 +12,11 @@
 
 #define S12_EMPTYSITE (-1)
 #define S12_TYPE_ANY (-2)
+#define S12_ENERGY_BM (1)
+#define S12_ENERGY_ZERO (2)
+#define S12_CYCLE_MC (1)
+#define S12_CYCLE_KA (2)
+#define S12_CYCLE_FA (3)
 
 int debug = 0;
 int errorcheck = 1;  // print errors if inconsistent
@@ -231,62 +236,79 @@ void loadStateFromSave(struct SimData *SD) {
   }
 }
 
+/* How to use these energy functions ?
+ * energy_pos is the main energy function.
+ * energy_posLocal is the energy due to one lattice site.  It is only
+ *           important when there are "induced 3-body interactions"
+ * energy is the sum of all energies in the system.
+ * 
+ * How to add a new energy function:
+ * a) add a energy_XXX.c file in ccode/ directory.
+ *    add an #include "ccode/energy_XXX.c" below to include it.
+ * b) add S12_ENERGY_XXX constant in the top of saiga12c.c AND common.py
+ * c) add the energy setting in setEnergyMode in main.py.  Follow the
+ *    examples.
+ * d) Most likely, your energy function is two-body.  If so, do this:
+ *    d1) you need only one energy function, call it 
+ *        energyXXX_pos(sturct SimData *SD, int pos)
+ *        in the ccode/ file.  Make it an inline function
+ *    d2) add the hooks in energy_posLocal and energy_pos to call the
+ *        function above.  You don't need to make energy_pos and
+ *        energy_posLocal call different things since your function is
+ *        only two-body.
+ * e) saiga12 extensively uses inline functions in critical portions.
+ *    It would probably go faster if un-inlined the energy functions you
+ *    were not using -- so remove the inlines from ccode/energy_bm.c.
+ */
+#include "ccode/energy_bm.c"
 
+inline double energy_posLocal(struct SimData *SD, int pos) {
+  /*  Energy of a particle at one particular position.  This function
+   *  should only be used instead of energy_pos when there are three
+   *  body interactions, and you want to isolate which body is causing
+   *  a problem.  In short, don't use it unless you know what you are
+   *  doing.
+   */
+  if (SD->energyMode == S12_ENERGY_BM)
+    return energyBM_posLocal(SD, pos);
+  else if (SD->energyMode == S12_ENERGY_ZERO)
+    return(0.);
+  // add new energy modes above this line.
+  else {
+    if (errorcheck) {
+      printf("invalid evergy mode: %d", SD->energyMode);
+      exit(5); }
+    else
+      return(-1.);
+  }
+}
 
 inline double energy_pos(struct SimData *SD, int pos) {
-  /*  Energy of a particle at one particular position.
+  /* This should be your primary energy function for a certain lattice site.
    */
-  if (SD->energyMode == 2)
+  if (SD->energyMode == S12_ENERGY_BM)
+    return energyBM_pos(SD, pos);
+  else if (SD->energyMode == S12_ENERGY_ZERO)
     return(0.);
-  if (SD->lattsite[pos] == S12_EMPTYSITE)
-     return 0;
-  int type = atomType(SD, pos);
-#ifndef neighlist
-  int excessneighbors = neighbors_pos(SD, pos) - type;
-#else
-  int excessneighbors = SD->nneighbors[pos] - type;
-#endif
-  //printf("excessneighbors: %d\n", excessneighbors);
-  if (excessneighbors <= 0) {
-    return 0.;
-  }
+  // add new energy modes above this line.
   else {
-    return excessneighbors * SD->hardness;
+    if (errorcheck) {
+      printf("invalid evergy mode: %d", SD->energyMode);
+      exit(6); }
+    else
+      return(-1.);
   }
 }
-
-
-
-
-
-inline double energy_posNeighborhood(struct SimData *SD, int pos) {
-  /* This is similar to the energy_pos, but will also return energy of
-   * that position, and all neighboring positions.  This takes into
-   * account "induced" interactions, where one particle doesn't
-   * violate its own density constraint, but violates the density
-   * constraint one of its neighbors.
-   */
-  if (SD->energyMode == 2)
-    return(0.);
-  int i_conn;
-  double E = energy_pos(SD, pos);
-  for (i_conn=0; i_conn<SD->connN[pos] ; i_conn++) {
-    int adjPos = SD->conn[pos*SD->connMax + i_conn];
-    E += energy_pos(SD, adjPos);
-  }
-  return E;
-}
-
-
-
 
 double energy(struct SimData *SD) {
-  /* Total energy of the system.
+  /* Total energy of the system.  Note that for two-body symmetric
+   * potentials, this does not divide by two to eliminate
+   * double-counting.
    */
   int pos;
   double energy=0;
   for (pos=0 ; pos<SD->lattSize ; pos++) {
-    energy += energy_pos(SD, pos);
+    energy += energy_posLocal(SD, pos);
   }
   return energy;
 }
@@ -324,9 +346,9 @@ int cycleMC_GCadd(struct SimData *SD, int pos) {
     uVTchempotential = SD->inserttypes_mulookup[inserttype];
   }
 
-  double Eold = energy_posNeighborhood(SD, pos);
+  double Eold = energy_pos(SD, pos);
   addParticle(SD, pos, inserttype);
-  double Enew = energy_posNeighborhood(SD, pos);
+  double Enew = energy_pos(SD, pos);
   double x = //(SD->lattSize/(double)(SD->N+1)) *   // this for method A only
                exp( SD->beta * (uVTchempotential - Enew + Eold))
                / inserttype_prob;
@@ -381,10 +403,10 @@ int cycleMC_GCdel(struct SimData *SD, int pos) {
     uVTchempotential = SD->inserttypes_mulookup[inserttype];
   }
 
-  double Eold = energy_posNeighborhood(SD, pos);
+  double Eold = energy_pos(SD, pos);
   int origtype = atomType(SD, pos);
   delParticle(SD, pos);  // this WILL result in particle nums being shifted.
-  double Enew = energy_posNeighborhood(SD, pos);
+  double Enew = energy_pos(SD, pos);
   
 
   double x = //((SD->N+1)/(double)SD->lattSize) *  // this for method A only
@@ -433,9 +455,9 @@ double chempotential(struct SimData *SD, int inserttype) {
       // so continue
       continue;
     }
-    double Eold = energy_posNeighborhood(SD, pos);
+    double Eold = energy_pos(SD, pos);
     addParticle(SD, pos, inserttype);
-    double Enew = energy_posNeighborhood(SD, pos);
+    double Enew = energy_pos(SD, pos);
     delParticle(SD, pos);
     //printf("%f %f\n", Eold, Enew);
 
@@ -461,11 +483,11 @@ inline int cycleKA_translate(struct SimData *SD);
 int cycle(struct SimData *SD, double n) {
   // If there is no cycle mode set (defaults to empty zero), we should
   // have an error.
-  if (SD->cycleMode == 1)
+  if (SD->cycleMode == S12_CYCLE_MC)
     return cycleMC(SD, n);
-  else if (SD->cycleMode == 2)
+  else if (SD->cycleMode == S12_CYCLE_KA)
     return cycleKA(SD, n);
-  else if (SD->cycleMode == 3)
+  else if (SD->cycleMode == S12_CYCLE_FA)
     return cycleFA(SD, n);
   else {
     printf("Cycle mode not set: %d", SD->cycleMode);
@@ -524,14 +546,14 @@ inline int cycleMC_translate(struct SimData *SD) {
     }
     
     int accept;
-    double Eold = energy_posNeighborhood(SD, pos) +
-                  energy_posNeighborhood(SD, newPos);
+    double Eold = energy_pos(SD, pos) +
+                  energy_pos(SD, newPos);
     //int atomtype = atomType(SD, pos);
     //delParticle(SD, pos);
     //addParticle(SD, newPos, atomtype);
     moveParticle(SD, pos, newPos);
-    double Enew = energy_posNeighborhood(SD, newPos) +
-                  energy_posNeighborhood(SD, pos);
+    double Enew = energy_pos(SD, newPos) +
+                  energy_pos(SD, pos);
 
     if (Enew == 1./0.) {
       // always reject moves producing infinite energy

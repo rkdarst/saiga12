@@ -87,8 +87,8 @@ def getClib():
         ("neighbors_pos",          c_int,    (SimData_p, c_int)),
         ("getInsertType",          c_int,    (SimData_p,)),
         ("loadStateFromSave",      None,     (SimData_p,)),
-        ("energy_pos",             c_double, (SimData_p, c_int)),
-        ("energy_posNeighborhood", c_double, (SimData_p, c_int) ),
+        ("energy_posLocal",             c_double, (SimData_p, c_int)),
+        ("energy_pos", c_double, (SimData_p, c_int) ),
         ("energy",                 c_double, (SimData_p,)),
         ("chempotential",          c_double, (SimData_p, c_int)),
         ("cycle",                  c_int,    (SimData_p, c_double)),
@@ -177,7 +177,7 @@ class Sys(io.IOSys, object):
         """
         self.cycleModeStr = cycleMode
         if cycleMode.lower() == 'montecarlo':
-            self.cycleMode = 1
+            self.cycleMode = S12_CYCLE_MC
             # event driven dynamics only work for biroli-mezard dynamics!
             self._eddInit = self.C.EddBM_init
             self._eddUupdateLatPos = self.C.EddBM_updateLatPos
@@ -185,14 +185,14 @@ class Sys(io.IOSys, object):
             self._eddCycle = self.C.EddBM_cycle
             
         elif cycleMode.lower() == 'kobandersen':
-            self.cycleMode = 2
+            self.cycleMode = S12_CYCLE_KA
             self._eddInit = self.C.EddKA_init
             self._eddUpdateLatPos = self.C.EddKA_updateLatPos
             self._eddConsistencyCheck = self.C.EddKA_consistencyCheck
             self._eddCycle = self.C.EddKA_cycle
             self.setEnergyMode('zero')
         elif cycleMode.lower() == 'fredricksonandersen':
-            self.cycleMode = 3
+            self.cycleMode = S12_CYCLE_FA
             self._eddInit = self.C.EddFA_init
             self._eddUpdateLatPos = self.C.EddFA_updateLatPos
             self._eddConsistencyCheck = self.C.EddFA_consistencyCheck
@@ -215,10 +215,10 @@ class Sys(io.IOSys, object):
         """
         self.energyModeStr = energyMode
         if energyMode.lower() == 'birolimezard':
-            self.energyMode = 1
+            self.energyMode = S12_ENERGY_BM
         elif energyMode.lower() in ('zero', 'kobandersen',
                                   'fredricksonandersen'):
-            self.energyMode = 2
+            self.energyMode = S12_ENERGY_ZERO
         else:
             raise Exception("Unknown energy mode: %s", energyMode)
     
@@ -383,7 +383,7 @@ class Sys(io.IOSys, object):
             #if not neighlist:      self.lattsite[pos] = type_
             #else:                  self.addParticle(pos, type_)
             self.addParticle(pos, type_)
-            if self.energy_posNeighborhood(pos) == float("inf"):
+            if self.energy_pos(pos) == float("inf"):
                 #if not neighlist:  self.lattsite[pos] = S12_EMPTYSITE
                 #else:              self.delParticle(pos)
                 self.delParticle(pos)
@@ -539,21 +539,23 @@ class Sys(io.IOSys, object):
     def energy(self):
         """Total energy of the system."""
         return self.C.energy(self.SD_p)
-    def energy_pos(self, pos):
+    def energy_posLocal(self, pos):
         """Energy due to a single lattice site."""
+        return self.C.energy_posLocal(self.SD_p, pos)
+    def energy_pos(self, pos):
+        """Energy due to a single position.
+
+        This function is what is used in monte-carlo and other functions."""
         return self.C.energy_pos(self.SD_p, pos)
-    def energy_posNeighborhood(self, pos):
-        """Energy due to a single position and all neighboring sites."""
-        return self.C.energy_posNeighborhood(self.SD_p, pos)
     def findInfiniteEnergy(self):
         """Utility function to find the lattice sites which have inf energy.
 
         Print information about infinite areas.
         """
         for pos in range(self.lattSize):
-            if self.energy_posNeighborhood(pos) == float("inf"):
-                print pos, self.energy_pos(pos), \
-                      self.energy_posNeighborhood(pos)
+            if self.energy_pos(pos) == float("inf"):
+                print pos, self.energy_posLocal(pos), \
+                      self.energy_pos(pos)
                 self.printLatticeLocal(pos, width=2)
     def hash(self):
         """Utility function to find checksum of current state.
