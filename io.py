@@ -95,7 +95,7 @@ class IOSys(object):
             self.atomtype[:self.N] = state['atomtype']
             self.C.loadStateFromSave(self.SD_p)
         else:
-            raise Exception("Invalid save version when loading: %s",
+            raise Exception("Invalid save version when loading: %s"%
                             state['stateSaveVersion'])
         #if state.has_key("energyModeStr"):
         #    self.setEnergyMode(self.energyModeStr)
@@ -105,9 +105,15 @@ class IOSys(object):
             self.eddEnable()
         if state.has_key("persist"):
             version, persist = state["persist"]
-            persist = zlib.decompress(persist)
-            persist = pickle.loads(persist)
-            self.persist[:] = persist
+            if version == 0:
+                if self.persist is None: self._allocPersistArray()
+                persist = zlib.decompress(persist)
+                persist = pickle.loads(persist)
+                self.persist[:] = persist
+            else:  # unknown version
+                if not getattr(self, "_ignorePersistLoading"):
+                    raise Exception("Invalid persist array version: %s"%
+                                    version)
         
 
         if consistencyCheck:
