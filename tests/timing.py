@@ -9,7 +9,7 @@ from saiga12.geom.grid import Grid3d
 
 S1 = Grid3d()
 S1.makegrid(15, 15, 15)
-S1.addParticleRandomDensity(.5, type_=3)
+S1.addParticleRandomDensity(.45, type_=3)
 S1.setCycleMoves()
 
 #S2 = Grid3d()
