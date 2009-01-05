@@ -54,3 +54,44 @@ for i in xrange(10):
 
 #print "time:", resource.getrusage(resource.RUSAGE_SELF).ru_utime-t1
 assert S2.eddConsistencyCheck() == 0
+
+
+#
+# test persistence function stuff
+#
+S1 = Grid2d()
+S1.setCycleMode('kobandersen')
+S1.makegrid(3, 3)
+S1.addParticleRandom(n=1, type_=3)
+
+print S1.lattsite, S1.persist
+S1.cycle()
+print S1.lattsite, S1.persist
+
+S1._allocPersistArray()
+
+print S1.lattsite, S1.persist
+S1.cycle()
+print S1.lattsite, S1.persist
+
+print
+
+import saiga12 ; saiga12.randomSeed(174)
+S1 = Grid2d()
+S1.setCycleMode('kobandersen')
+S1.makegrid(3, 3)
+S1.addParticleRandom(n=1, type_=3)
+S1.eddEnable()
+
+print S1.lattsite, S1.persist
+S1.cycle()
+print S1.lattsite, S1.persist
+
+S1._allocPersistArray()
+
+print S1.lattsite, S1.persist
+S1.cycle()
+print S1.lattsite, S1.persist
+
+
+#from rkddp.interact import interact ; interact()

@@ -193,6 +193,10 @@ int EddKA_cycle(struct SimData *SD, double n) {
       printf("move: moving from oldpos:%d to newpos:%d\n", oldpos, newpos);
     moveParticle(SD, oldpos, newpos);  // should always be valid, else
 				       // prev prob.
+    if (SD->persist != NULL) {  // Update persistence function array if there
+      SD->persist[oldpos] = 1;
+      SD->persist[newpos] = 1;
+    }
     llist.n = 0;
     LlistAdd(&llist, oldpos); //oldpos moves are rmvd below, in the first loop.
     EddKA_updateLatPos2(SD, newpos, &llist);

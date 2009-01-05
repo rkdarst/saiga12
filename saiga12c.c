@@ -568,6 +568,10 @@ inline int cycleMC_translate(struct SimData *SD) {
     }
     else {
       if (debug) printf("accepting move\n");
+      if (SD->persist != NULL) { // Update persistence function array if there
+        SD->persist[pos] = 1;
+        SD->persist[newPos] = 1;
+      }
       return(1);  // Return 1, since we accepted one move
     }
     if(debug) printf("Eold: %.3f Enew: %.3f\n", Eold, Enew);
@@ -660,6 +664,10 @@ inline int cycleKA_translate(struct SimData *SD) {
     }
 
     moveParticle(SD, pos, newPos);
+    if (SD->persist != NULL) { // Update persistence function array if there
+      SD->persist[pos] = 1;
+      SD->persist[newPos] = 1;
+    }
 
     return(1);  // Return 1, since we accepted one move
 }

@@ -201,11 +201,23 @@ class Sys(io.IOSys, object):
             if self.lattSize <= 0:
                 raise Exception, ("lattSize is not set-- you must set up "+
                                  "your arrays before enabling F-A dynamics")
-            self._allocArray("persist", shape=(self.lattSize),
-                             dtype=numpy_int)
-            self.persist[:] = 0
+            self._allocPersistArray() # automatically set to zeros
         else:
             raise Exception("Unknown cycle mode: %s", cycleMode)
+    def _allocPersistArray(self):
+        """Allocate a persistence function array. (public method)
+
+        Allocate just the persistence function array--- models can
+        then update it.
+
+        FA dynamics - automatically created.
+        KA dynamics - implemented
+        MC dynamics (BM) - implemented
+        """
+        self._allocArray("persist", shape=(self.lattSize),
+                         dtype=numpy_int)
+        # automatically set to zeros
+
     def setEnergyMode(self, energyMode):
         """Set the energy calculation mode.
 
