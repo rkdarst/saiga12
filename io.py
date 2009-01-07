@@ -79,9 +79,9 @@ class IOSys(object):
                 continue
             setattr(self, key, state[key])
         if state["hardness"] == "inf":
-            self.hardness == float("inf")
+            self.hardness = float("inf")
         else:
-            self.hardness == state["hardness"]
+            self.hardness = state["hardness"]
         # was event-driven dynamics enabled before?  (note: you *must*
         # regenerate the move-lists, you can't just set the variable
         # and call it enabled)
