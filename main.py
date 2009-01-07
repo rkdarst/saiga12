@@ -648,10 +648,33 @@ class Sys(io.IOSys, object):
         return mu
     def persistFunction(self):
         return (self.lattSize - numpy.sum(self.persist)) / float(self.lattSize)
-    
-        
 
+
+    def eddCheckAllowed(self, raiseException=False):
+        """Check if event-driven dynamics is allowed with our current setup.
+
+        Returns True if EDD is allowed, False if it's not.  So far,
+        EDD is allowed with:
+        - FA model
+        - KA model
+        - BM model with infinite hardness (T=0/beta=inf or hardness=inf)
+        """
+        if (
+            self.cycleModeStr == 'fredricksonandersen' or
+            self.cycleModeStr == 'kobandersen' or
+            ( self.cycleModeStr == 'montecarlo' and
+              self.energyModeStr == 'birolimezard' and
+              ( self.beta == inf or self.hardness == inf )
+            )
+          ):
+            return True
+        if raiseException:
+            raise Exception("EDD is not allowed with our paremeters")
+        return False
     def eddEnable(self):
+        if not self.eddCheckAllowed():
+            print "can not run event-driven dynamics: ignoring"
+            return
         assert self.lattSize > 0, "lattSize <= zero... is grid initialized?"
         MLLsize = self.lattSize*self.connMax
         if self.cycleModeStr == 'fredricksonandersen':
@@ -693,6 +716,8 @@ class Sys(io.IOSys, object):
         the process of equilibrating the system.  However, if you set
         `copy` to true, it will make a copy before it 
         """
+        if not self.eddCheckAllowed():
+            return
         if self.cycleModeStr == 'montecarlo':
             n = 100
         elif self.cycleModeStr == 'kobandersen':
