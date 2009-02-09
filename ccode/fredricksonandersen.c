@@ -356,7 +356,6 @@ int EddFA_cycle(struct SimData *SD, double n) {
 
   while (time < maxTime) {
     int pos;
-    wTot = SD->MLLlen_down * wDown   +   SD->MLLlen * wUp;
     double rand = genrand_real2() * wTot;
 
     if (rand < (SD->MLLlen_down)*wDown) {
@@ -393,6 +392,7 @@ int EddFA_cycle(struct SimData *SD, double n) {
     naccept += 1;
     
     // Advance time
+    wTot = SD->MLLlen_down * wDown   +   SD->MLLlen * wUp;
     double timestep = 1./wTot;
     timestep *= -log(genrand_real3());  // exponential distribution of times.
                                         // genrand_real3()  -> (0, 1)
