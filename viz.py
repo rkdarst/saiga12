@@ -77,7 +77,7 @@ class VizSystem(object):
             z = 0
         else:
             x,y,z = self.S.physicalShape
-        visual.scene.center = (x/2., y/2., z/2.)
+        visual.scene.center = visual.scene.originalCenter = (x/2., y/2., z/2.)
         c = visual.color.blue
         self._otherObjects.extend((
         visual.cylinder(pos=(0,0,0), axis=(x, 0, 0), radius=radius, color=c),
@@ -137,9 +137,11 @@ class VizSystem(object):
         """
         display = self._display
         for i in range(len(self._display)):
-            display[i].visible = 0
-        for obj in self._otherObjects:
-            obj.visible = 0
+            display[0].visible = 0
+            del display[0]
+        for i in range(len(self._otherObjects)):
+            self._otherObjects[0].visible = 0
+            del self._otherObjects[0]
                     
 if __name__ == "__main__":
     import saiga12.io
@@ -150,13 +152,14 @@ if __name__ == "__main__":
         pass
                         
 
+    fileNames = sys.argv[1:]
+    frame_index = 0
     wait = True
-
-    for i, fname in enumerate(sys.argv[1:]):
-        if fname == "-w":
-            wait = False
-            continue
-        
+    # bash filename sort ignores "-" which is annoying for negative numbers
+    fileNames.sort()  
+    #print fileNames
+    while True:
+        fname = fileNames[frame_index]
         S = saiga12.io.io_open(open(fname))
 
         visual.scene.title = fname
@@ -165,7 +168,17 @@ if __name__ == "__main__":
         V.vizDisplay()
 
         print fname,
-        if wait:
-            raw_input(", ...")
+        sys.stdout.flush()
+        ch = visual.scene.kb.getkey()
+        if ch in '>.': frame_index += 1
+        if ch in '<,': frame_index -= 1
+        if ch == '0': frame_index = 0
+        if ch == '9': frame_index = len(fileNames)-1
+        if frame_index < 0: frame_index = 0
+        if frame_index > len(fileNames)-1: frame_index = len(fileNames)-1
+        if ch == 'x': break
+        del V
+    print
+    visual.scene.visible = 0
 
 
