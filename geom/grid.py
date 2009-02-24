@@ -130,8 +130,10 @@ class GridNd(saiga12.Sys):
         # v-- this 
         delta = (numpy.floor(lindistances/self.physicalShape + .5)) * \
                 self.physicalShape
-        lindistances = lindistances - delta
-        dists2 = numpy.sum(lindistances * lindistances, axis=-1)
+        # Use the ufuncs so that all operations are done in-place.
+        numpy.subtract(lindistances, delta, lindistances)
+        numpy.multiply(lindistances, lindistances, lindistances)
+        dists2 = numpy.sum(lindistances, axis=-1)
         return dists2
     def latticeReInitData(self):
         """Get state data needed to re-create our grid.
