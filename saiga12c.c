@@ -706,12 +706,15 @@ double calc_structfact(struct SimData *SD1, struct SimData *SD2,
       continue;
     }
 
-    if(print) printf("  dr: %f %f %f\n", dr[0], dr[1], dr[2]);
     int d;
     for (d=0 ; d<nDim ; d++) {
+      //printf("coord: %f\n", (double)cords[nDim*pos1 + d]);
+      //printf("coord: %f\n", (double)cords[nDim*pos2 + d]);
+      //printf("shape: %f\n", (double)lattShape[d]);
       dr[d] =  cords[nDim*pos1 + d] - cords[nDim*pos2 + d];
       dr[d] -= (floor(dr[d]/lattShape[d] + .5)) *lattShape[d];
     }
+    if(print) printf("  dr: %f %f %f\n", dr[0], dr[1], dr[2]);
     
 	
     for(nk=0 ; nk < Nk ; nk++) {
