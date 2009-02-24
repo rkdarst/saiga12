@@ -67,6 +67,9 @@ class SimData(ctypes.Structure):
         ]
 SimData_p = ctypes.POINTER(SimData)
 
+class Saiga12Exception(Exception):
+    pass
+
 _clibCache = { }
 def getClib():
     if _clibCache.has_key("C"):
