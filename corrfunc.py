@@ -314,13 +314,13 @@ class StructCorr(object):
             raise Exception, "Number of atoms has changed... "\
                   "Fs assumes you aren't doing that."
 
-        physicalShape = numpy.asarray(S1.physicalShape,
-                                      dtype=saiga12.c_double).ctypes.data
+        physicalShape = numpy.asarray(S1.physicalShape, dtype=saiga12.c_double)
+        physicalShape_p = physicalShape.ctypes.data
         totalsum = S1.C.calc_structfact(S1.SD_p, S2.SD_p,
                                         self.kvecs.ctypes.data,
                                         len(self.kvecs), type_,
                                         self.coordLookup.ctypes.data,
-                                        physicalShape,
+                                        physicalShape_p,
                                         len(S1.physicalShape),
                                         #self._SkArray.ctypes.data,
                                         #self._SkArrayByAtom.ctypes.data)
