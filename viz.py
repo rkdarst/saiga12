@@ -145,6 +145,7 @@ class VizSystem(object):
                     
 if __name__ == "__main__":
     import saiga12.io
+    import saiga12.util
     import sys
     try:
         from urllib import urlopen as open
@@ -158,26 +159,25 @@ if __name__ == "__main__":
     # bash filename sort ignores "-" which is annoying for negative numbers
     fileNames.sort()  
     #print fileNames
+    V = None
+
     while True:
         fname = fileNames[frame_index]
         S = saiga12.io.io_open(open(fname))
 
         visual.scene.title = fname
-        V = VizSystem(S)
-        V.vizMakeBox()
+        if V == None or V.S.lattSize != S.lattSize:
+            V = VizSystem(S)
+            V.vizMakeBox()
+        V.S = S
         V.vizDisplay()
+        
 
         print fname,
         sys.stdout.flush()
-        ch = visual.scene.kb.getkey()
-        if ch in '>.': frame_index += 1
-        if ch in '<,': frame_index -= 1
-        if ch == '0': frame_index = 0
-        if ch == '9': frame_index = len(fileNames)-1
-        if frame_index < 0: frame_index = 0
-        if frame_index > len(fileNames)-1: frame_index = len(fileNames)-1
-        if ch == 'x': break
-        del V
+        frame_index = saiga12.util.getNewFrameIndex(frame_index,len(fileNames))
+        if frame_index == None: break
+    del V
     print
     visual.scene.visible = 0
 

@@ -28,7 +28,9 @@ def vector(x):
 
 def getNewFrameIndex(frame_index, nFrames):
     #ch = getch()
-    ch = visual.scene.kb.getkey()
+    ch = '~'
+    while ch not in '>.<,09xcC':
+        ch = visual.scene.kb.getkey()
     if ch in '>.': frame_index += 1
     if ch in '<,': frame_index -= 1
     if ch == '0': frame_index = 0
