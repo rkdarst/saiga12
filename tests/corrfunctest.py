@@ -24,10 +24,10 @@ def assertwithin(a, b, ratio=.01):
     assert abs(   (a-b) / ((a+b)/2)   )  < ratio
 
 SkList = saiga12.corrfunc.StructCorrList(
-    S=S, kmag2s=range(1, 50), type_=type_)
+    S=S, kmag2s=range(1, 50), type_=type_, orthogonal=False)
 
 FsList = saiga12.corrfunc.StructCorrList(
-    S=S, kmag2s=range(1, 50), type_=type_)
+    S=S, kmag2s=range(1, 50), type_=type_, orthogonal=True)
 
 
 for i in range(25):
