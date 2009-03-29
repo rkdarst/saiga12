@@ -264,6 +264,59 @@ def moves(fileNames):
     visual.scene.visible = 0
     print        
 
+def visualizeKvectors(fileNames):
+    import saiga12.corrfunc as corrfunc
+    scene = visual.scene
+    scene.exit = 0
+    scene.fov = .5 * scene.fov
+    scene.range = 7
+    scene.width, scene.height = 800, 800
+    fileNames.sort()
+
+    if False:
+        frame_index = 0
+        while True:
+            print '\r',
+            print fileNames[frame_index][-20:],
+            frame = io_open(fileNames[frame_index])
+        
+            SsfList = corrfunc.StructCorrList(
+                frame, kmags=range(1, 8), type_=2,  # XXX type=2
+                orthogonal=False)
+            SsfList.calcSk(frame)
+            scene = viz.visualizeKvectors(SsfList)
+            sys.stdout.flush()
+        
+            frame_index = getNewFrameIndex(frame_index, len(fileNames))
+            if frame_index == None: break
+            #scene.visible = 0
+            for i in range(len(scene.objects)):
+                scene.objects[0].visible = 0
+        
+        #for i in range(len(scene.objects)):
+        #    scene.objects[0].visible = 0
+        visual.scene.visible = 0
+        del visual.scene
+    if True:
+        SsfList = None
+        for fname in fileNames:
+            frame = io_open(fname)
+            if SsfList==None: 
+                SsfList = corrfunc.StructCorrList(
+                    frame, kmags=range(1, 8), type_=2,  # XXX type=2
+                    orthogonal=False)
+            SsfList.calcSk(frame)
+        scene = viz.visualizeKvectors(SsfList)
+        while True:
+            frame_index = getNewFrameIndex(0, 1)
+            if frame_index == None: break
+        # clean up
+        scene.visible = 0
+        for i in range(len(scene.objects)):
+            scene.objects[0].visible = 0
+    
+
+
 
 if __name__ == "__main__":
     if len(sys.argv) == 1 or sys.argv[1] in ('--help', '-h', 'help'):
@@ -283,6 +336,9 @@ if __name__ == "__main__":
 
     elif sys.argv[1] == 'moves':
         moves(sys.argv[2:])
+
+    elif sys.argv[1] == 'kvecs':
+        visualizeKvectors(sys.argv[2:])
 
     else:
         print "command not found: %s"%sys.argv[1]

@@ -243,6 +243,30 @@ def toggleBG():
     elif visual.scene.background == visual.color.black:
         visual.scene.background = visual.color.white
 
+
+def visualizeKvectors(SsfList):
+    scene = visual.scene
+    #visual.scene = visual.display()
+    #scene = visual.scene
+    #scene.exit = 0
+    #scene.fov = .5 * scene.fov
+    #scene.range = 7
+    #scene.width, scene.height = 800, 800
+
+    for kmag in SsfList.kmags():
+        Ssf = SsfList.SsfDict[kmag]
+        for i, (kvec, Sk) in enumerate(
+            zip(Ssf.kvecsOrig, Ssf.SkArraysByKvec())):
+            widthfactor = .4
+            col = min(1, max(.1,  (Sk-.3)*2. ))
+            col = (col, col, col)
+            #visual.arrow(pos=(0,0,0), axis=kvec,
+            #             shaftwidth=Sk*widthfactor,
+            #             fixedwidth=1)
+            visual.cylinder(pos=(0,0,0), axis=kvec, color=col,
+                            radius=Sk*widthfactor)
+    return scene
+
                     
 if __name__ == "__main__":
     import saiga12.io
@@ -266,7 +290,6 @@ if __name__ == "__main__":
         fname = fileNames[frame_index]
         S = saiga12.io.io_open(open(fname))
 
-        visual.scene.title = fname
         if V == None or V.S.lattSize != S.lattSize:
             V = VizSystem(S)
             V.vizMakeBox()
@@ -274,7 +297,7 @@ if __name__ == "__main__":
         V.vizDisplay()
         
 
-        print fname,
+        print fname[-20:], " d=%04.4f e=%4.4g "%(S.density, S.energy()),
         sys.stdout.flush()
         frame_index = saiga12.util.getNewFrameIndex(
                                               frame_index,len(fileNames), V=V)
