@@ -85,7 +85,6 @@ class ConvolvingCorrelation(Averager, object):
     def runItems(self):
         for k, v in self._singleFrameItems.iteritems():
             self.avgStore(k, v(self.frameList[-1]))
-            #print self._avgs
     def addItemSingleFrame(self, name, func):
         self._singleFrameItems[name] = func
 
@@ -94,7 +93,7 @@ class ConvolvingCorrelation(Averager, object):
 def getLattice(S, type_):
     lattice = S.lattsite.copy()
     lattice[:] = 0
-    lattice[S.atompos[S.atomtype == type_]] = 1
+    lattice[S.getPos(type_)] = 1
     lattice.shape = S.lattShape
     return lattice
 def getFromCache(S, type_, function):
@@ -110,7 +109,6 @@ def getFromCache(S, type_, function):
         if mctime != S.mctime:
             val = None
     if val is None:
-        #print "calculating", function
         lattice = getLattice(S, type_)
         val = function(lattice)
         S._fftcache[cachepar] = val, S.mctime
@@ -131,16 +129,15 @@ def getFftArrays(S, type_, SOverlap=None):
 
     # Do the actual regeneration of the functions:
     if val is None:
-        #print "calculating", function
         #lattice = getLattice(S, type_)
         lattice = S.lattsite.copy()
         lattice[:] = 0
         if SOverlap is None:
-            lattice[S.atompos[S.atomtype == type_]] = 1
+            lattice[S.getPos(type_)] = 1
             norm = N
         else:
-            lattice[S       .atompos[S       .atomtype == type_]] += 1
-            lattice[SOverlap.atompos[SOverlap.atomtype == type_]] += 1
+            lattice[S       .getPos(type_)] += 1
+            lattice[SOverlap.getPos(type_)] += 1
             lattice[lattice != 2] = 0
             lattice[lattice == 2] = 1
             norm = N * S.densityOf(type_)
@@ -209,7 +206,6 @@ class StructCorr(object):
             # integer $k$.
             if kmag != math.sqrt(kmag2):
                 raise NoKvecsException
-            print kmag
             kvecs = numpy.asarray([(kmag, 0.  , 0.  ),
                                    (0.  , kmag, 0.  ),
                                    (0.  , 0.  , kmag),
@@ -255,24 +251,19 @@ class StructCorr(object):
                     kvecs = kvecs[magnitudes2 == kmag2]
                     if len(kvecs) == 0:
                         raise NoKvecsException
-                    #print kmag2, kvecs.shape[0]
-                    #print kvecs
                     
                     if useCache:
                         cache[cachepar] = kvecs
                     _kvecCache[cachepar] = kvecs   # memory cache always
                 del cache
         self.kvecs = kvecs
-        #print kvecs
 
     def makeCoordLookup(self, S):
         # DANGER -- only works for integer coordinates (so far!
         c = S.coords()
         c = numpy.asarray(c, dtype=saiga12.c_int)
-        #print c.dtype
         if not c.flags.carray:
             c = c.copy()
-        #print c, c.flags
         self.coordLookup = c
         
 
@@ -303,17 +294,16 @@ class StructCorr(object):
         
         # Do the actual regeneration of the functions:
         if val is None:
-            #print "calculating", function
             #lattice = getLattice(S, type_)
             #lattice = S.lattsite.copy()
             #lattice[:] = 0
             lattice = numpy.zeros(S.lattsite.size)
             if SOverlap is None:
-                lattice[S.atompos[S.atomtype == type_]] = 1
+                lattice[S.getPos(type_)] = 1
                 norm = N
             else:
-                lattice[S       .atompos[S       .atomtype == type_]] += 1
-                lattice[SOverlap.atompos[SOverlap.atomtype == type_]] += 1
+                lattice[S       .getPos(type_)] += 1
+                lattice[SOverlap.getPos(type_)] += 1
                 lattice[lattice != 2] = 0
                 lattice[lattice == 2] = 1
                 norm = N * S.densityOf(type_)
