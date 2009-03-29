@@ -45,7 +45,11 @@ class TestSequenceFunctions(unittest.TestCase):
     def testScripts(self):
         execfile("tests/scripttest.py", {})
 
+import sys
+sys.stdout = file('/dev/null', 'w')
+
 print unittest.main()
+sys.stdout = sys.__stdout__
 
 #suite = unittest.TestLoader().loadTestsFromTestCase(TestSequenceFunctions)
 #unittest.TextTestRunner(verbosity=2).run(suite)
