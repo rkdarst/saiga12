@@ -26,24 +26,35 @@ def vector(x):
     return x
 
 
-def getNewFrameIndex(frame_index, nFrames):
+def getNewFrameIndex(frame_index, nFrames, V=None, otherObjects=()):
     #ch = getch()
-    ch = '~'
-    while ch not in '>.<,09xcC':
-        ch = visual.scene.kb.getkey()
-    if ch in '>.': frame_index += 1
-    if ch in '<,': frame_index -= 1
-    if ch == '0': frame_index = 0
-    if ch == '9': frame_index = nFrames-1
-    if frame_index < 0: frame_index = 0
-    if frame_index > nFrames-1: frame_index = nFrames-1
-    if ch == 'x': return None
-    if ch == 'c':
-        if visual.scene.mouse.pick != None:
-            visual.scene.center = visual.scene.mouse.pick.pos
-    if ch == 'C':
-        if hasattr(visual.scene, "originalCenter"):
-            visual.scene.center = visual.scene.originalCenter
+    inLoop = True
+    while inLoop:
+        inLoop = False
+        ch = '~'
+        while ch not in '>.<,09xqcCtnvb':
+            ch = visual.scene.kb.getkey()
+            
+        if ch in '>.': frame_index += 1
+        if ch in '<,': frame_index -= 1
+        if ch == '0': frame_index = 0
+        if ch == '9': frame_index = nFrames-1
+        if frame_index < 0: frame_index = 0
+        if frame_index > nFrames-1: frame_index = nFrames-1
+        if ch in 'xq': return None
+        if ch == 'c': 
+            if visual.scene.mouse.pick != None:
+                visual.scene.center = visual.scene.mouse.pick.pos
+            inLoop = True
+        if ch == 'C':
+            if hasattr(visual.scene, "originalCenter"):
+                visual.scene.center = visual.scene.originalCenter
+            inLoop = True
+        if ch == 't': viz.tagToggle(); inLoop = True
+        if ch == 'n': viz.tagToggle2(otherObjects); inLoop = True
+        if ch == 'v': viz.toggleViz(V,otherObjects=otherObjects); inLoop = True
+        if ch == 'b': viz.toggleBG(); inLoop = True
+    
     return frame_index
 
 class Averager(object):
@@ -190,7 +201,8 @@ def diff(fname0, *fileNames):
             print "%.4f"%(float(nMove )/frame.lattSize), \
                   "%.4f"%(float(nMoved)/frame.lattSize),
         sys.stdout.flush()
-        frame_index = getNewFrameIndex(frame_index, len(fileNames))
+        frame_index = getNewFrameIndex(frame_index, len(fileNames),
+                                       V=V, otherObjects=objs)
         if frame_index == None: break
         
     for i in range(len(objs)):
