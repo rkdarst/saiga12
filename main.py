@@ -229,7 +229,11 @@ class Sys(io.IOSys, object):
         'zero'         -- energy is always zero (but no overlaps)
         """
         self.energyModeStr = energyMode
-        if energyMode.lower() == 'birolimezard':
+        if isinstance(energyMode, int):
+            if energyMode not in S12_ENERGY_AVAIL:
+                raise Exception("Unknown energy mode: %s", energyMode)
+            self.energyMode = energyMode
+        elif energyMode.lower() == 'birolimezard':
             self.energyMode = S12_ENERGY_BM
         elif energyMode.lower() in ('zero', 'kobandersen',
                                   'fredricksonandersen'):
