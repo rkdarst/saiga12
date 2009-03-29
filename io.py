@@ -97,10 +97,10 @@ class IOSys(object):
         else:
             raise Exception("Invalid save version when loading: %s"%
                             state['stateSaveVersion'])
-        #if state.has_key("energyModeStr"):
-        #    self.setEnergyMode(self.energyModeStr)
         if state.has_key("cycleModeStr"):
             self.setCycleMode(self.cycleModeStr)
+        if state.has_key("energyModeStr"):
+            self.setEnergyMode(self.energyModeStr)
         if self.cycleModeStr == "fredricksonandersen":
             self.eddEnable()
         if state.has_key("persist"):
