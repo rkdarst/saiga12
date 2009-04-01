@@ -81,3 +81,31 @@ inline double energyBMimmobile1_pos(struct SimData *SD, int pos) {
   }
   return E;
 }
+
+/*
+ *  Packing violations are penalized infinitely for type 1 particles,
+ *  using only 'hardness' for other types.
+ */
+inline double energyBMimmobile1b_posLocal(struct SimData *SD, int pos) {
+  if (SD->lattsite[pos] == S12_EMPTYSITE)
+    return 0;
+  int type = atomType(SD, pos);
+  int excessneighbors = SD->nneighbors[pos] - type;
+  //printf("excessneighbors: %d\n", excessneighbors);
+  if (excessneighbors <= 0)
+    return 0.;
+  else if (type == 1)
+    return 1./0.;
+  else
+    return excessneighbors * SD->hardness;
+}
+
+inline double energyBMimmobile1b_pos(struct SimData *SD, int pos) {
+  int i_conn;
+  double E = energyBMimmobile1_posLocal(SD, pos);
+  for (i_conn=0; i_conn<SD->connN[pos] ; i_conn++) {
+    int adjPos = SD->conn[pos*SD->connMax + i_conn];
+    E += energyBMimmobile1_posLocal(SD, adjPos);
+  }
+  return E;
+}

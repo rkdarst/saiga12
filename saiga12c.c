@@ -16,6 +16,7 @@
 #define S12_ENERGY_ZERO (2)
 #define S12_ENERGY_BMnotzero (10)
 #define S12_ENERGY_BMimmobile1 (11)
+#define S12_ENERGY_BMimmobile1b (12)
 #define S12_CYCLE_MC (1)
 #define S12_CYCLE_KA (2)
 #define S12_CYCLE_FA (3)
@@ -264,6 +265,8 @@ inline double energy_posLocal(struct SimData *SD, int pos) {
     return energyBMnotzero_posLocal(SD, pos);
   else if (SD->energyMode == S12_ENERGY_BMimmobile1)
     return energyBMimmobile1_posLocal(SD, pos);
+  else if (SD->energyMode == S12_ENERGY_BMimmobile1b)
+    return energyBMimmobile1b_posLocal(SD, pos);
   // add new energy modes above this line.
   else {
     if (errorcheck) {
@@ -285,6 +288,8 @@ inline double energy_pos(struct SimData *SD, int pos) {
     return energyBMnotzero_pos(SD, pos);
   else if (SD->energyMode == S12_ENERGY_BMimmobile1)
     return energyBMimmobile1_pos(SD, pos);
+  else if (SD->energyMode == S12_ENERGY_BMimmobile1b)
+    return energyBMimmobile1b_pos(SD, pos);
   // add new energy modes above this line.
   else {
     if (errorcheck) {
