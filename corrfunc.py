@@ -275,11 +275,11 @@ class StructCorr(object):
         """
         # this used to be method 1
         #Sk takes MUCH longer than Fs
-        #self.staticStructureFactor(S1=S1, S2=S2, method=1)
 
         type_ = self._type_
         self._niterSk += 1
         N = S.numberOfType(type_)
+        lattSize = S.lattSize
 
         # This is getting the FFTs from the cache
         cachepar = (type_, SOverlap is None)
@@ -301,34 +301,41 @@ class StructCorr(object):
             if SOverlap is None:
                 lattice[S.getPos(type_)] = 1
                 norm = N
+                density = N / float(lattSize)
+                #shape = lattice.shape
+                #lattice.shape = lattice.size
+                #import random
+                #density = .2     # adjust
+                #norm = int(math.floor(density * 15**3))
+                #poss = range(15**3)
+                #random.shuffle(poss)
+                #poss = poss[:norm]
+                #lattice[poss] = 1
+                #lattice.shape = shape
             else:
                 lattice[S       .getPos(type_)] += 1
                 lattice[SOverlap.getPos(type_)] += 1
                 lattice[lattice != 2] = 0
                 lattice[lattice == 2] = 1
-                norm = N * S.densityOf(type_)
+                #norm = N * S.densityOf(type_)
+                density = N * S.densityOf(type_) / float(lattSize)
         
             #from rkddp import interact ; interact.interact()
             lattice.shape = S.lattShape
-            val = fftn(lattice), ifftn(lattice), norm
-            #val = function(lattice)
+            val = fftn(lattice), ifftn(lattice), density
             S._fftcache[cachepar] = val, S.mctime
 
-        ForwardFFT, InverseFFT, norm = val
-        #ForwardFFT, InverseFFT, norm = getFftArrays(S, type_, SOverlap, )
-        #ForwardFFT = getFromCache(S, type_, fftn )
-        #InverseFFT = getFromCache(S, type_, ifftn)
+        ForwardFFT, InverseFFT, density = val
             
         totalsum2 = 0.
-        lattSize = S.lattSize
         for i, k in enumerate(self.kvecsOrig):
             k = tuple(k)
-            x = ((InverseFFT[k]) * (ForwardFFT[k])).real * lattSize / norm
+            #x = ((InverseFFT[k]) * (ForwardFFT[k])).real * lattSize / norm
+            x = ((InverseFFT[k]) * (ForwardFFT[k])).real /(density*(1-density))
             totalsum2 += x
             self._SkArrayByKvec[i] += x
-        Sk2 = totalsum2 / len(self.kvecs)
-        Sk2 = Sk2.real
-        Sk = Sk2
+        Sk = totalsum2 / len(self.kvecs)
+        Sk = Sk.real
 
         self._SkTotal += Sk
 
