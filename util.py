@@ -303,7 +303,7 @@ def visualizeKvectors(fileNames):
             frame = io_open(fname)
             if SsfList==None: 
                 SsfList = corrfunc.StructCorrList(
-                    frame, kmags=range(1, 8), type_=2,  # XXX type=2
+                    frame, kmag2s=range(1, 8**2), type_=2,  # XXX type=2
                     orthogonal=False)
             SsfList.calcSk(frame)
         scene = viz.visualizeKvectors(SsfList)

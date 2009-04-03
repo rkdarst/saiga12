@@ -252,19 +252,33 @@ def visualizeKvectors(SsfList):
     #scene.fov = .5 * scene.fov
     #scene.range = 7
     #scene.width, scene.height = 800, 800
-
+    import saiga12.util
+    avg = saiga12.util.Averager()
     for kmag in SsfList.kmags():
         Ssf = SsfList.SsfDict[kmag]
         for i, (kvec, Sk) in enumerate(
-            zip(Ssf.kvecsOrig, Ssf.SkArraysByKvec())):
-            widthfactor = .4
-            col = min(1, max(.1,  (Sk-.3)*2. ))
+              zip(Ssf.kvecsOrig, Ssf.SkArraysByKvec())):
+            #Sk -= .3
+            #Sk -= .53
+            avg.add(Sk)
+            if Sk <= 0 or 1:
+                print kvec, Sk, 
+            #Sk /= (1 - .3)
+            if Sk <= 0 or 1:
+                print Sk
+                
+            widthfactor = .2
+            col = (Sk-.5)*2.
+            #col = Sk
+            col = min(1., max(0,  col+.05))
             col = (col, col, col)
+            radius = max(.01, (Sk)*widthfactor)
             #visual.arrow(pos=(0,0,0), axis=kvec,
             #             shaftwidth=Sk*widthfactor,
             #             fixedwidth=1)
             visual.cylinder(pos=(0,0,0), axis=kvec, color=col,
-                            radius=Sk*widthfactor)
+                            radius=radius)
+    print "mean:", avg.mean
     return scene
 
                     
@@ -285,6 +299,7 @@ if __name__ == "__main__":
     fileNames.sort()  
     #print fileNames
     V = None
+    visual.scene.width, visual.scene.height = 800, 800
 
     while True:
         fname = fileNames[frame_index]
