@@ -162,7 +162,11 @@ class StructCorr(object):
         self.kvecsOrig = self.kvecs
         self.kvecs = self.kvecs.copy()
         self.kvecs *= (2*math.pi / L)
+        self.kvecs_p = self.kvecs.ctypes.data
         self.makeCoordLookup(S)
+        self.physicalShape = numpy.asarray(S.physicalShape,
+                                           dtype=saiga12.c_double)
+        self.physicalShape_p = self.physicalShape.ctypes.data
 
         #self.SkArrayAvgs    = numpy.zeros(shape=len(kvecs),
         #                                  dtype=saiga12.c_double)
@@ -170,10 +174,12 @@ class StructCorr(object):
                                              dtype=saiga12.c_double)
         self._SkArrayByKvecTMP = numpy.zeros(shape=len(self.kvecs),
                                              dtype=saiga12.c_double)
+        self._SkArrayByKvecTMP_p = self._SkArrayByKvecTMP.ctypes.data
         self._SkArrayByAtom    = numpy.zeros(shape=S.N,
                                              dtype=saiga12.c_double)
         self._SkArrayByAtomTMP = numpy.zeros(shape=S.N,
                                              dtype=saiga12.c_double)
+        self._SkArrayByAtomTMP_p = self._SkArrayByAtomTMP.ctypes.data
         self.reset()
         # we rely on people to not go non-contiguouizing this later.
         assert self.kvecs.flags.c_contiguous, "kvecs is not c_contiguous"
@@ -265,6 +271,7 @@ class StructCorr(object):
         if not c.flags.carray:
             c = c.copy()
         self.coordLookup = c
+        self.coordLookup_p = self.coordLookup.ctypes.data
         
 
     def calcSk(self, S, SOverlap=None):
@@ -341,7 +348,7 @@ class StructCorr(object):
 
 
 
-    def calcFs(self, S1, S2):
+    def calcFs(self, S0, S):
         """Intermediate scattering function
         """
         # this used to be method 0
@@ -351,23 +358,21 @@ class StructCorr(object):
         self._SkArrayByAtomTMP[:] = 0
         type_ = self._type_
         self._niterSk += 1
-        N = S1.numberOfType(type_)
-        if S1.N != self._SkArrayByAtomTMP.size:
+        N = S0.numberOfType(type_)
+        if S.N != self._SkArrayByAtomTMP.size:
             raise Exception, "Number of atoms has changed... "\
                   "Fs assumes you aren't doing that."
 
-        physicalShape = numpy.asarray(S1.physicalShape, dtype=saiga12.c_double)
-        physicalShape_p = physicalShape.ctypes.data
-        totalsum = S1.C.calc_structfact(S1.SD_p, S2.SD_p,
-                                        self.kvecs.ctypes.data,
+        totalsum = S0.C.calc_structfact(S0.SD_p, S.SD_p,
+                                        self.kvecs_p,
                                         len(self.kvecs), type_,
-                                        self.coordLookup.ctypes.data,
-                                        physicalShape_p,
-                                        len(S1.physicalShape),
+                                        self.coordLookup_p,
+                                        self.physicalShape_p,
+                                        len(S0.physicalShape),
                                         #self._SkArray.ctypes.data,
                                         #self._SkArrayByAtom.ctypes.data)
-                                        self._SkArrayByKvecTMP.ctypes.data,
-                                        self._SkArrayByAtomTMP.ctypes.data)
+                                        self._SkArrayByKvecTMP_p,
+                                        self._SkArrayByAtomTMP_p)
         Sk = totalsum / (N * len(self.kvecs))
         self._SkTotal += Sk
 
@@ -425,9 +430,9 @@ class StructCorrList(object):
     def calcSk(self, S, SOverlap=None):
         for Ssf in self.SsfList:
             Ssf.calcSk(S=S, SOverlap=SOverlap)
-    def calcFs(self, S1, S2=None):
+    def calcFs(self, S0, S=None):
         for Ssf in self.SsfList:
-            Ssf.calcFs(S1=S1, S2=S2)
+            Ssf.calcFs(S0=S0, S=S)
     def reset(self):
         for Ssf in self.SsfList:
             Ssf.reset()
