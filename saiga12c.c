@@ -20,6 +20,7 @@
 #define S12_CYCLE_MC (1)
 #define S12_CYCLE_KA (2)
 #define S12_CYCLE_FA (3)
+#define S12_FLAG_VIB_ENABLED (1)
 
 int debug = 0;
 int errorcheck = 1;  // print errors if inconsistent
@@ -692,10 +693,11 @@ inline int cycleKA_translate(struct SimData *SD) {
 
 double calc_structfact(struct SimData *SD1, struct SimData *SD2,
 		       double *kvecs, int Nk, int type,
-		       int *cords, 
+		       double *cords, double *cords2,
 		       double *lattShape, int nDim,
 		       double *Skresult,
-		       double *SkArrayByAtom) {
+		       double *SkArrayByAtom,
+		       int flags) {
   int n1, n2, nk;
   double totalsum = 0;
   int pos1, pos2;
@@ -704,7 +706,7 @@ double calc_structfact(struct SimData *SD1, struct SimData *SD2,
   int print=0;
 
   for (n1=0 ; n1 < SD1->N ; n1++) {
-    //printf("%X %X\n", SD1, SD2);
+    //printf("%p %p\n", SD1, SD2);
     if ((type != S12_TYPE_ANY) && (SD1->atomtype[n1] != type))
       continue;
     pos1 = SD1->atompos[n1];
@@ -713,7 +715,8 @@ double calc_structfact(struct SimData *SD1, struct SimData *SD2,
     //if ((type != S12_TYPE_ANY) && (SD->atomtype[n2] != type))
     //  continue;
     pos2 = SD2->atompos[n2];
-    if (pos1 == pos2) {
+    if ((pos1 == pos2) && (! (flags & S12_FLAG_VIB_ENABLED))) {
+      // This simplifying branch is only valid if we do NOT have vibrations.
       totalsum += Nk;
       SkArrayByAtom[n1] += Nk;
       for(nk=0 ; nk < Nk ; nk++)
@@ -726,7 +729,7 @@ double calc_structfact(struct SimData *SD1, struct SimData *SD2,
       //printf("coord: %f\n", (double)cords[nDim*pos1 + d]);
       //printf("coord: %f\n", (double)cords[nDim*pos2 + d]);
       //printf("shape: %f\n", (double)lattShape[d]);
-      dr[d] =  cords[nDim*pos1 + d] - cords[nDim*pos2 + d];
+      dr[d] =  cords[nDim*pos1 + d] - cords2[nDim*pos2 + d];
       dr[d] -= (floor(dr[d]/lattShape[d] + .5)) *lattShape[d];
     }
     if(print) printf("  dr: %f %f %f\n", dr[0], dr[1], dr[2]);

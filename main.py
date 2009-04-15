@@ -13,6 +13,7 @@ RandomSeed = 1361
 random.seed(RandomSeed+165)
 
 from saiga12 import io
+from saiga12 import vibration
 from saiga12.common import *
 
 
@@ -97,9 +98,11 @@ def getClib():
         ("cycle",                  c_int,    (SimData_p, c_double)),
         ("calc_structfact",        c_double, (SimData_p, SimData_p, # SD1, SD2
                                         c_void_p, c_int, # *kvecs, Nk
-                                        c_int, c_void_p, # type, *cords
+                                        c_int,           # type
+                                        c_void_p, c_void_p, #  *cords *cords2
                                         c_void_p, c_int, # shape, nDim
-                                        c_void_p, c_void_p)),#*result,SkByAtom
+                                        c_void_p, c_void_p,#*result,SkByAtom
+                                        c_int )),        # flags
         ("addToMLL",               None,     (SimData_p, c_int, c_int)),
         ("removeFromMLL",          None,     (SimData_p, c_int, c_int)),
 
@@ -133,7 +136,7 @@ def randomSeed(data):
     random.seed(int(hash(data)) + 641)
     
 
-class Sys(io.IOSys, object):
+class Sys(io.IOSys, vibration.SystemVibrations, object):
     def __init__(self, N=None):
 
         SD = SimData()

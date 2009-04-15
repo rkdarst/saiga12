@@ -44,6 +44,8 @@ class TestSequenceFunctions(unittest.TestCase):
     #    execfile("tests/viztest.py", {})
     def testScripts(self):
         execfile("tests/scripttest.py", {})
+    def testVibrations(self):
+        execfile("tests/vibrationtest.py", {})
 
 import sys
 sys.stdout = file('/dev/null', 'w')

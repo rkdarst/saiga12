@@ -175,9 +175,14 @@ class SquareGrid(GridNd):
             c = c.transpose()
             coord_datacache[coordCacheKey] = c.copy()
         if index is None:
-            return coord_datacache[coordCacheKey]
-        index = numpy.asarray(index)
-        return coord_datacache[coordCacheKey][index]
+            c = coord_datacache[coordCacheKey]
+        else:
+            index = numpy.asarray(index)
+            c = coord_datacache[coordCacheKey][index]
+        if getattr(self, 'vibEnabled', False):
+            c = self.vib_adjustCoords(c)
+        return c
+
     def gridIndex(self, coords):
         """Mapping from coordinates in real space to lattice index
         """
@@ -322,9 +327,13 @@ class GridHex2d(GridNd):
             c[1::2,0] +=  .5
             coord_datacache[coordCacheKey] = c.copy()
         if index is None:
-            return coord_datacache[coordCacheKey]
-        index = numpy.asarray(index)
-        return coord_datacache[coordCacheKey][index]
+            c = coord_datacache[coordCacheKey]
+        else:
+            index = numpy.asarray(index)
+            c = coord_datacache[coordCacheKey][index]
+        if getattr(self, 'vibEnabled', False):
+            c = self.vib_adjustCoords(c)
+        return c
 
     # The print lattice methods here are the same as for the 2d grid--
     # they should probably be unified sometime.
@@ -458,9 +467,13 @@ class Grid3dHCP(GridNd):
             self._coordCache = c.copy()
             coord_datacache[coordCacheKey] = c.copy()
         if index is None:
-            return coord_datacache[coordCacheKey]
-        index = numpy.asarray(index)
-        return coord_datacache[coordCacheKey][index]
+            c = coord_datacache[coordCacheKey]
+        else:
+            index = numpy.asarray(index)
+            c = coord_datacache[coordCacheKey][index]
+        if getattr(self, 'vibEnabled', False):
+            c = self.vib_adjustCoords(c)
+        return c
 
     def printLattice(self, lattice=None):
         # expanded for 3d.

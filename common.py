@@ -16,3 +16,4 @@ S12_ENERGY_BMimmobile1b  = 12
 S12_CYCLE_MC      = 1             # monte carlo
 S12_CYCLE_KA      = 2             # kob-andersen
 S12_CYCLE_FA      = 3             # fredrickson-andersen
+S12_FLAG_VIB_ENABLED     = 1      # vibrations are enabled

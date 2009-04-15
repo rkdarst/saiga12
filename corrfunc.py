@@ -267,7 +267,7 @@ class StructCorr(object):
     def makeCoordLookup(self, S):
         # DANGER -- only works for integer coordinates (so far!
         c = S.coords()
-        c = numpy.asarray(c, dtype=saiga12.c_int)
+        c = numpy.asarray(c, dtype=saiga12.numpy_double)
         if not c.flags.carray:
             c = c.copy()
         self.coordLookup = c
@@ -363,16 +363,29 @@ class StructCorr(object):
             raise Exception, "Number of atoms has changed... "\
                   "Fs assumes you aren't doing that."
 
+        flags = 0
+        if getattr(S0, 'vibEnabled', False):
+            # Vibrations enabled: if we have vibrations enabled, we
+            # have to use different coordinates for every timestep.
+            flags = saiga12.S12_FLAG_VIB_ENABLED
+            c1 = S0.getCCords(returnPointer=True)
+            c2 = S .getCCords(returnPointer=True)
+        else:
+            # No vibrations: use the same coordinates at all times
+            c1 = c2 = self.coordLookup_p
+
         totalsum = S0.C.calc_structfact(S0.SD_p, S.SD_p,
                                         self.kvecs_p,
                                         len(self.kvecs), type_,
-                                        self.coordLookup_p,
+                                        #self.coordLookup_p,
+                                        c1, c2,
                                         self.physicalShape_p,
                                         len(S0.physicalShape),
                                         #self._SkArray.ctypes.data,
                                         #self._SkArrayByAtom.ctypes.data)
                                         self._SkArrayByKvecTMP_p,
-                                        self._SkArrayByAtomTMP_p)
+                                        self._SkArrayByAtomTMP_p,
+                                        flags)
         Sk = totalsum / (N * len(self.kvecs))
         self._SkTotal += Sk
 

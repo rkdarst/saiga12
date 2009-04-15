@@ -8,7 +8,8 @@ import numpy
 classvars = ("N", "beta", "mctime",
              "movesPerCycle", "cumProbAdd", "cumProbDel",
              "otherData", "cycleModeStr", "energyModeStr",
-             "inserttype", "_dontSetCycleMoves")
+             "inserttype", "_dontSetCycleMoves",
+             "vibEnabled")
             # "lattSize", "lattShape", "latticeReInitData"
 arrays = ("lattsite", "nneighbors", "atomtype", "atompos", "ntype")
             # self.conn, self.connN, self.connMax (not array),
@@ -114,6 +115,8 @@ class IOSys(object):
                 if not getattr(self, "_ignorePersistLoading"):
                     raise Exception("Invalid persist array version: %s"%
                                     version)
+        if state.has_key("vibEnabled"):
+            self.vib_init()
         
 
         if consistencyCheck:
