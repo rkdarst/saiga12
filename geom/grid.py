@@ -3,30 +3,8 @@
 import math
 import numpy
 from saiga12.common import *
+from saiga12.util import cartesianproduct
 import saiga12
-
-# the below is from
-#  http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/302478
-# it basically defines a cartesian product.
-# I think the activestate sample recipees are freely-usable and distributable
-def xcombine(*seqin):
-    '''returns a generator which returns combinations of argument sequences
-    for example xcombine((1,2),(3,4)) returns a generator; calling the next()
-    method on the generator will return [1,3], [1,4], [2,3], [2,4] and
-    StopIteration exception.  This will not create the whole list of
-    combinations in memory at once.'''
-    def rloop(seqin,comb):
-        '''recursive looping function'''
-        if seqin:                   # any more sequences to process?
-            for item in seqin[0]:
-                newcomb=comb+[item]     # add next item to current combination
-                # call rloop w/ remaining seqs, newcomb
-                for item in rloop(seqin[1:],newcomb):
-                    yield item          # seqs and newcomb
-        else:                           # processing last sequence
-            yield comb                  # comb finished, add to list
-    return rloop(seqin,[])
-cartesianproduct = xcombine
 
 # the following are from Richard's dimcalc.py file.
 # this is the cryptic, impossible to understand version of these...

@@ -102,8 +102,18 @@ class Averager(object):
     def varsample(self):
         """Sample Standard Deviation"""
         return self._M2 / (self.n-1)
-    
 
+def cartesianproduct(*args):
+    """Cartesion product of iterable arguments.
+
+    This implementation is thanks to MrGreen.
+    """
+    if len(args) == 0:
+        yield ()
+    else:
+        for x in args[0]:
+            for xs in cartesianproduct(*args[1:]):
+                yield (x,) + xs
 
 def diff(fname0, *fileNames):
     frame0 = io_open(fname0)
