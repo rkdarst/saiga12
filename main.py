@@ -550,6 +550,16 @@ class Sys(io.IOSys, vibration.SystemVibrations, object):
             return self.atompos[self.atompos != S12_EMPTYSITE].copy()
         else:
             return self.atompos[self.atomtype == type_].copy()
+    def atomIndexOfType(self, type_=None):
+        """Return atom indexes (numbers) of a certain type of particle.
+
+        type_ can be None or S12_TYPE_ANY (default) to return indexes
+        of all particles, otherwise return indexes of that particular
+        type."""
+        if type_ == None or type_ == S12_TYPE_ANY:
+            return numpy.where(self.atomtype != S12_EMPTYSITE)[0]
+        else:
+            return numpy.where(self.atomtype == type_)[0]
     def energy(self):
         """Total energy of the system."""
         return self.C.energy(self.SD_p)
