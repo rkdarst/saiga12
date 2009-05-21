@@ -167,6 +167,7 @@ class StructCorr(object):
         self.physicalShape = numpy.asarray(S.physicalShape,
                                            dtype=saiga12.c_double)
         self.physicalShape_p = self.physicalShape.ctypes.data
+        self._whichAtoms = S.atomIndexOfType(type_)
 
         #self.SkArrayAvgs    = numpy.zeros(shape=len(kvecs),
         #                                  dtype=saiga12.c_double)
@@ -403,7 +404,7 @@ class StructCorr(object):
     def SkArraysByKvec(self):
         return self._SkArrayByKvec / self._niterSk
     def SkArraysByAtom(self):
-        return self._SkArrayByAtom / self._niterSk
+        return self._SkArrayByAtom[self._whichAtoms] / self._niterSk
 
 
     def staticStructureFactor(self, S1, method, S2=None):
