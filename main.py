@@ -54,14 +54,14 @@ class SimData(ctypes.Structure):
         
 
         ("lattSize", c_int),      # integer, length of lattice
-        ("lattsite", c_void_p),   # lookup from lattsite->atomnumber
-        ("conn", c_void_p),       # array of connections
-        ("connN", c_void_p),      # atomnumber->N conncetions of it
-        ("connMax", c_int),       
-        ("nneighbors", c_void_p), # num of neighbers
-        ("atomtype", c_void_p),   # lookup of atomnumber->atomtype
-        ("atompos", c_void_p),    # lookup of atomnumber->latt position
-        ("persist", c_void_p),    # lookup of atomnumber->latt position
+        ("lattsite", c_void_p),   # pos -> atomnumber
+        ("conn", c_void_p),       # (connMax*pos + conni) -> neighboring pos
+        ("connN", c_void_p),      # pos -> N connections of that site
+        ("connMax", c_int),       # int, maximum number of connections
+        ("nneighbors", c_void_p), # pos -> num of neighbers
+        ("atomtype", c_void_p),   # atomnumber -> atomtype
+        ("atompos", c_void_p),    # atomnumber -> pos (latt position)
+        ("persist", c_void_p),    # pos -> persistence func (has it moved?)
 
         ("cumProbAdd", c_double),
         ("cumProbDel", c_double),
