@@ -14,6 +14,7 @@ random.seed(RandomSeed+165)
 
 from saiga12 import io
 from saiga12 import vibration
+from saiga12 import ctccdynamics
 from saiga12.common import *
 
 
@@ -137,7 +138,8 @@ def randomSeed(data):
     random.seed(int(hash(data)) + 641)
     
 
-class Sys(io.IOSys, vibration.SystemVibrations, object):
+class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
+          object):
     def __init__(self, N=None):
 
         SD = SimData()

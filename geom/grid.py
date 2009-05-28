@@ -159,6 +159,8 @@ class SquareGrid(GridNd):
             c = coord_datacache[coordCacheKey][index]
         if getattr(self, 'vibEnabled', False):
             c = self.vib_adjustCoords(c)
+        if self.orient is not None:
+            c = self.ctcc_adjustCoords(c)
         return c
 
     def gridIndex(self, coords):
