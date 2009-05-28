@@ -519,11 +519,21 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
         return self.C.neighbors_pos(self.SD_p, i)
     def setInsertType(self, probs):
         """Set the types of atoms to be inserted
-        
+
         probs = {type0: (prob0, mu0 ),
                  type1: (prob1, mu1 ),
                  ... }
         """
+        if len(probs) == 1:
+            inserttype = probs.keys()[0]
+            self.inserttype = inserttype
+            self.uVTchempotential = probs[inserttype][1]
+            self.inserttypes_prob = None
+            self.inserttypes_type = None
+            self.inserttypes_plookup = None
+            self.inserttypes_mulookup = None
+            return
+
         self.inserttype = S12_EMPTYSITE
         n = len(probs)
         maxtype = max(probs.keys())
