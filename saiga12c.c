@@ -14,12 +14,14 @@
 #define S12_TYPE_ANY (-2)
 #define S12_ENERGY_BM (1)
 #define S12_ENERGY_ZERO (2)
+#define S12_ENERGY_CTCC (3)
 #define S12_ENERGY_BMnotzero (10)
 #define S12_ENERGY_BMimmobile1 (11)
 #define S12_ENERGY_BMimmobile1b (12)
 #define S12_CYCLE_MC (1)
 #define S12_CYCLE_KA (2)
 #define S12_CYCLE_FA (3)
+#define S12_CYCLE_CTCC (4)
 #define S12_FLAG_VIB_ENABLED (1)
 
 int debug = 0;
@@ -61,6 +63,7 @@ struct SimData {
   int *atomtype;
   int *atompos;
   int *persist;
+  int *orient;
 
   double cumProbAdd;
   double cumProbDel;
@@ -155,6 +158,10 @@ inline void addParticle(struct SimData *SD, int pos, int type) {
   SD->atomtype[SD->N] = type;
   SD->atompos[SD->N] = pos;
   SD->ntype[type]++;
+  if (SD->orient != NULL) {
+    int conni = SD->connN[pos] * genrand_real2();
+    SD->orient[pos] = conni;
+  }
   SD->N++;
 }
 inline void delParticle(struct SimData *SD, int pos) {
@@ -173,7 +180,6 @@ inline void delParticle(struct SimData *SD, int pos) {
     //atomType
     SD->atomtype[atomnum] = S12_EMPTYSITE;  // reset it
     SD->atompos[atomnum] = S12_EMPTYSITE;  // reset it
-    SD->lattsite[pos] = S12_EMPTYSITE;
   }
   else {
     // move the N-1 atom to atomnum.
@@ -183,8 +189,10 @@ inline void delParticle(struct SimData *SD, int pos) {
 
     SD->atomtype[SD->N-1] = S12_EMPTYSITE;  // reset it
     SD->atompos[SD->N-1] = S12_EMPTYSITE;  // reset it
-
-    SD->lattsite[pos] = S12_EMPTYSITE;
+  }
+  SD->lattsite[pos] = S12_EMPTYSITE;
+  if (SD->orient != NULL) {
+    SD->orient[pos] = S12_EMPTYSITE ;
   }
   SD->N--;
 }
@@ -206,6 +214,19 @@ inline void moveParticle(struct SimData *SD, int oldpos, int newpos) {
   for (i=0 ; i<SD->connN[newpos] ; i++) {
     int neighpos = SD->conn[SD->connMax*newpos + i];
     SD->nneighbors[neighpos] ++;
+  }
+  if (SD->orient != NULL) {
+    if(errorcheck) {
+      if(SD->conn[SD->connMax*oldpos+SD->orient[oldpos]] != newpos) {
+	printf("moved in direction we aren't oriented in."); exit (79);
+      }
+    }
+    // what is our new orientation?
+    int oldOrient = SD->orient[oldpos];
+    int newOrient = (oldOrient+(SD->connMax/2)) % SD->connMax;
+    // which direction should it now be facing?
+    SD->orient[newpos] = newOrient;
+    SD->orient[oldpos] = S12_EMPTYSITE ;
   }
 }
 
@@ -250,6 +271,7 @@ void loadStateFromSave(struct SimData *SD) {
  *    were not using -- so remove the inlines from ccode/energy_bm.c.
  */
 #include "ccode/energy_bm.c"
+#include "ccode/energy_ctcc.c"
 
 inline double energy_posLocal(struct SimData *SD, int pos) {
   /*  Energy of a particle at one particular position.  This function
@@ -262,6 +284,8 @@ inline double energy_posLocal(struct SimData *SD, int pos) {
     return energyBM_posLocal(SD, pos);
   else if (SD->energyMode == S12_ENERGY_ZERO)
     return(0.);
+  else if (SD->energyMode == S12_ENERGY_CTCC)
+    return energyCTCC_posLocal(SD, pos);
   else if (SD->energyMode == S12_ENERGY_BMnotzero)
     return energyBMnotzero_posLocal(SD, pos);
   else if (SD->energyMode == S12_ENERGY_BMimmobile1)
@@ -285,6 +309,8 @@ inline double energy_pos(struct SimData *SD, int pos) {
     return energyBM_pos(SD, pos);
   else if (SD->energyMode == S12_ENERGY_ZERO)
     return(0.);
+  else if (SD->energyMode == S12_ENERGY_CTCC)
+    return energyCTCC_pos(SD, pos);
   else if (SD->energyMode == S12_ENERGY_BMnotzero)
     return energyBMnotzero_pos(SD, pos);
   else if (SD->energyMode == S12_ENERGY_BMimmobile1)
@@ -406,6 +432,9 @@ int cycleMC_GCdel(struct SimData *SD, int pos) {
 
   double Eold = energy_pos(SD, pos);
   int origtype = atomType(SD, pos);
+  int oldOrient = -1;
+  if (SD->orient != NULL)
+    oldOrient = SD->orient[pos];
   delParticle(SD, pos);  // this WILL result in particle nums being shifted.
   double Enew = energy_pos(SD, pos);
   
@@ -429,6 +458,8 @@ int cycleMC_GCdel(struct SimData *SD, int pos) {
   } else {
     // revert
     addParticle(SD, pos, origtype);
+    if (oldOrient != -1)
+      SD->orient[pos] = oldOrient;
   }
   return(0);
 }
@@ -478,6 +509,7 @@ double chempotential(struct SimData *SD, int inserttype) {
 int cycleMC(struct SimData *SD, double n);
 int cycleKA(struct SimData *SD, double n);
 int cycleFA(struct SimData *SD, double n);
+int cycleCTCC(struct SimData *SD, double n);
 inline int cycleKA_translate(struct SimData *SD);
 
 
@@ -490,6 +522,8 @@ int cycle(struct SimData *SD, double n) {
     return cycleKA(SD, n);
   else if (SD->cycleMode == S12_CYCLE_FA)
     return cycleFA(SD, n);
+  else if (SD->cycleMode == S12_CYCLE_CTCC)
+    return cycleCTCC(SD, n);
   else {
     printf("Cycle mode not set: %d", SD->cycleMode);
     exit(49);
@@ -821,6 +855,7 @@ inline void EddKA_updateLatPos(struct SimData *SD, int pos);
 inline void EddFA_updateLatPos(struct SimData *SD, int pos);
 #include "ccode/fredricksonandersen.c"
 
+#include "ccode/ctcc.c"
 
 
 

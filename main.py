@@ -62,6 +62,7 @@ class SimData(ctypes.Structure):
         ("atomtype", c_void_p),   # atomnumber -> atomtype
         ("atompos", c_void_p),    # atomnumber -> pos (latt position)
         ("persist", c_void_p),    # pos -> persistence func (has it moved?)
+        ("orient", c_void_p),     # pos -> direction particle points.
 
         ("cumProbAdd", c_double),
         ("cumProbDel", c_double),
@@ -180,6 +181,8 @@ class Sys(io.IOSys, vibration.SystemVibrations, object):
                          event-driven dynamics in this mode.  You must make
                          the grid (to set lattSize) before enabling FA
                          dynamics.
+        'ctcc'        -- On a lattice, with one directional degree of
+                         freedom.
         """
         self.cycleModeStr = cycleMode
         if cycleMode.lower() == 'montecarlo':
@@ -208,6 +211,16 @@ class Sys(io.IOSys, vibration.SystemVibrations, object):
                 raise Exception, ("lattSize is not set-- you must set up "+
                                  "your arrays before enabling F-A dynamics")
             self._allocPersistArray() # automatically set to zeros
+        elif cycleMode.lower() == 'ctcc':
+            if self.N != 0:
+                raise Exception("You must set ctcc cycle mode before you "+
+                                "have any particles.")
+            self.cycleMode = S12_CYCLE_CTCC
+            self._allocArray("orient", shape=(self.lattSize),
+                             dtype=numpy_int)
+            self.orient[:] = S12_EMPTYSITE
+            self.setEnergyMode('ctcc')
+
         else:
             raise Exception("Unknown cycle mode: %s", cycleMode)
     def _allocPersistArray(self):
@@ -230,6 +243,8 @@ class Sys(io.IOSys, vibration.SystemVibrations, object):
         Options are:
         'birolimezard' -- Biroli-Mezard lattice glass model dynamics
         'zero'         -- energy is always zero (but no overlaps)
+        'ctcc'        -- On a lattice, with one directional degree of
+                         freedom, no overlaps.
         """
         self.energyModeStr = energyMode
         if isinstance(energyMode, int):
@@ -241,6 +256,8 @@ class Sys(io.IOSys, vibration.SystemVibrations, object):
         elif energyMode.lower() in ('zero', 'kobandersen',
                                   'fredricksonandersen'):
             self.energyMode = S12_ENERGY_ZERO
+        elif energyMode.lower() == 'ctcc':
+            self.energyMode = S12_ENERGY_CTCC
         else:
             raise Exception("Unknown energy mode: %s", energyMode)
     
@@ -588,9 +605,11 @@ class Sys(io.IOSys, vibration.SystemVibrations, object):
         state after some changes."""
         if self.persist is not None:  persist = tuple(self.persist)
         else:                         persist = None
+        if self.orient is not None:   orient = tuple(self.orient)
+        else:                         orient = None
         x = ( tuple(self.lattsite.flat),
               tuple(self.conn.flat), tuple(self.connN.flat),
-              persist,
+              persist, orient,
               self.hardness, self.lattSize, tuple(self.ntype),
               self.beta, self.cumProbAdd, self.cumProbDel, self.inserttype,
               self.movesPerCycle,

@@ -64,6 +64,10 @@ class IOSys(object):
                          -1), 6)
                        )
             state["persist"] = persist
+        if self.orient is not None:
+            orientversion = 0
+            orient = numpy.asarray(self.orient[self.atompos], dtype=numpy.int8)
+            state["orient"] = orientversion, orient
 
 
         return state
@@ -75,6 +79,12 @@ class IOSys(object):
         """Set self's state based on passed dict of state.
         """
         self.latticeReInit(state["latticeReInitData"])
+        if state.has_key("cycleModeStr"):
+            self.setCycleMode(state["cycleModeStr"])
+            del state["cycleModeStr"]
+        if state.has_key("energyModeStr"):
+            self.setEnergyMode(state["energyModeStr"])
+            del state["energyModeStr"]
         for key in classvars:
             if not state.has_key(key):
                 continue
@@ -98,10 +108,6 @@ class IOSys(object):
         else:
             raise Exception("Invalid save version when loading: %s"%
                             state['stateSaveVersion'])
-        if state.has_key("cycleModeStr"):
-            self.setCycleMode(self.cycleModeStr)
-        if state.has_key("energyModeStr"):
-            self.setEnergyMode(self.energyModeStr)
         if self.cycleModeStr == "fredricksonandersen":
             self.eddEnable()
         if state.has_key("persist"):
@@ -115,6 +121,11 @@ class IOSys(object):
                 if not getattr(self, "_ignorePersistLoading"):
                     raise Exception("Invalid persist array version: %s"%
                                     version)
+        if "orient" in state:
+            orientversion, orient = state["orient"]
+            if orientversion != 0:
+                raise Exception("Unknown orient save version")
+            self.orient[self.atompos] = orient
         if state.has_key("vibEnabled"):
             self.vib_init()
         
