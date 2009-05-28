@@ -14,6 +14,8 @@ class TestSequenceFunctions(unittest.TestCase):
     #    execfile("tests/chempotential.py", {})
     def testCorrFunc(self):
         execfile("tests/corrfunctest.py", {'noviz':True})
+    def testCtccTest(self):
+        execfile("tests/ctcctest.py", {})
     def testDecay(self):
         # writes out to logfile.txt, don't use this test.
         execfile("tests/decay.py", {})
@@ -21,6 +23,8 @@ class TestSequenceFunctions(unittest.TestCase):
         execfile("tests/diffusion.py", {})
     def testDistances(self):
         execfile("tests/distances.py", {})
+    def testEnergymodes(self):
+        execfile("tests/energymodes.py", {})
 
 
     def testFA(self):
@@ -41,7 +45,7 @@ class TestSequenceFunctions(unittest.TestCase):
     #def testStateFinder(self):
     #    execfile("tests/statefindertest.py", {})
     def testTiming(self):
-        execfile("tests/timing.py", {})
+        execfile("tests/timing.py", {'fast':True})
     #def testviztest(self):
     #    execfile("tests/viztest.py", {})
     def testScripts(self):
