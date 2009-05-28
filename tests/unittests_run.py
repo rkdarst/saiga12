@@ -25,6 +25,8 @@ class TestSequenceFunctions(unittest.TestCase):
 
     def testFA(self):
         execfile("tests/fredricksonandersentest.py", {})
+    def testGridUnitTests(self):
+        execfile("tests/gridunittests.py", {})
     def testHexGrids(self):
         execfile("tests/hextest.py", {'noviz':True})
     #def testInsertType(self):

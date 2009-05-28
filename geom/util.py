@@ -61,3 +61,20 @@ def checkConnDistances(S, distanceShouldBe=1, setType=None,
         assert (not doAssert) or \
                not numpy.any(numpy.abs(x - distanceShouldBe) > 1e-5), \
                "Connection distances outside of normal parameters"
+
+
+def checkConnReversibility(S):
+    """Tests that (i_conn+(connMax//2))%connMax gives the reverse connection.
+
+    CTCC dynamics (and possibly others in the future) depend on this.
+    """
+    for pos in range(50,S.lattSize):
+        for conni in range(S.connN[pos]):
+            neighPos = S.conn[pos, conni]
+            conniReverse = (conni+S.connMax//2) % S.connMax
+            neighNeighPos = S.conn[neighPos, conniReverse]
+            #print pos, conni ,
+            #print neighNeighPos, conniReverse
+            assert pos == neighNeighPos, \
+                   (pos, conni, neighNeighPos, conniReverse,
+                    saiga12.geom.grid.coords(S.lattShape,pos))

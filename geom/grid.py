@@ -242,9 +242,9 @@ class Grid3d(SquareGrid):
     _neighborlist = numpy.asarray(
         (( 0, 1, 0 ),
          ( 1, 0, 0 ),
+         ( 0, 0, 1 ),
          ( 0,-1, 0 ),
          (-1, 0, 0 ),
-         ( 0, 0, 1 ),
          ( 0, 0,-1 ),
          ))
 
@@ -277,6 +277,7 @@ class GridHex2d(GridNd):
                 neighborlist += neighborlist_evenY
             else:
                 neighborlist += neighborlist_oddY
+            neighborlist = neighborlist[0::2] + neighborlist[1::2]
             for n in neighborlist:
                 cur = x[tuple(c)]
                 neighbor = x[tuple(numpy.mod(c+n, dimensions))]
@@ -381,12 +382,12 @@ class Grid3dHCP(GridNd):
         # what is next to every site.  Use pictures.
         neighborlist_evenZevenY = ( (-1, +1, +1), (-1,  0, +1), # e
                                     (-1, +1, -1), (-1,  0, -1),)# f
-        neighborlist_oddZevenY  = ( ( 0, -1, +1), (+1,  0, +1), # e
-                                    ( 0, -1, -1), (+1,  0, -1),)# f
+        neighborlist_oddZevenY  = ( (+1,  0, -1), ( 0, -1, -1), # e
+                                    (+1,  0, +1), ( 0, -1, +1),)# f
         neighborlist_evenZoddY  = ( ( 0, +1, +1), (-1,  0, +1), # e
                                     ( 0, +1, -1), (-1,  0, -1),)# f
-        neighborlist_oddZoddY   = ( (+1, -1, +1), (+1,  0, +1), # e
-                                    (+1, -1, -1), (+1,  0, -1),)# f
+        neighborlist_oddZoddY   = ( (+1,  0, -1), (+1, -1, -1), # e
+                                    (+1,  0, +1), (+1, -1, +1),)# f
         for c in celllist:
             y = c[1]
             z = c[2]
@@ -404,6 +405,7 @@ class Grid3dHCP(GridNd):
                 neighborlist += neighborlist_evenZevenY
             else:                     # oddZ oddY
                 neighborlist += neighborlist_oddZoddY
+            neighborlist = neighborlist[0::2] + neighborlist[1::2]
             for n in neighborlist:
                 cur = x[tuple(c)]
                 neighbor = x[tuple(numpy.mod(c+n, dimensions))]
