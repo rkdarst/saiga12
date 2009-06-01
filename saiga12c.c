@@ -741,6 +741,7 @@ double calc_structfact(struct SimData *SD1, struct SimData *SD2,
 
   for (n1=0 ; n1 < SD1->N ; n1++) {
     //printf("%p %p\n", SD1, SD2);
+    if (print) printf("=== n: %d ===\n", n1);
     if ((type != S12_TYPE_ANY) && (SD1->atomtype[n1] != type))
       continue;
     pos1 = SD1->atompos[n1];
@@ -760,13 +761,13 @@ double calc_structfact(struct SimData *SD1, struct SimData *SD2,
 
     int d;
     for (d=0 ; d<nDim ; d++) {
-      //printf("coord: %f\n", (double)cords[nDim*pos1 + d]);
-      //printf("coord: %f\n", (double)cords[nDim*pos2 + d]);
-      //printf("shape: %f\n", (double)lattShape[d]);
+      //printf("coord1, coord2:  %f %f \n",
+      //     (double)cords[nDim*pos1 + d], (double)cords2[nDim*pos2 + d]);
+      //printf(" shape: %f\n", (double)lattShape[d]);
       dr[d] =  cords[nDim*pos1 + d] - cords2[nDim*pos2 + d];
       dr[d] -= (floor(dr[d]/lattShape[d] + .5)) *lattShape[d];
     }
-    if(print) printf("  dr: %f %f %f\n", dr[0], dr[1], dr[2]);
+    if(print) printf("  dr: %f %f %f (%d)\n", dr[0], dr[1], dr[2], n1);
     
 	
     for(nk=0 ; nk < Nk ; nk++) {
