@@ -4,11 +4,15 @@ import math
 import numpy
 import sys
 
-import visual
+try:
+    import visual
+    import saiga12.viz as viz
+except ImportError:
+    pass
+
 
 import saiga12
 from saiga12.io import io_open
-import saiga12.viz as viz
 
 def getch():
     import tty, termios
