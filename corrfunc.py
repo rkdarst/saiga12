@@ -365,7 +365,7 @@ class StructCorr(object):
                   "Fs assumes you aren't doing that."
 
         flags = 0
-        if getattr(S0, 'vibEnabled', False):
+        if getattr(S0, 'vibEnabled', False) or S0.orient is not None:
             # Vibrations enabled: if we have vibrations enabled, we
             # have to use different coordinates for every timestep.
             flags = saiga12.S12_FLAG_VIB_ENABLED
