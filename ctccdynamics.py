@@ -4,7 +4,7 @@ import numpy
 
 class CTCCDynamics(object):
 
-    def ctcc_adjustCoords(self, coords, index=None):
+    def ctcc_adjustCoords(self, coords, coordsRaw, index=None):
         """Adjust coords based on CTCC dynamics orientation.
         """
         #activeParticles = self.orient != -1
@@ -16,29 +16,28 @@ class CTCCDynamics(object):
         #coords0[activeParticles] = newCoords
         #return coords0
 
-
-        activeParticles = self.orient != -1
+        if index is None:
+            activeParticles = self.orient != -1
+        else:
+            activeParticles = self.orient[index] != -1
+            active_FromAll = index[self.orient[index] != -1]
         firstCoords = coords[activeParticles]
-        neighCoords = \
-           coords[self.conn[activeParticles, self.orient[activeParticles]]]
-        #import fitz.interactnow
-        deltas = neighCoords - firstCoords
+        if index is None:
+            neighCoords = \
+            coordsRaw[self.conn[activeParticles, self.orient[activeParticles]]]
+        else:
+            neighCoords = \
+              coordsRaw[self.conn[active_FromAll, self.orient[active_FromAll]]]
 
+        deltas = (neighCoords - firstCoords)
         physicalShape = numpy.asarray(self.physicalShape)
         deltas += .5 * physicalShape
         numpy.mod(deltas, physicalShape, deltas)
         deltas -= .5 * physicalShape
-
         deltas /= 4.
+
         coords = coords.copy() # we *need* to make a copy here...
         coords[activeParticles] += deltas
-
-        #coords[coords==14.25] = 10.5
-        #coords[coords==-.25] = 3.5
-
-        #if not numpy.all(coords == coords0):
-        #    import fitz.interactnow
-
         #from fitz.interact import interact ; interact()
         return coords
 

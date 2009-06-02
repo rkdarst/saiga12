@@ -90,6 +90,32 @@ class GridNd(saiga12.Sys):
         same lattShape.
         """
         return lattShape
+    def coords(self, index=None, raw=False):
+        """Mapping from lattice index to coordinates in real space.
+
+        By default, return an array of all coordinates.  If 'index' is
+        given, it is an integer labeling (or slice list/array) and
+        returns coordinates only of those points.
+
+        If 'raw' is True, then don't perform vibration/orientation
+        adjustments.
+        """
+        coordCacheKey = (self.__class__.__name__, self.lattShape)
+        if not coord_datacache.has_key(coordCacheKey):
+            c = self._coords()
+            coord_datacache[coordCacheKey] = c
+        if index is None:
+            c = cRaw = coord_datacache[coordCacheKey]
+        else:
+            if isinstance(index, slice): pass
+            else:                        index = numpy.asarray(index)
+            cRaw = coord_datacache[coordCacheKey]
+            c = cRaw[index]
+        if getattr(self, 'vibEnabled', False) and not raw:
+            c = self.vib_adjustCoords(c, index=index)
+        if self.orient is not None and not raw:
+            c = self.ctcc_adjustCoords(c, coordsRaw=cRaw, index=index)
+        return c
     def distance(self, index0, index1):
         """Distance between any two lattice points.
 
@@ -133,7 +159,7 @@ class SquareGrid(GridNd):
 
     Must be subclassed and have connection data added to it.
     """
-    def coords(self, index=None):
+    def _coords(self):
         """Mapping from lattice indexa to coordinates in real space.
 
         'index' is sort of misnamed here-- it should be 'pos' to be
@@ -145,22 +171,10 @@ class SquareGrid(GridNd):
 
         if index is None, return all coordinates.
         """
-        coordCacheKey = (self.__class__.__name__, self.lattShape)
-        if not coord_datacache.has_key(coordCacheKey):
-            c = numpy.asarray(coords(self.lattShape,
-                                     numpy.arange(self.lattSize)),
-                              dtype=saiga12.numpy_double)
-            c = c.transpose()
-            coord_datacache[coordCacheKey] = c.copy()
-        if index is None:
-            c = coord_datacache[coordCacheKey]
-        else:
-            index = numpy.asarray(index)
-            c = coord_datacache[coordCacheKey][index]
-        if getattr(self, 'vibEnabled', False):
-            c = self.vib_adjustCoords(c)
-        if self.orient is not None:
-            c = self.ctcc_adjustCoords(c)
+        c = numpy.asarray(coords(self.lattShape,
+                                 numpy.arange(self.lattSize)),
+                          dtype=saiga12.numpy_double)
+        c = c.transpose()
         return c
 
     def gridIndex(self, coords):
@@ -286,7 +300,7 @@ class GridHex2d(GridNd):
                 i = self.connN[cur]
                 self.conn[cur, i] = neighbor
                 self.connN[cur] += 1
-    def coords(self, index=None):
+    def _coords(self, index=None):
         """Mapping from lattice index to coordinates in real space.
 
         'index' is sort of misnamed here-- it should be 'pos' to be
@@ -296,24 +310,14 @@ class GridHex2d(GridNd):
 
         This method is a replacement for grid_coords()
         """
-        coordCacheKey = (self.__class__.__name__, self.lattShape)
-        if not coord_datacache.has_key(coordCacheKey):
-            c = numpy.asarray(coords(self.lattShape,
-                                     numpy.arange(self.lattSize)),
-                              dtype=saiga12.numpy_double)
-            hexmat = numpy.asarray(((  1,        0         ),
-                                    (  0,  math.sqrt(3)/2) )  )
-            c = numpy.dot(hexmat, c)
-            c = c.transpose()
-            c[1::2,0] +=  .5
-            coord_datacache[coordCacheKey] = c.copy()
-        if index is None:
-            c = coord_datacache[coordCacheKey]
-        else:
-            index = numpy.asarray(index)
-            c = coord_datacache[coordCacheKey][index]
-        if getattr(self, 'vibEnabled', False):
-            c = self.vib_adjustCoords(c)
+        c = numpy.asarray(coords(self.lattShape,
+                                 numpy.arange(self.lattSize)),
+                          dtype=saiga12.numpy_double)
+        hexmat = numpy.asarray(((  1,        0         ),
+                                (  0,  math.sqrt(3)/2) )  )
+        c = numpy.dot(hexmat, c)
+        c = c.transpose()
+        c[1::2,0] +=  .5
         return c
 
     # The print lattice methods here are the same as for the 2d grid--
@@ -414,7 +418,7 @@ class Grid3dHCP(GridNd):
                 i = self.connN[cur]
                 self.conn[cur, i] = neighbor
                 self.connN[cur] += 1
-    def coords(self, index=None):
+    def _coords(self, index=None):
         """Mapping from lattice indexa to coordinates in real space.
 
         'index' is sort of misnamed here-- it should be 'pos' to be
@@ -424,37 +428,26 @@ class Grid3dHCP(GridNd):
 
         This method is a replacement for grid_coords()
         """
-        coordCacheKey = (self.__class__.__name__, self.lattShape)
-        if not coord_datacache.has_key(coordCacheKey):
-            c = numpy.asarray(coords(self.lattShape,
-                                     numpy.arange(self.lattSize)),
-                              dtype=saiga12.numpy_double)
+        c = numpy.asarray(coords(self.lattShape,
+                                 numpy.arange(self.lattSize)),
+                          dtype=saiga12.numpy_double)
 
-            # Linear transform -- just shrink the coordinates down.
-            # Offsets still need to be adjusted below.
-            hexmat = numpy.asarray(((1,              0  ,  0                ),
-                                    (0,  math.sqrt(3)/2.,  0                ),
-                                    (0,                0,  math.sqrt(6)/3 )))
-            c = numpy.dot(hexmat, c)
-            c = c.transpose()
-            lattShape = self.lattShape
-            c.shape = lattShape[0], lattShape[1], lattShape[2], 3
+        # Linear transform -- just shrink the coordinates down.
+        # Offsets still need to be adjusted below.
+        hexmat = numpy.asarray(((1,              0  ,  0                ),
+                                (0,  math.sqrt(3)/2.,  0                ),
+                                (0,                0,  math.sqrt(6)/3 )))
+        c = numpy.dot(hexmat, c)
+        c = c.transpose()
+        lattShape = self.lattShape
+        c.shape = lattShape[0], lattShape[1], lattShape[2], 3
 
-            # adjust x offset by .5 for every other y layer
-            c[:, 1::2, :, 0] +=  .5
-            # adjust z offset by the proper amount for ever other z layer
-            c[:, :, 1::2, :2] +=  (.5, -math.sqrt(3)/6)
+        # adjust x offset by .5 for every other y layer
+        c[:, 1::2, :, 0] +=  .5
+        # adjust z offset by the proper amount for ever other z layer
+        c[:, :, 1::2, :2] +=  (.5, -math.sqrt(3)/6)
 
-            c.shape = product(lattShape), 3
-            self._coordCache = c.copy()
-            coord_datacache[coordCacheKey] = c.copy()
-        if index is None:
-            c = coord_datacache[coordCacheKey]
-        else:
-            index = numpy.asarray(index)
-            c = coord_datacache[coordCacheKey][index]
-        if getattr(self, 'vibEnabled', False):
-            c = self.vib_adjustCoords(c)
+        c.shape = product(lattShape), 3
         return c
 
     def printLattice(self, lattice=None):
