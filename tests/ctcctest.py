@@ -77,5 +77,10 @@ print S.hash(), S2.hash()
 assert S.hash() == S2.hash()
 assert tuple(S.orient) == tuple(S2.orient)
 
+# does slicing of coords() work right?
+assert numpy.all(S.coords(range(100,200))     == S.coords()[100:200])
+assert numpy.all(S.coords(range(125,175))     == S.coords()[125:175])
+assert numpy.all(S.coords(range(50, 1000, 2)) == S.coords()[50:1000:2])
 
+#import fitz.interactnow
 #from fitz.interact import interact ; interact()

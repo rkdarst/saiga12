@@ -32,7 +32,13 @@ testRuns = [
      'grid':'Grid3d', 'size':'15,15,15', 'particles':{1:.6}, 'n':500,
      'cycleMode':'ctcc', 'hardness':'anneal',
      'cycleMoves':{'mode':'grandCanonical'}},
+    {'name':"CTCC coords",
+     'grid':'Grid3d', 'size':'15,15,15', 'particles':{1:.6}, 'n':100,
+     'cycleMode':'ctcc', 'hardness':'anneal',
+     'command':'S.coords()'},
     ]
+ToDo = None
+#ToDo = set(('CTCC coords', ))
 
 def run_test(kwargs):
     stmt = [ ]
@@ -42,26 +48,36 @@ def run_test(kwargs):
     a("S.makegrid(%s)"%kwargs['size'])
     if 'cycleMode' in kwargs:
         a('S.setCycleMode("%s")'%kwargs['cycleMode'])
-
+    # deal with hardness stuff
     hardness = kwargs.get('hardness', None)
     if hardness:
         if hardness == 'anneal':
             a('S.hardness = 1')
         else:
             a('S.hardness = %s'%hardness)
+    # add particles and anneal if needed
     a("S.addParticles(%s)"%repr(kwargs['particles']))
     if hardness == 'anneal':
         a('S.anneal(verbose=False)')
-
+    # set cycle moves
     cycleMoves = kwargs.get('cycleMoves', {})
     a('S.setCycleMoves(**%s)'%repr(cycleMoves))
     return '\n'.join(stmt)
 
 for run in testRuns:
+    if ToDo and run['name'] not in ToDo: continue
     setup = run_test(run)
     nMoves = run['n']
     if 'fast' in globals(): nMoves /= 10
-    T = timeit.Timer('S.cycle(%s)'%nMoves, setup)
+    # What test running command should we use?
+    command = run.get('command', None)
+    if command is None:
+        T = timeit.Timer('S.cycle(%s)'%nMoves, setup)
+    else:
+        command = ("for i in xrange(%s): "+command)%nMoves
+        T = timeit.Timer(command, setup)
+
+    # Actually do it
     number = 3
     try:
         times = T.repeat(3, number=number)
@@ -69,18 +85,19 @@ for run in testRuns:
         T.print_exc()
         import sys ; sys.exit()
     time = min(times)
-    print ("%-15s %9.2f mctime per real second (%3.1fs here)"%
-           (run['name'], run['n']/time, sum(times)))
+    print ("%-15s %9.2f / real s  (%1.1e) (%3.1fs here)"%
+           (run['name'], run['n']/time, time/run['n'], sum(times)))
 
 
 """
 Latest:
-BM 1d            59684.75 mctime per real second (0.5s here)
-BM 2d            28165.29 mctime per real second (1.1s here)
-BM 3d             1203.85 mctime per real second (1.2s here)
-BM Hex2d         17865.05 mctime per real second (1.7s here)
-BM 3dHCP           647.55 mctime per real second (0.9s here)
-BM 3d GC           967.99 mctime per real second (1.6s here)
-CTCC 3d           1369.39 mctime per real second (1.1s here)
-CTCC 3d GC        1368.52 mctime per real second (1.1s here)
+BM 1d            58542.46 / real s  (1.7e-05) (0.5s here)
+BM 2d            27896.02 / real s  (3.6e-05) (1.1s here)
+BM 3d             1200.49 / real s  (8.3e-04) (1.3s here)
+BM Hex2d         17818.20 / real s  (5.6e-05) (1.7s here)
+BM 3dHCP           643.73 / real s  (1.6e-03) (0.9s here)
+BM 3d GC           960.24 / real s  (1.0e-03) (1.6s here)
+CTCC 3d           1367.60 / real s  (7.3e-04) (1.1s here)
+CTCC 3d GC        1368.05 / real s  (7.3e-04) (1.1s here)
+CTCC offset        263.11 / real s  (3.8e-03) (1.1s here)
 """
