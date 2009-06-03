@@ -1,6 +1,7 @@
 # Richard Darst, May 2009
 
 import numpy
+import pickle
 import time
 
 import saiga12
@@ -70,7 +71,6 @@ for i in xrange(100):
 S.coords()
 
 print '='*15
-import pickle
 x = pickle.dumps(S)
 S2 = pickle.loads(x)
 print S.hash(), S2.hash()
@@ -81,6 +81,31 @@ assert tuple(S.orient) == tuple(S2.orient)
 assert numpy.all(S.coords(range(100,200))     == S.coords()[100:200])
 assert numpy.all(S.coords(range(125,175))     == S.coords()[125:175])
 assert numpy.all(S.coords(range(50, 1000, 2)) == S.coords()[50:1000:2])
+assert numpy.all(S.coords(25) == S.coords()[25])
+assert numpy.all(S.coords(S.atompos[25]) == S.coords()[S.atompos[25]])
+
+
+pos = S.atompos[0]
+print pos
+S.coords(pos)
 
 #import fitz.interactnow
 #from fitz.interact import interact ; interact()
+
+
+# test CTCCclassic
+S = Grid3d()
+S.makegrid(15, 15, 15)
+particles = {1:.4}
+#S.setCycleMode('ctcc')
+S.setCycleMode(saiga12.S12_CYCLE_CTCCclassic)
+S.addParticles(particles)
+S.setCycleMoves()
+S.cycle(100)
+
+x = pickle.dumps(S)
+S2 = pickle.loads(x)
+assert S.cycleMode    == S2.cycleMode
+assert S.cycleModeStr == S2.cycleModeStr
+assert S.N == S2.N
+assert S.hash() == S2.hash()
