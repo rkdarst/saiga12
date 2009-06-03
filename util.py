@@ -124,7 +124,7 @@ def diff(fname0, *fileNames):
 
     if frame0.cycleModeStr in ('fredricksonandersen', ):
         difftype = 'spin'
-    elif frame0.cycleModeStr in ('kobandersen', 'montecarlo'):
+    else:
         difftype = 'particle'
     frame_index = 0
     V = viz.VizSystem(frame0)
