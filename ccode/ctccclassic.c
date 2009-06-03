@@ -30,11 +30,12 @@ inline int cycleCTCCclassic_translate(struct SimData *SD) {
     int oldOrient = SD->orient[pos];
     int newOrient = SD->connN[newPos] * genrand_real2();
 
-
     double Eold = energy_pos(SD, pos) +
                   energy_pos(SD, newPos);
-    if (pos != newPos)
+    if (pos != newPos) {
       moveParticleShort(SD, pos, newPos);
+      SD->orient[pos] = S12_EMPTYSITE;
+    }
     SD->orient[newPos] = newOrient;
     double Enew = energy_pos(SD, newPos) +
                   energy_pos(SD, pos);
@@ -61,8 +62,10 @@ inline int cycleCTCCclassic_translate(struct SimData *SD) {
 
     if (accept == 0) {
       // Restore the particle location if it wasn't accepted.
-      if (pos != newPos)
+      if (pos != newPos) {
 	moveParticleShort(SD, newPos, pos);
+	SD->orient[newPos] = S12_EMPTYSITE;
+      }
       SD->orient[pos] = oldOrient;
     }
     else {

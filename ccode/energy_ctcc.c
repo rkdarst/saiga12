@@ -23,6 +23,8 @@ inline double energyCTCC_pos(struct SimData *SD, int pos) {
   for (i_conn=0; i_conn<SD->connN[pos] ; i_conn++) {
     int adjPos = SD->conn[pos*SD->connMax + i_conn];
     int reverseconn = (i_conn+(SD->connMax/2)) % SD->connMax;
+    // The test below should never be true if the site is empty, since
+    /// then orient should be -1 always.
     if(SD->orient[adjPos] == reverseconn) {
       E += SD->hardness;
     }
