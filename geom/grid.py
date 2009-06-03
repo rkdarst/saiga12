@@ -109,6 +109,8 @@ class GridNd(saiga12.Sys):
         else:
             if isinstance(index, slice): pass
             else:                        index = numpy.asarray(index)
+            # ensure that it is an array, not a scalar
+            if index.shape == (): index.shape = 1,
             cRaw = coord_datacache[coordCacheKey]
             c = cRaw[index]
         if getattr(self, 'vibEnabled', False) and not raw:
