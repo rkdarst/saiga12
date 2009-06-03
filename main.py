@@ -190,9 +190,11 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
         self.cycleModeStr = cycleMode
         # self.cycleMode is what is used in actual dynamics
         if isinstance(cycleMode, int):
-            #if energyMode not in S12_ENERGY_AVAIL:
-            #    raise Exception("Unknown energy mode: %s", energyMode)
-            self.cycleMode = cycleMode
+            if cycleMode in (S12_CYCLE_CTCCclassic, ):
+                self.setCycleMode('ctcc')
+                self.cycleModeStr = cycleMode # above call resets it
+            self.cycleMode    = cycleMode
+            return
         if cycleMode.lower() == 'montecarlo':
             self.cycleMode = S12_CYCLE_MC
             # event driven dynamics only work for biroli-mezard dynamics!
