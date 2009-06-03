@@ -5,6 +5,7 @@ import os
 import resource
 import timeit
 
+import saiga12
 from saiga12.geom.grid import Grid1d, Grid2d, Grid3d, GridHex2d, Grid3dHCP
 
 testRuns = [
@@ -28,6 +29,9 @@ testRuns = [
     {'name':"CTCC 3d",
      'grid':'Grid3d', 'size':'15,15,15', 'particles':{1:.6}, 'n':500,
      'cycleMode':'ctcc', 'hardness':'anneal'},
+    {'name':"CTCC 3d classic",
+     'grid':'Grid3d', 'size':'15,15,15', 'particles':{1:.6}, 'n':500,
+     'cycleMode':saiga12.S12_CYCLE_CTCCclassic, 'hardness':'anneal'},
     {'name':"CTCC 3d GC",
      'grid':'Grid3d', 'size':'15,15,15', 'particles':{1:.6}, 'n':500,
      'cycleMode':'ctcc', 'hardness':'anneal',
@@ -47,7 +51,7 @@ def run_test(kwargs):
     a("S = %s()"%kwargs['grid'])
     a("S.makegrid(%s)"%kwargs['size'])
     if 'cycleMode' in kwargs:
-        a('S.setCycleMode("%s")'%kwargs['cycleMode'])
+        a('S.setCycleMode(%s)'%repr(kwargs['cycleMode']))
     # deal with hardness stuff
     hardness = kwargs.get('hardness', None)
     if hardness:
@@ -91,13 +95,14 @@ for run in testRuns:
 
 """
 Latest:
-BM 1d            58542.46 / real s  (1.7e-05) (0.5s here)
-BM 2d            27896.02 / real s  (3.6e-05) (1.1s here)
-BM 3d             1200.49 / real s  (8.3e-04) (1.3s here)
-BM Hex2d         17818.20 / real s  (5.6e-05) (1.7s here)
-BM 3dHCP           643.73 / real s  (1.6e-03) (0.9s here)
-BM 3d GC           960.24 / real s  (1.0e-03) (1.6s here)
-CTCC 3d           1367.60 / real s  (7.3e-04) (1.1s here)
-CTCC 3d GC        1368.05 / real s  (7.3e-04) (1.1s here)
-CTCC offset        263.11 / real s  (3.8e-03) (1.1s here)
+BM 1d            60078.09 / real s  (1.7e-05) (0.5s here)
+BM 2d            27763.21 / real s  (3.6e-05) (1.1s here)
+BM 3d             1195.59 / real s  (8.4e-04) (1.3s here)
+BM Hex2d         17720.04 / real s  (5.6e-05) (1.7s here)
+BM 3dHCP           641.03 / real s  (1.6e-03) (0.9s here)
+BM 3d GC           959.46 / real s  (1.0e-03) (1.6s here)
+CTCC 3d           1441.41 / real s  (6.9e-04) (1.0s here)
+CTCC 3d classic   1175.62 / real s  (8.5e-04) (1.3s here)
+CTCC 3d GC        1442.59 / real s  (6.9e-04) (1.0s here)
+CTCC coords        263.93 / real s  (3.8e-03) (1.1s here)
 """
