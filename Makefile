@@ -9,7 +9,7 @@ saiga12c.so: saiga12c.o SFMT.o
 
 saiga12c.o: saiga12c.c ccode/kobandersen.c ccode/fredricksonandersen.c\
 	ccode/birolimezard.c ccode/energy_bm.c \
-	ccode/ctcc.c ccode/energy_ctcc.c
+	ccode/ctcc.c ccode/ctccclassic.c ccode/energy_ctcc.c
 	gcc ${extra} ${opts} -c saiga12c.c
 
 SFMT.o: SFMT.c SFMT.h

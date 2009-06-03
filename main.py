@@ -186,7 +186,13 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
         'ctcc'        -- On a lattice, with one directional degree of
                          freedom.
         """
+        # self.cycleModeStr is what is used when save/reloading.
         self.cycleModeStr = cycleMode
+        # self.cycleMode is what is used in actual dynamics
+        if isinstance(cycleMode, int):
+            #if energyMode not in S12_ENERGY_AVAIL:
+            #    raise Exception("Unknown energy mode: %s", energyMode)
+            self.cycleMode = cycleMode
         if cycleMode.lower() == 'montecarlo':
             self.cycleMode = S12_CYCLE_MC
             # event driven dynamics only work for biroli-mezard dynamics!

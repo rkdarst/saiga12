@@ -22,6 +22,7 @@
 #define S12_CYCLE_KA (2)
 #define S12_CYCLE_FA (3)
 #define S12_CYCLE_CTCC (4)
+#define S12_CYCLE_CTCCclassic (10)
 #define S12_FLAG_VIB_ENABLED (1)
 
 int debug = 0;
@@ -229,7 +230,22 @@ inline void moveParticle(struct SimData *SD, int oldpos, int newpos) {
     SD->orient[oldpos] = S12_EMPTYSITE ;
   }
 }
-
+inline void moveParticleShort(struct SimData *SD, int oldpos, int newpos) {
+  /* Doesn't errorcheck - used in CTCCclassic dynamics.
+   */
+  SD->lattsite[newpos] = SD->lattsite[oldpos];
+  SD->lattsite[oldpos] = S12_EMPTYSITE;
+  SD->atompos[SD->lattsite[newpos]] = newpos;
+  int i;
+  for (i=0 ; i<SD->connN[oldpos] ; i++) {
+    int neighpos = SD->conn[SD->connMax*oldpos + i];
+    SD->nneighbors[neighpos] --;
+  }
+  for (i=0 ; i<SD->connN[newpos] ; i++) {
+    int neighpos = SD->conn[SD->connMax*newpos + i];
+    SD->nneighbors[neighpos] ++;
+  }
+}
 
 
 void loadStateFromSave(struct SimData *SD) {
@@ -510,6 +526,7 @@ int cycleMC(struct SimData *SD, double n);
 int cycleKA(struct SimData *SD, double n);
 int cycleFA(struct SimData *SD, double n);
 int cycleCTCC(struct SimData *SD, double n);
+int cycleCTCCclassic(struct SimData *SD, double n);
 inline int cycleKA_translate(struct SimData *SD);
 
 
@@ -524,6 +541,8 @@ int cycle(struct SimData *SD, double n) {
     return cycleFA(SD, n);
   else if (SD->cycleMode == S12_CYCLE_CTCC)
     return cycleCTCC(SD, n);
+  else if (SD->cycleMode == S12_CYCLE_CTCCclassic)
+    return cycleCTCCclassic(SD, n);
   else {
     printf("Cycle mode not set: %d", SD->cycleMode);
     exit(49);
@@ -857,6 +876,7 @@ inline void EddFA_updateLatPos(struct SimData *SD, int pos);
 #include "ccode/fredricksonandersen.c"
 
 #include "ccode/ctcc.c"
+#include "ccode/ctccclassic.c"
 
 
 
