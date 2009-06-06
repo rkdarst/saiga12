@@ -122,14 +122,17 @@ class GridNd(saiga12.Sys):
         Depends on distance2 to work.
         """
         return numpy.sqrt(self.distance2(index0, index1))
-    def distance2(self, index0, index1):
+    def distance2(self, index0, index1, otherS=None):
         """Distance-squared between any two lattice points.
 
         This works for arbitrary dimensions, as well as arrays!
         Depends on a functioning coords() method to work.
         """
         coords0 = self.coords(index0)
-        coords1 = self.coords(index1)
+        if otherS is None:
+            coords1 = self.coords(index1)
+        else:
+            coords1 = otherS.coords(index1)
         lindistances = coords0 - coords1
         # v-- this 
         delta = (numpy.floor(lindistances/self.physicalShape + .5)) * \

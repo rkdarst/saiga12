@@ -927,14 +927,6 @@ def diff(S1, S2):
         
     from rkddp.interact import interact ; interact()
 
-def msdPosition(S0, S, type_=S12_TYPE_ANY):
-    startpos = S0.getPos(type_)
-    endpos =   S.getPos(type_)
-    d2 = S.distance2(startpos, endpos)  # distance squared array
-    maxd = max(numpy.sqrt(d2))
-    msd = sum(d2) / len(d2)
-    return msd
-    
 
 if __name__ == "__main__":
     # Some test scripts, but the main tests are in the tests/

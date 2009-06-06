@@ -330,6 +330,16 @@ def visualizeKvectors(fileNames):
             scene.objects[0].visible = 0
     
 
+def msdPosition(S0, S, type_=saiga12.S12_TYPE_ANY, otherS=None):
+    """MSD displacement of all particles of a certain type between two times.
+    """
+    startpos = S0.getPos(type_)
+    endpos =   S.getPos(type_)
+    d2 = S0.distance2(startpos, endpos, otherS)  # distance squared array
+    #print d2
+    maxd = max(numpy.sqrt(d2))
+    msd = sum(d2) / len(d2)
+    return msd
 
 
 if __name__ == "__main__":
