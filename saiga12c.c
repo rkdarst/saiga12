@@ -138,6 +138,12 @@ inline int atomType(struct SimData *SD, int pos) {
   //return(SD->lattsite[pos]);
   return(SD->atomtype[SD->lattsite[pos]]);
 }
+/* Little macro for finding the reverse connection.
+ */
+inline int reverseConnection(struct SimData *SD, int i_conn) {
+  int connMax = SD->connMax;
+  return ( (i_conn+(connMax/2)) % connMax );
+}
 
 
 inline void addParticle(struct SimData *SD, int pos, int type) {
