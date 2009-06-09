@@ -874,6 +874,28 @@ inline void removeFromMLL(struct SimData *SD, int pos, int conni) {
   SD->MLLlen -= 1 ;
 }
 
+inline int isInMLL(struct SimData *SD, int pos, int conni) {
+  if (SD->MLLr[pos*SD->connMax + conni] == S12_EMPTYSITE)
+    return 0;
+  else
+    return 1;
+}
+inline void ensureInMLL(struct SimData *SD, int pos, int conni) {
+  if (SD->MLLr[pos*SD->connMax + conni] == S12_EMPTYSITE)
+    addToMLL(SD, pos, conni);
+}
+inline void ensureNotInMLL(struct SimData *SD, int pos, int conni) {
+  if (SD->MLLr[pos*SD->connMax + conni] != S12_EMPTYSITE)
+    removeFromMLL(SD, pos, conni);
+}
+inline void ensureInMLLIf(int isAllowed, struct SimData *SD,int pos,int conni){
+  if (isAllowed)
+    ensureInMLL(SD, pos, conni);
+  else
+    ensureNotInMLL(SD, pos, conni);
+}
+
+
 inline void EddBM_updateLatPos(struct SimData *SD, int pos);
 #include "ccode/birolimezard.c"
 
