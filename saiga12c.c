@@ -848,7 +848,7 @@ inline int LlistLookup(struct LList *llist, int elem) {
 
 inline void addToMLL(struct SimData *SD, int pos, int conni) {
   int lookup = pos * SD->connMax + conni;
-  if (errorcheck && SD->MLLr[lookup] != -1) {
+  if (errorcheck && (SD->MLLr[lookup] != S12_EMPTYSITE)) {
     printf("error rhoeacurk %d %d \n", pos, conni);
   }
   SD->MLL[SD->MLLlen] = lookup;
@@ -857,6 +857,9 @@ inline void addToMLL(struct SimData *SD, int pos, int conni) {
 }
 inline void removeFromMLL(struct SimData *SD, int pos, int conni) {
   int moveIndex = pos * SD->connMax + conni;
+  if (errorcheck && (SD->MLLr[moveIndex] == S12_EMPTYSITE)) {
+    printf("error torknotur %d %d \n", pos, conni);
+  }
   int mllLocation = SD->MLLr[moveIndex];
   if (mllLocation == SD->MLLlen-1 ) {
     SD->MLL[mllLocation] = -1;
