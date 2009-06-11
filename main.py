@@ -127,6 +127,11 @@ def getClib():
         ("EddCTCC_init",           None,     (SimData_p, )),
         ("EddCTCC_consistencyCheck",c_int,   (SimData_p, )),
         ("EddCTCC_cycle",          c_int,    (SimData_p, c_double)),
+
+        ("EddEast_updateLatPos",     None,     (SimData_p, c_int, )),
+        ("EddEast_init",             None,     (SimData_p, )),
+        ("EddEast_consistencyCheck", c_int,    (SimData_p, )),
+        ("EddEast_cycle",            c_int,    (SimData_p, c_double)),
         )
     for name, restype, argtypes in cfuncs:
         getattr(C, name).restype  = restype
@@ -190,6 +195,7 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
                          dynamics.
         'ctcc'        -- On a lattice, with one directional degree of
                          freedom.
+        'east'        -- East model (one sided Fredrickson-Anderson).
         """
         # self.cycleModeStr is what is used when save/reloading.
         self.cycleModeStr = cycleMode
@@ -225,6 +231,17 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
             if self.lattSize <= 0:
                 raise Exception, ("lattSize is not set-- you must set up "+
                                  "your arrays before enabling F-A dynamics")
+            self._allocPersistArray() # automatically set to zeros
+        elif cycleMode.lower() == 'east':
+            self.cycleMode = S12_CYCLE_EAST
+            self._eddInit = self.C.EddEast_init
+            self._eddUpdateLatPos = self.C.EddEast_updateLatPos
+            self._eddConsistencyCheck = self.C.EddEast_consistencyCheck
+            self._eddCycle = self.C.EddEast_cycle
+            self.setEnergyMode('zero')
+            if self.lattSize <= 0:
+                raise Exception, ("lattSize is not set-- you must set up "+
+                                 "your arrays before enabling East dynamics")
             self._allocPersistArray() # automatically set to zeros
         elif cycleMode.lower() == 'ctcc':
             self.cycleMode = S12_CYCLE_CTCC
@@ -729,6 +746,7 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
         """
         if (
             self.cycleModeStr == 'fredricksonandersen' or
+            self.cycleModeStr == 'east' or
             self.cycleModeStr == 'kobandersen' or
             ( self.cycleModeStr == 'montecarlo' and
               self.energyModeStr == 'birolimezard' and
@@ -749,7 +767,7 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
             return
         assert self.lattSize > 0, "lattSize <= zero... is grid initialized?"
         MLLsize = self.lattSize*self.connMax
-        if self.cycleModeStr == 'fredricksonandersen':
+        if self.cycleModeStr in ('fredricksonandersen', 'east'):
             MLLsize = self.lattSize
             self._allocArray("MLL_down", shape=MLLsize, dtype=numpy_int)
             self.MLL_down[:] = -1
@@ -794,7 +812,7 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
             n = 100
         elif self.cycleModeStr == 'kobandersen':
             n = 100
-        elif self.cycleModeStr == 'fredricksonandersen':
+        elif self.cycleModeStr in ('fredricksonandersen', 'east'):
             return # it should always be enabled for FA.
         if copy:
             origHash = self.hash()

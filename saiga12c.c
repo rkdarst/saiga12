@@ -22,6 +22,7 @@
 #define S12_CYCLE_KA (2)
 #define S12_CYCLE_FA (3)
 #define S12_CYCLE_CTCC (4)
+#define S12_CYCLE_EAST (5)
 #define S12_CYCLE_CTCCclassic (10)
 #define S12_FLAG_VIB_ENABLED (1)
 
@@ -909,6 +910,10 @@ inline void EddFA_updateLatPos(struct SimData *SD, int pos);
 inline void EddCTCC_updateLatPos(struct SimData *SD, int pos);
 #include "ccode/ctcc.c"
 #include "ccode/ctccclassic.c"
+
+inline void EddEast_updateLatPos(struct SimData *SD, int pos);
+#include "ccode/east.c"
+
 
 
 
