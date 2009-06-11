@@ -25,6 +25,8 @@ class TestSequenceFunctions(unittest.TestCase):
         execfile("tests/diffusion.py", {})
     def testDistances(self):
         execfile("tests/distances.py", {})
+    def testEast(self):
+        execfile("tests/easttest.py", {})
     def testEnergymodes(self):
         execfile("tests/energymodes.py", {})
 
