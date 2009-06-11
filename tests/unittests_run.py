@@ -16,6 +16,8 @@ class TestSequenceFunctions(unittest.TestCase):
         execfile("tests/corrfunctest.py", {'noviz':True})
     def testCtccTest(self):
         execfile("tests/ctcctest.py", {})
+    def testCtccEDDTest(self):
+        execfile("tests/ctcceddtest.py", {'short':True})
     def testDecay(self):
         # writes out to logfile.txt, don't use this test.
         execfile("tests/decay.py", {})

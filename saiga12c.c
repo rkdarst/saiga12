@@ -906,6 +906,7 @@ inline void EddKA_updateLatPos(struct SimData *SD, int pos);
 inline void EddFA_updateLatPos(struct SimData *SD, int pos);
 #include "ccode/fredricksonandersen.c"
 
+inline void EddCTCC_updateLatPos(struct SimData *SD, int pos);
 #include "ccode/ctcc.c"
 #include "ccode/ctccclassic.c"
 

@@ -122,6 +122,11 @@ def getClib():
         ("EddFA_init",             None,     (SimData_p, )),
         ("EddFA_consistencyCheck", c_int,    (SimData_p, )),
         ("EddFA_cycle",            c_int,    (SimData_p, c_double)),
+
+        ("EddCTCC_updateLatPos",   None,     (SimData_p, c_int, )),
+        ("EddCTCC_init",           None,     (SimData_p, )),
+        ("EddCTCC_consistencyCheck",c_int,   (SimData_p, )),
+        ("EddCTCC_cycle",          c_int,    (SimData_p, c_double)),
         )
     for name, restype, argtypes in cfuncs:
         getattr(C, name).restype  = restype
@@ -222,10 +227,14 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
                                  "your arrays before enabling F-A dynamics")
             self._allocPersistArray() # automatically set to zeros
         elif cycleMode.lower() == 'ctcc':
+            self.cycleMode = S12_CYCLE_CTCC
+            self._eddInit =             self.C.EddCTCC_init
+            self._eddUpdateLatPos =     self.C.EddCTCC_updateLatPos
+            self._eddConsistencyCheck = self.C.EddCTCC_consistencyCheck
+            self._eddCycle =            self.C.EddCTCC_cycle
             if self.N != 0:
                 raise Exception("You must set ctcc cycle mode before you "+
                                 "have any particles.")
-            self.cycleMode = S12_CYCLE_CTCC
             self._allocArray("orient", shape=(self.lattSize),
                              dtype=numpy_int)
             self.orient[:] = S12_EMPTYSITE
@@ -723,6 +732,10 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
             self.cycleModeStr == 'kobandersen' or
             ( self.cycleModeStr == 'montecarlo' and
               self.energyModeStr == 'birolimezard' and
+              ( self.beta == inf or self.hardness == inf )
+            ) or
+            ( self.cycleModeStr == 'ctcc' and
+              self.energyModeStr == 'ctcc' and
               ( self.beta == inf or self.hardness == inf )
             )
           ):
