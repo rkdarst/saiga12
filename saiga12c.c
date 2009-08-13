@@ -526,6 +526,21 @@ double chempotential(struct SimData *SD, int inserttype) {
      - log(totalsum / (SD->ntype[inserttype])) / SD->beta; // B per type
   return(chempotential);
 }
+double chempotential_innersum(struct SimData *SD, int inserttype) {
+  double totalsum=0;
+  int pos;
+  for(pos=0 ; pos<SD->lattSize ; pos++) {
+    if (SD->lattsite[pos] != S12_EMPTYSITE) {
+      continue;
+    }
+    double Eold = energy_pos(SD, pos);
+    addParticle(SD, pos, inserttype);
+    double Enew = energy_pos(SD, pos);
+    delParticle(SD, pos);
+    totalsum += exp(-SD->beta * (Enew-Eold));
+  }
+  return(totalsum / (SD->ntype[inserttype]));
+}
 
 
 

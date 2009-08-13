@@ -101,6 +101,7 @@ def getClib():
         ("energy_pos", c_double, (SimData_p, c_int) ),
         ("energy",                 c_double, (SimData_p,)),
         ("chempotential",          c_double, (SimData_p, c_int)),
+        ("chempotential_innersum", c_double, (SimData_p, c_int)),
         ("cycle",                  c_int,    (SimData_p, c_double)),
         ("calc_structfact",        c_double, (SimData_p, SimData_p, # SD1, SD2
                                         c_void_p, c_int, # *kvecs, Nk
@@ -737,6 +738,11 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
         if store and mu != inf:
             self.avgStore("chempotential", mu)
         return mu
+    def chempotential_innersum(self, inserttype):
+        """Chemical potential of the system, test inserting at every site.
+        """
+        sum_ = self.C.chempotential_innersum(self.SD_p, inserttype)
+        return sum_
     def persistFunction(self):
         return (self.lattSize - numpy.sum(self.persist)) / float(self.lattSize)
 
