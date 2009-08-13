@@ -917,6 +917,27 @@ inline void EddEast_updateLatPos(struct SimData *SD, int pos);
 
 
 
+int istructure(struct SimData *SD) {
+  // Go through all sites and add particles if we can move.
+
+  int number_of_bonds=0;
+  int pos, adjpos;
+  int conni;
+  for (pos=0 ; pos<SD->lattSize ; pos++) {
+    if (SD->lattsite[pos] == S12_EMPTYSITE)
+      continue;
+    for (conni=0 ; conni<SD->connN[pos] ; conni++) {
+      adjpos = SD->conn[pos*SD->connMax + conni];
+      if (SD->lattsite[adjpos] != S12_EMPTYSITE)
+	number_of_bonds += 1;
+    }
+  }
+  return number_of_bonds;
+}
+
+
+
+
 
 
 

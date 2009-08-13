@@ -109,6 +109,8 @@ def getClib():
                                         c_void_p, c_int, # shape, nDim
                                         c_void_p, c_void_p,#*result,SkByAtom
                                         c_int )),        # flags
+        ("istructure",             c_int,    (SimData_p, )),
+
         ("addToMLL",               None,     (SimData_p, c_int, c_int)),
         ("removeFromMLL",          None,     (SimData_p, c_int, c_int)),
 
