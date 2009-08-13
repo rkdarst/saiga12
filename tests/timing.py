@@ -9,6 +9,10 @@ import saiga12
 from saiga12.geom.grid import Grid1d, Grid2d, Grid3d, GridHex2d, Grid3dHCP
 
 testRuns = [
+    {'name':"overhead",
+     'n': 500,
+     'setup':'from saiga12 import Grid3d \nGrid3d().makegrid(15,15,15)',
+     'command':'Grid3d().makegrid(15,15,15)',},
     {'name':"BM 1d",
      'grid':'Grid1d', 'size':'150', 'particles':{2:.45}, 'n':10000,},
     {'name':"BM 2d",
@@ -43,6 +47,9 @@ testRuns = [
     ]
 ToDo = None
 #ToDo = set(('CTCC coords', ))
+if __name__ == "__main__":
+    import sys
+    ToDo = set(sys.argv[1:])
 
 def run_test(kwargs):
     stmt = [ ]
@@ -70,18 +77,21 @@ def run_test(kwargs):
 
 for run in testRuns:
     if ToDo and run['name'] not in ToDo: continue
-    setup = run_test(run)
+    # Setup part: either custom or default cycle testing
+    if 'setup' in run:
+        setup = run['setup']
+    else:
+        setup = run_test(run)
     nMoves = run['n']
     if 'fast' in globals(): nMoves /= 10
-    # What test running command should we use?
-    command = run.get('command', None)
-    if command is None:
-        T = timeit.Timer('S.cycle(%s)'%nMoves, setup)
+    # Run custom command or default cycle testing?
+    if 'command' in run:
+        command = "for i in xrange(%s): %s"%(nMoves, run['command'])
     else:
-        command = ("for i in xrange(%s): "+command)%nMoves
-        T = timeit.Timer(command, setup)
+        command = 'S.cycle(%s)'%nMoves
 
     # Actually do it
+    T = timeit.Timer(command, setup)
     number = 3
     try:
         times = T.repeat(3, number=number)
