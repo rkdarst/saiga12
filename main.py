@@ -69,6 +69,10 @@ class SimData(ctypes.Structure):
         ("cumProbDel", c_double),
         ]
 SimData_p = ctypes.POINTER(SimData)
+SimDataFields = { }
+for name, t in SimData._fields_:
+    SimDataFields[name] = True
+
 
 class Saiga12Exception(Exception):
     pass
@@ -313,8 +317,8 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
         # name, but it is equivalent to this for the name `lattsite`:
         ##  self.__dict__["lattsite"] = numpy.zeros(**args)
         ##  self.SD.lattsite = self.lattsite.ctypes.data
-        self.__dict__[name]=numpy.zeros(**args)
-        setattr(self.SD, name, getattr(self, name).ctypes.data)
+        self.__dict__[name] = array = numpy.zeros(**args)
+        setattr(self.SD, name, array.ctypes.data)
 
     def _initArrays(self, lattSize, connMax):
         """Function to initilize various data structures.
@@ -901,14 +905,13 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
     def __getattr__(self, attrname):
         """Wrapper to proxy attribute gets to the C SimData struct
         """
-        try:
+        if name in SimDataFields:
             return getattr(self.SD, attrname)
-        except AttributeError:
-            raise AttributeError("No Such Attribute: %s"%attrname)
+        raise AttributeError("No Such Attribute: %s"%attrname)
     def __setattr__(self, name, value):
         """Wrapper to proxy attribute sets to the C SimData struct
         """
-        if hasattr(self.SD, name):
+        if name in SimDataFields:
             setattr(self.SD, name, value)
         else:
             self.__dict__[name] = value
