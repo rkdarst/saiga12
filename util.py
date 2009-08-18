@@ -36,7 +36,7 @@ def getNewFrameIndex(frame_index, nFrames, V=None, otherObjects=()):
     while inLoop:
         inLoop = False
         ch = '~'
-        while ch not in '>.<,09xqcCtnvb':
+        while ch not in '>.<,09xqcCtnvbI':
             ch = visual.scene.kb.getkey()
             
         if ch in '>.': frame_index += 1
@@ -58,6 +58,7 @@ def getNewFrameIndex(frame_index, nFrames, V=None, otherObjects=()):
         if ch == 'n': viz.tagToggle2(otherObjects); inLoop = True
         if ch == 'v': viz.toggleViz(V,otherObjects=otherObjects); inLoop = True
         if ch == 'b': viz.toggleBG(); inLoop = True
+        if ch == 'I': from code import interact ; interact(local=locals())
     
     return frame_index
 
