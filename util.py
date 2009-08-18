@@ -294,9 +294,12 @@ def visualizeKvectors(fileNames):
             print '\r',
             print fileNames[frame_index][-20:],
             frame = io_open(fileNames[frame_index])
-        
+
+            # XXX we still need a way to set the type of this.
+            type_ = list(frame.ntype).index(max(frame.ntype))
+            #type_ = 2
             SsfList = corrfunc.StructCorrList(
-                frame, kmags=range(1, 8), type_=2,  # XXX type=2
+                frame, kmags=range(1, 8), type_=type_,
                 orthogonal=False)
             SsfList.calcSk(frame)
             scene = viz.visualizeKvectors(SsfList)
