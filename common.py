@@ -21,3 +21,4 @@ S12_CYCLE_CTCC    = 4             # an orientation and an overlap exclusion.
 S12_CYCLE_EAST    = 5             # East model - one-sided FA
 S12_CYCLE_CTCCclassic    = 10     #
 S12_FLAG_VIB_ENABLED     = 1      # vibrations are enabled
+S12_FLAG_DOSIN           = 2      # use 'sin' in fourpoint C func

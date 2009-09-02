@@ -110,6 +110,14 @@ def getClib():
                                         c_void_p, c_int, # shape, nDim
                                         c_void_p, c_void_p,#*result,SkByAtom
                                         c_int )),        # flags
+        ("fourpoint",              c_int, (SimData_p, SimData_p, # SD1, SD2
+                                        c_void_p, c_void_p, #  *cords *cords2
+                                        c_void_p,c_int,c_int, #shape,nDim,type
+                                        c_void_p, c_int, # *kvecs, Nk
+                                        c_void_p,        # q
+                                        c_void_p,c_void_p,c_void_p, #*A,*B,*C
+                                        c_void_p, c_void_p,#*result,SkByAtom
+                                        c_int )),        # flags
         ("istructure",             c_int,    (SimData_p, )),
 
         ("addToMLL",               None,     (SimData_p, c_int, c_int)),

@@ -1,6 +1,7 @@
 # Richard Darst, 2008
 
 
+import ctypes
 import math
 import numpy
 
@@ -157,6 +158,7 @@ class StructCorr(object):
         self._type_ = type_
         
         # the only importance of S is the shape.
+        self.L = L
         self.kmag = math.sqrt(kmag2)
         self.makeKvecs(kmag2, S, orthogonal=orthogonal)
         self.kvecsOrig = self.kvecs
@@ -417,6 +419,34 @@ class StructCorr(object):
             self.calcSk(S1)
         else:
             raise
+
+    def fourpoint(self, S1, S2, qprime, dosin=False):
+        q = 2 * qprime * math.pi / self.L
+        q = numpy.asarray(((q, 0, 0),
+                           (0, q, 0),
+                           (0, 0, q),), dtype=saiga12.numpy_double)
+        A = ctypes.c_double(0)
+        B = ctypes.c_double(0)
+        C = ctypes.c_double(0)
+
+        c1 = c2 = self.coordLookup_p
+        flags = 0
+        if dosin:
+            flags |= saiga12.S12_FLAG_DOSIN
+
+        for qvec in q:
+            q_p = q.ctypes.data
+            assert q.flags.carray
+            S1.C.fourpoint(S1.SD_p, S2.SD_p,
+                       c1, c2,
+                       self.physicalShape_p,len(S1.physicalShape), self._type_,
+                       self.kvecs_p, len(self.kvecs),
+                       q_p, # q
+                       ctypes.byref(A), ctypes.byref(B), ctypes.byref(C),
+                       self._SkArrayByKvecTMP_p, self._SkArrayByAtomTMP_p,
+                       flags, # flags.
+                       )
+        return A.value/3., B.value/3., C.value/3.
 
 
 class StructCorrList(object):

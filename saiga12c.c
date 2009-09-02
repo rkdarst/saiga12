@@ -25,6 +25,7 @@
 #define S12_CYCLE_EAST (5)
 #define S12_CYCLE_CTCCclassic (10)
 #define S12_FLAG_VIB_ENABLED (1)
+#define S12_FLAG_DOSIN (2)
 
 int debug = 0;
 int errorcheck = 1;  // print errors if inconsistent
@@ -827,6 +828,72 @@ double calc_structfact(struct SimData *SD1, struct SimData *SD2,
   }
   //printf("totalsum: %f ", totalsum);
   return(totalsum);
+}
+
+
+
+int fourpoint(struct SimData *SD1, struct SimData *SD2,
+		 double *cords, double *cords2,
+		 double *lattShape, int nDim, int type,
+		 double *kvecs, int Nk,
+		 double *q,
+		 double *A_, double *B_, double *C_,
+		 double *Skresult, double *SkArrayByAtom,
+		 int flags) {
+  int n_part, n_kvec;
+  int pos1, pos2;
+  double dr[5];  // max number of dims
+  int print=0;
+  int d;
+  int dosin = flags&S12_FLAG_DOSIN;
+
+
+  // Accumulators
+  double A = 0;
+  double B = 0;
+  double C = 0;
+  for (n_part=0 ; n_part < SD1->N ; n_part++) {
+    if ((type != S12_TYPE_ANY) && (SD1->atomtype[n_part] != type))
+      continue;
+    pos1 = SD1->atompos[n_part];
+    pos2 = SD2->atompos[n_part];
+
+    // set dr
+    for (d=0 ; d<nDim ; d++) {
+      dr[d] =  cords[nDim*pos1 + d] - cords2[nDim*pos2 + d];
+      dr[d] -= (floor(dr[d]/lattShape[d] + .5)) *lattShape[d];
+    }
+    if(print) printf("  dr: %f %f %f (%d)\n", dr[0], dr[1], dr[2], n_part);
+
+    // Loop through k-vectors
+    for(n_kvec=0 ; n_kvec < Nk ; n_kvec++) {
+      // The regular Fs part.
+      double dot=0;
+      for (d=0 ; d<nDim ; d++)
+	dot += dr[d]*kvecs[nDim*n_kvec+d];
+      double x;
+      if (!dosin)
+	x = cos(dot);
+      else
+	x = sin(dot);
+      C += x;
+
+      // Now for the prefix part:
+      dot = 0;
+      for (d=0 ; d<nDim ; d++)
+	dot += (cords[nDim*pos1 + d])*q[d];
+      double y = cos(dot);
+      A += y*x;
+      B += y;
+
+      //SkArrayByAtom[n_part] += x;
+      //Skresult[n_kvec] += x;
+    }
+  }
+  *A_ += (double)A/Nk;
+  *B_ += (double)B/Nk;
+  *C_ += (double)C/Nk;
+  return(1);
 }
 
 
