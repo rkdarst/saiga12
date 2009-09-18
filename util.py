@@ -279,7 +279,7 @@ def moves(fileNames):
     visual.scene.visible = 0
     print        
 
-def visualizeKvectors(fileNames):
+def visualizeKvectors(fileNames, mode='avg'):
     import saiga12.corrfunc as corrfunc
     scene = visual.scene
     scene.exit = 0
@@ -288,7 +288,7 @@ def visualizeKvectors(fileNames):
     scene.width, scene.height = 800, 800
     fileNames.sort()
 
-    if False:
+    if mode == 'each':
         frame_index = 0
         while True:
             print '\r',
@@ -315,7 +315,7 @@ def visualizeKvectors(fileNames):
         #    scene.objects[0].visible = 0
         visual.scene.visible = 0
         del visual.scene
-    if True:
+    if mode == 'avg':
         SsfList = None
         for fname in fileNames:
             frame = io_open(fname)
@@ -367,6 +367,10 @@ if __name__ == "__main__":
 
     elif sys.argv[1] == 'kvecs':
         visualizeKvectors(sys.argv[2:])
+    elif sys.argv[1] == 'kvecs-each':
+        visualizeKvectors(sys.argv[2:], mode='each')
+    elif sys.argv[1] == 'kvecs-avg':
+        visualizeKvectors(sys.argv[2:], mode='avg')
 
     else:
         print "command not found: %s"%sys.argv[1]
