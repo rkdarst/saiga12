@@ -748,6 +748,8 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
         return mu
     def chempotential_innersum(self, inserttype):
         """Chemical potential of the system, test inserting at every site.
+
+        mu = -log(average_of_returned_values)/S.beta
         """
         sum_ = self.C.chempotential_innersum(self.SD_p, inserttype)
         return sum_
