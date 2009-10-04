@@ -373,5 +373,15 @@ if __name__ == "__main__":
     elif sys.argv[1] == 'kvecs-avg':
         visualizeKvectors(sys.argv[2:], mode='avg')
 
+    elif sys.argv[1] == 'info':
+        for fname in sys.argv[2:]:
+            print fname
+            S = io_open(fname)
+            print "density:", S.density
+            for t,n in enumerate(S.ntype):
+                if n == 0: continue
+                print ("  type %d, density: %0.4f(%0.4f)"%
+                      (t, S.densityOf(t), S.densityOf(t)/S.density))
+
     else:
         print "command not found: %s"%sys.argv[1]
