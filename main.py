@@ -573,6 +573,7 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
                  type1: (prob1, mu1 ),
                  ... }
         """
+        self._currentInsertTypes = probs
         if len(probs) == 1:
             inserttype = probs.keys()[0]
             self.inserttype = inserttype

@@ -68,6 +68,8 @@ class IOSys(object):
             orientversion = 0
             orient = numpy.asarray(self.orient[self.atompos], dtype=numpy.int8)
             state["orient"] = orientversion, orient
+        if hasattr(self, "_currentInsertTypes"):
+            state['insertTypes'] = self._currentInsertTypes
 
 
         return state
@@ -93,6 +95,9 @@ class IOSys(object):
             self.hardness = float("inf")
         else:
             self.hardness = state["hardness"]
+        if 'insertTypes' in state:
+            self.setInsertType(state['insertTypes'])
+            del state['insertTypes']
         # was event-driven dynamics enabled before?  (note: you *must*
         # regenerate the move-lists, you can't just set the variable
         # and call it enabled)
