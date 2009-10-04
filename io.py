@@ -199,6 +199,7 @@ open = io_open # too bad this is a namespace collision, but hopefully
 
 if __name__ == "__main__":
     import code
+    import os
     import sys
     try: import readline
     except ImportError: pass
@@ -206,11 +207,24 @@ if __name__ == "__main__":
         import rlcompleter
         readline.parse_and_bind("tab: complete")
 
+    from optparse import OptionParser
+    parser = OptionParser()
+    parser.add_option('-e', '--exec', dest='exec_', default=None)
+    options, args = parser.parse_args()
+
     try:
         from urllib import urlopen as open
     except ImportError:
         pass
     
-    S = io_open(open(sys.argv[1]))
-    code.interact(local=locals(), banner="")
+    if options.exec_:
+        for fname in args:
+            if not os.access(fname, os.F_OK):
+                print "Not accessible:", fname
+                continue
+            S = io_open(open(fname))
+            exec(options.exec_)
+    else:
+        S = io_open(open(args[0]))
+        code.interact(local=locals(), banner="")
     
