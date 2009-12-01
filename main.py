@@ -19,10 +19,16 @@ from saiga12.common import *
 
 
 c_int = ctypes.c_int
+c_int_p = ctypes.POINTER(c_int)
 c_double = ctypes.c_double
+c_double_p = ctypes.POINTER(c_double)
 c_void_p = ctypes.c_void_p
 numpy_int = ctypes.c_int
 numpy_double = ctypes.c_double
+def get_cdoublep(array):
+    return array.ctypes.data_as(c_double_p)
+def get_cintp(array):
+    return array.ctypes.data_as(c_int_p)
 
 # Shared state between python and C.
 class SimData(ctypes.Structure):
