@@ -645,6 +645,14 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
             return numpy.where(self.atomtype != S12_EMPTYSITE)[0]
         else:
             return numpy.where(self.atomtype == type_)[0]
+    @property
+    def L(self):
+        """Return the length of the system"""
+        L = self.lattShape[0]
+        # Check to ensure it is square
+        for L2 in self.lattShape[1:]:
+            assert self.lattShape[0] == L2, "Lattice is not square"
+        return L
     def energy(self):
         """Total energy of the system."""
         return self.C.energy(self.SD_p)
