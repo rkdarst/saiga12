@@ -110,8 +110,8 @@ def getClib():
         ("chempotential_innersum", c_double, (SimData_p, c_int)),
         ("cycle",                  c_int,    (SimData_p, c_double)),
         ("calc_structfact",        c_double, (SimData_p, SimData_p, # SD1, SD2
+                                        c_void_p, c_int, # *atomlist, N
                                         c_void_p, c_int, # *kvecs, Nk
-                                        c_int,           # type
                                         c_void_p, c_void_p, #  *cords *cords2
                                         c_void_p, c_int, # shape, nDim
                                         c_void_p, c_void_p,#*result,SkByAtom
@@ -877,6 +877,37 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
             else:                origSelf.eddDisable()
             if origSelf.hash() != origHash:
                 raise Exception, "Hashes don't match after enabling even driven dynamics - the original system has changed."
+
+
+    def _corrfunc_makeCoordLookup(self, StructCorr):
+        # DANGER -- only works for integer coordinates (so far!
+        c = self.coords()
+        c = numpy.asarray(c, dtype=numpy_double)
+        if not c.flags.carray:
+            c = c.copy()
+        StructCorr.coordLookup = c
+        StructCorr.coordLookup_p = StructCorr.coordLookup.ctypes.data
+    def _corrfunc_calcFs(self, StructCorr, S0):
+        flags = 0
+        # self is S
+        if getattr(S0, 'vibEnabled', False) or S0.orient is not None:
+            # Vibrations enabled: if we have vibrations enabled, we
+            # have to use different coordinates for every timestep.
+            flags = saiga12.S12_FLAG_VIB_ENABLED
+            c1 = S0  .getCCords(returnPointer=True)
+            c2 = self.getCCords(returnPointer=True)
+        else:
+            # No vibrations: use the same coordinates at all times
+            c1 = c2 = StructCorr.coordLookup_p
+
+        totalsum = S0.C.calc_structfact(
+            S0.SD_p, self.SD_p, StructCorr.atomlist_p, StructCorr.N,
+            StructCorr.kvecs_p, len(StructCorr.kvecs),
+            c1, c2, StructCorr.physicalShape_p, len(StructCorr.physicalShape),
+            StructCorr._SkArrayByKvecTMP_p, StructCorr._SkArrayByAtomTMP_p,
+            flags)
+        return totalsum
+
 
     def avgStore(self, name,  value):
         """Add an average to lists, to easily compute avgs and stddevs later.

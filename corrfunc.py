@@ -164,12 +164,18 @@ class StructCorr(object):
         self.kvecsOrig = self.kvecs
         self.kvecs = self.kvecs.copy()
         self.kvecs *= (2*math.pi / L)
-        self.kvecs_p = self.kvecs.ctypes.data
-        self.makeCoordLookup(S)
+        self.kvecs_p = saiga12.get_cdoublep(self.kvecs)
+        self.atomlist = numpy.asarray(S.atomIndexOfType(type_),
+                                      dtype=ctypes.c_int)
+        self.atomlist_p = saiga12.get_cintp(self.atomlist)
+        self.N = len(self.atomlist) # Number of _included_ atoms...
+
+
+        #self.makeCoordLookup(S)
+        S._corrfunc_makeCoordLookup(self)
         self.physicalShape = numpy.asarray(S.physicalShape,
                                            dtype=saiga12.c_double)
-        self.physicalShape_p = self.physicalShape.ctypes.data
-        self._whichAtoms = S.atomIndexOfType(type_)
+        self.physicalShape_p = saiga12.get_cdoublep(self.physicalShape)
 
         #self.SkArrayAvgs    = numpy.zeros(shape=len(kvecs),
         #                                  dtype=saiga12.c_double)
@@ -177,12 +183,12 @@ class StructCorr(object):
                                              dtype=saiga12.c_double)
         self._SkArrayByKvecTMP = numpy.zeros(shape=len(self.kvecs),
                                              dtype=saiga12.c_double)
-        self._SkArrayByKvecTMP_p = self._SkArrayByKvecTMP.ctypes.data
+        self._SkArrayByKvecTMP_p = saiga12.get_cdoublep(self._SkArrayByKvecTMP)
         self._SkArrayByAtom    = numpy.zeros(shape=S.N,
                                              dtype=saiga12.c_double)
         self._SkArrayByAtomTMP = numpy.zeros(shape=S.N,
                                              dtype=saiga12.c_double)
-        self._SkArrayByAtomTMP_p = self._SkArrayByAtomTMP.ctypes.data
+        self._SkArrayByAtomTMP_p = saiga12.get_cdoublep(self._SkArrayByAtomTMP)
         self.reset()
         # we rely on people to not go non-contiguouizing this later.
         assert self.kvecs.flags.c_contiguous, "kvecs is not c_contiguous"
@@ -222,7 +228,7 @@ class StructCorr(object):
                                   dtype=saiga12.c_double)
         else:
             import shelve
-            cachepar = str((kmag2, len(S.lattShape)))
+            cachepar = str((kmag2, len(S.physicalShape)))
             kmax = int(math.ceil(math.sqrt(kmag2)))
     
             useCache = False
@@ -243,11 +249,11 @@ class StructCorr(object):
                     full = [ x for x in range(-kmax+1, kmax+1) ]
                     half = [ x for x in range(0, kmax+1) ]
                     
-                    if len(S.lattShape) == 1:
+                    if len(S.physicalShape) == 1:
                         kvecs = cartesianproduct(half, )
-                    elif len(S.lattShape) == 2:
+                    elif len(S.physicalShape) == 2:
                         kvecs = cartesianproduct(full, half)
-                    elif len(S.lattShape) == 3:
+                    elif len(S.physicalShape) == 3:
                         kvecs = cartesianproduct(full, full, half)
                     kvecs = numpy.asarray([ _ for _ in kvecs
                                         # the following lines limits to only
@@ -267,14 +273,14 @@ class StructCorr(object):
                 del cache
         self.kvecs = kvecs
 
-    def makeCoordLookup(self, S):
-        # DANGER -- only works for integer coordinates (so far!
-        c = S.coords()
-        c = numpy.asarray(c, dtype=saiga12.numpy_double)
-        if not c.flags.carray:
-            c = c.copy()
-        self.coordLookup = c
-        self.coordLookup_p = self.coordLookup.ctypes.data
+    #def makeCoordLookup(self, S):
+    #    # DANGER -- only works for integer coordinates (so far!
+    #    c = S.coords()
+    #    c = numpy.asarray(c, dtype=saiga12.numpy_double)
+    #    if not c.flags.carray:
+    #        c = c.copy()
+    #    self.coordLookup = c
+    #    self.coordLookup_p = self.coordLookup.ctypes.data
         
 
     def calcSk(self, S, SOverlap=None):
@@ -359,36 +365,15 @@ class StructCorr(object):
 
         self._SkArrayByKvecTMP[:] = 0
         self._SkArrayByAtomTMP[:] = 0
-        type_ = self._type_
         self._niterSk += 1
-        N = S0.numberOfType(type_)
-        if S.N != self._SkArrayByAtomTMP.size:
+        N = self.N
+        if S.numberOfType(self._type_) != self._SkArrayByAtomTMP.size:
             raise Exception, "Number of atoms has changed... "\
                   "Fs assumes you aren't doing that."
 
-        flags = 0
-        if getattr(S0, 'vibEnabled', False) or S0.orient is not None:
-            # Vibrations enabled: if we have vibrations enabled, we
-            # have to use different coordinates for every timestep.
-            flags = saiga12.S12_FLAG_VIB_ENABLED
-            c1 = S0.getCCords(returnPointer=True)
-            c2 = S .getCCords(returnPointer=True)
-        else:
-            # No vibrations: use the same coordinates at all times
-            c1 = c2 = self.coordLookup_p
+        totalsum = S._corrfunc_calcFs(self, S0)
+        print totalsum
 
-        totalsum = S0.C.calc_structfact(S0.SD_p, S.SD_p,
-                                        self.kvecs_p,
-                                        len(self.kvecs), type_,
-                                        #self.coordLookup_p,
-                                        c1, c2,
-                                        self.physicalShape_p,
-                                        len(S0.physicalShape),
-                                        #self._SkArray.ctypes.data,
-                                        #self._SkArrayByAtom.ctypes.data)
-                                        self._SkArrayByKvecTMP_p,
-                                        self._SkArrayByAtomTMP_p,
-                                        flags)
         Sk = totalsum / (N * len(self.kvecs))
         self._SkTotal += Sk
 
@@ -406,7 +391,7 @@ class StructCorr(object):
     def SkArraysByKvec(self):
         return self._SkArrayByKvec / self._niterSk
     def SkArraysByAtom(self):
-        return self._SkArrayByAtom[self._whichAtoms] / self._niterSk
+        return self._SkArrayByAtom / self._niterSk
 
 
     def staticStructureFactor(self, S1, method, S2=None):
@@ -453,7 +438,7 @@ class StructCorrList(object):
     def __init__(self, S, type_=saiga12.S12_TYPE_ANY,
                  kmag2s=None, kmags=None, L=None, orthogonal=True):
         if L is None:
-            L = S.lattShape[0]  # assumes square!
+            L = S.L
         if kmags is not None:
             kmag2s = [ kmag*kmag for kmag in kmags ]
 

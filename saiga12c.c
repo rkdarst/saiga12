@@ -768,30 +768,26 @@ inline int cycleKA_translate(struct SimData *SD) {
 
 
 double calc_structfact(struct SimData *SD1, struct SimData *SD2,
-		       double *kvecs, int Nk, int type,
+		       int *atomlist, int N,
+		       double *kvecs, int Nk,
 		       double *cords, double *cords2,
 		       double *lattShape, int nDim,
 		       double *Skresult,
 		       double *SkArrayByAtom,
 		       int flags) {
-  int n1, n2, nk;
+  int n1, nk;
   double totalsum = 0;
   int pos1, pos2;
   //double r1[3];
   double dr[5];  // max number of dims
   int print=0;
 
-  for (n1=0 ; n1 < SD1->N ; n1++) {
+  for (n1=0 ; n1 < N ; n1++) {
     //printf("%p %p\n", SD1, SD2);
     if (print) printf("=== n: %d ===\n", n1);
-    if ((type != S12_TYPE_ANY) && (SD1->atomtype[n1] != type))
-      continue;
-    pos1 = SD1->atompos[n1];
-    //for (n2=n1+1 ; n2 < SD->N ; n2++) {
-    n2 = n1;
-    //if ((type != S12_TYPE_ANY) && (SD->atomtype[n2] != type))
-    //  continue;
-    pos2 = SD2->atompos[n2];
+    int atomn = atomlist[n1];
+    pos1 = SD1->atompos[atomn];
+    pos2 = SD2->atompos[atomn];
     if ((pos1 == pos2) && (! (flags & S12_FLAG_VIB_ENABLED))) {
       // This simplifying branch is only valid if we do NOT have vibrations.
       totalsum += Nk;
