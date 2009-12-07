@@ -1015,6 +1015,32 @@ int istructure(struct SimData *SD) {
 
 
 
+void spinGlass(struct SimData *SD0, struct SimData *SD1,
+		 int type0, int type1,
+		 int *siteCorrelation,
+		 int flags) {
+  int lattSize = SD0->lattSize;
+  int pos0, pos1;
+  for(pos0=0; pos0<lattSize; pos0++){
+    // is the i0 atom correct?
+    if (SD0->lattsite[pos0] == S12_EMPTYSITE)
+      continue;
+    if ((type0!=S12_TYPE_ANY) && (type0!=SD0->atomtype[SD0->lattsite[pos0]]))
+      continue;
+    for(pos1=0; pos1<lattSize; pos1++) {
+/*       if (pos0 != pos1) */
+/* 	continue; */
+      if (SD1->lattsite[pos1] == S12_EMPTYSITE)
+	continue;
+      if ((type1!=S12_TYPE_ANY) && (type1!=SD1->atomtype[SD1->lattsite[pos1]]))
+	continue;
+      siteCorrelation[pos0*lattSize+pos1] += 1;
+    }
+  }
+}
+
+
+
 
 
 

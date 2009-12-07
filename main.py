@@ -125,6 +125,10 @@ def getClib():
                                         c_void_p, c_void_p,#*result,SkByAtom
                                         c_int )),        # flags
         ("istructure",             c_int,    (SimData_p, )),
+        ("spinGlass",              None,    (SimData_p, SimData_p, # SD0, SD1
+                                             c_int, c_int, # type0, type1
+                                             c_int_p,    # *siteCorrelation
+                                             c_int)),    # flags
 
         ("addToMLL",               None,     (SimData_p, c_int, c_int)),
         ("removeFromMLL",          None,     (SimData_p, c_int, c_int)),

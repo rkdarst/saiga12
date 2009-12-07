@@ -525,6 +525,99 @@ def makeSsfList(S, type_, kmag2s, L):
         SsfList.append(Ssf)
     return SsfList
 
+
+
+
+
+class SpinGlass(object):
+    def __init__(self, S, types=(saiga12.S12_TYPE_ANY, saiga12.S12_TYPE_ANY)):
+        self._siteCorrelation = numpy.zeros(shape=(S.lattSize, S.lattSize),
+                                            dtype=saiga12.c_int)
+        self._siteCorrelation_p = self._siteCorrelation.ctypes.data_as(
+                                                               saiga12.c_int_p)
+        self.types = types
+        self.S = S
+        self.n = 0
+    def __repr__(self):
+        return "<%s object (0x%x), types (%s,%s)>"%\
+               (self.__class__.__name__,id(self),self.types[0],self.types[1])
+
+    def __iadd__(self, (S0, S)):
+        S.C.spinGlass(S0.SD_p, S.SD_p, self.types[0], self.types[1],
+                      self._siteCorrelation_p,
+                      0) # flags
+        self.n += 1
+        return self
+    def result(self):
+        n0   = self.S.numberOfType(self.types[0])
+        rho0 = self.S.densityOf(   self.types[0])
+        n1   = self.S.numberOfType(self.types[1])
+        rho1 = self.S.densityOf(   self.types[1])
+
+        #print self.types, n0, rho0, n1, rho1
+        #print self._siteCorrelation
+        #return ((1. / math.sqrt(n0*n1)) *
+        #       numpy.sum((self._siteCorrelation/float(self.n) - rho0*rho1)**2))
+#        print self.n
+        nn = self._siteCorrelation/float(self.n)
+        d = self.S.density
+        L = self.S.lattSize
+        print "*", "%.1f"%d, self.n, nn.sum(), \
+              "% -12.6g"%((((nn.diagonal()-rho0*rho1)**2).sum()/L) - (d*(1-d))**2), \
+              "% -12.6g"%((((nn-rho0*rho1)**2).sum() - ((nn.diagonal()-rho0*rho1)**2).sum())/L) , \
+              "% -12.6g"%(nn.diagonal()-rho0).mean(), \
+              "% -12.6g"%((nn.sum() - nn.diagonal().sum())/(nn.size-nn.diagonal().size)), \
+              "% -12.6g"%(((nn.sum() - nn.diagonal().sum())/(nn.size-nn.diagonal().size)
+                          - (rho0)*(rho1))) #, \
+#              "% -12.6g"%nn.mean(), \
+#              "% -12.6g"%(nn - rho0*rho1).mean(), \
+#              "% -12.6g"%nn.var()#, \
+#              "% -12.6g"%((nn - rho0*rho1)**2).mean()
+#        print
+        return ((1. / math.sqrt(n0*n1)) *
+               numpy.sum((nn - rho0*rho1)**2))
+
+
+class SpinGlassList(object):
+    def __init__(self, S, types=None):
+        if types is None:
+            types = [t for t,n in enumerate(S.ntype) if n > 0 ]
+        self.types = types
+        # Make a matrix to hold all of our info.  This convoluted
+        # procedure is needed since otherwise we end up with shallow
+        # copies.
+        typeMatrix = [ ]
+        for _ in range(len(types)):
+            typeMatrix.append([ None ] * len(types))
+        # A simple list to hold all elements.  This only works if
+        # commutability of the types holds.
+        typeList = [ ]
+        # Go through and build up all of our lists.
+        for i,type0 in enumerate(types):
+            for j,type1 in list(enumerate(types))[i:]:
+                SG = SpinGlass(S, types=(type0, type1))
+                typeMatrix[i][j] = SG
+                typeMatrix[j][i] = SG
+                if i <= j:
+                    typeList += [SG]
+        self.typeMatrix = typeMatrix
+        self.typeList = typeList
+
+    def __iadd__(self, (S0, S)):
+        for SG in self.typeList:
+            SG += S0, S
+        return self
+    def typePairs(self):
+        return [ sg.types for sg in self.typeList ]
+    def resultMatrix(self):
+        result = [ ]
+        for row in self.typeMatrix:
+            result.append( [x.result() for x in row] )
+        return result
+    def resultList(self):
+        return [ x.result() for x in self.typeList]
+
+
 if __name__ == "__main__":
     import sys
 
