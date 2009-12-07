@@ -54,6 +54,8 @@ class TestSequenceFunctions(unittest.TestCase):
     #    execfile("tests/viztest.py", {})
     def testScripts(self):
         execfile("tests/scripttest.py", {})
+    def testSpinGlass(self):
+        execfile("tests/spinglasstest.py", {})
     def testVibrations(self):
         execfile("tests/vibrationtest.py", {})
 
