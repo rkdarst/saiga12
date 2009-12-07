@@ -392,6 +392,10 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
     def delParticle(self, pos):
         """Delete particle at lattice site `pos`"""
         self.C.delParticle(self.SD_p, pos)
+    def delAll(self):
+        """Remove all particles from the system"""
+        for pos in self.atompos[self.atompos != S12_EMPTYSITE]:
+            self.delParticle(pos)
     def consistencyCheck(self, type_=3):
         """Check of internal data structures.
 
