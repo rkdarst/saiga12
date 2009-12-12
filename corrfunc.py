@@ -618,6 +618,139 @@ class SpinGlassList(object):
         return [ x.result() for x in self.typeList]
 
 
+class FourpointData(object):
+    pass
+class Fourpoint(object):
+    """New S4 and chi4 calculation method.
+
+    Berthier, Biroli, Bouchaud, Kob, Miyazaki, Reichman.  J Chem Phys
+    126 184503 (2007).
+    """
+    def __init__(self, S, qmag, type_):
+        self._type = type_
+        self.ntype = S.numberOfType(self._type)
+        # CorrectMode = True: do cos**2 + sin**2 method.  Add them at the end
+        #             = False: use only cos**2, which simplifies.
+        self.CorrectMode = True
+
+        kmag = self.kmag = 10
+        qmag = self.qmag = qmag
+        # Two independent modes: sin^2 and cos^2, need to store
+        # their data separately and add at the end.
+        def makedat(qmag=qmag):
+            dat = FourpointData()
+            dat.corr = saiga12.corrfunc.StructCorr(
+                S=S, type_=self._type, L=S.lattShape[0],
+                kmag2=kmag**2,
+                orthogonal=True)
+            for name in ("A", "B", "C", "AmBC2", "AA", "AB", "BB"):
+                setattr(dat, name, saiga12.util.Averager())
+            return dat
+        def makecorr():
+            return makedat(), makedat()
+        if not self.CorrectMode:
+            makecorr = makedat
+        self.Sdat = makecorr()
+        #self.makecorr = makecorr
+
+    def __iadd__(self, (S0, S)):
+        # The loop over deltaT is above this function.
+        qmag = self.qmag
+        Sdat_orig = self.Sdat
+        for dosin in (True, False):
+            if self.CorrectMode:
+                Sdat = Sdat_orig[int(dosin)]
+            else:
+                if dosin: continue
+                Sdat = Sdat_orig
+            A,B,C = Sdat.corr.fourpoint(S0, S, qprime=qmag, dosin=dosin)
+            #A /= self.ntype ; B /= self.ntype ; C /= self.ntype
+            #if qmag == 0: print A, B, C ;
+            if (not self.CorrectMode or not dosin) and qmag == 0: assert B==self.ntype
+            Sdat.A.add(A) ; Sdat.B.add(B) ; Sdat.C.add(C)
+            Sdat.AmBC2.add((A-B*C)**2)
+            Sdat.AA.add(A**2)
+            Sdat.AB.add(A*B)
+            Sdat.BB.add(B**2)
+            #print A,B,C
+            n = self.ntype
+            #print A/n - B*(C/n)/n
+        return self
+
+    def S4(self):
+        def S4(Sdat):
+            """S4 from one data set: note"""
+            # method 1
+            A,B,C = Sdat.A.mean, Sdat.B.mean, Sdat.C.mean
+            Fs = C/self.ntype
+            S4 = (A - B*(C))**2 / self.ntype**2
+            #return S4
+            # method 2
+            S4 = Sdat.AA.mean - 2*Sdat.AB.mean*Fs + \
+                 Sdat.BB.mean*Fs**2
+            S4 /= self.ntype**2
+            S4 *= self.ntype
+            return S4
+            # method 3
+            #S4 = Sdat.AmBC2.mean  # wrong
+            #return S4
+        if self.CorrectMode: S4 = S4(self.Sdat[0]) + S4(self.Sdat[1])
+        else:                S4 = S4(self.Sdat)
+        if self.qmag == 0:
+            chi4 = self.chi4()
+            assert chi4==S4 or (chi4-S4)/(chi4+S4) < 1e-5, \
+                   "Error: S4(q=0) != chi4  (chi4=%s S4=%s)"%(chi4, S4)
+        return S4
+
+    def accumulators(self):
+        if self.CorrectMode:
+            return (.5*(self.Sdat[0].A.mean+self.Sdat[1].A.mean),
+                    .5*(self.Sdat[0].B.mean+self.Sdat[1].B.mean),
+                    .5*(self.Sdat[0].C.mean+self.Sdat[1].C.mean),)
+        else:
+            return self.Sdat.A.mean, self.Sdat.B.mean, self.Sdat.C.mean
+
+    def Fs(self):
+        if self.CorrectMode:
+            assert self.Sdat[0].C.mean == self.Sdat[1].C.mean or True
+            return .5*(self.Sdat[0].C.mean + self.Sdat[1].C.mean)
+        else:
+            return self.Sdat.C.mean
+    def chi4(self):
+        if self.CorrectMode:
+            chi4_0 = self.Sdat[0].C.var/self.ntype
+            chi4_1 = self.Sdat[1].C.var/self.ntype
+            n = self.ntype
+            #print "*", chi4_0, chi4_1, self.Sdat[0].C.mean, self.Sdat[1].C.mean
+            chi4 = .5*(chi4_0+chi4_1) + numpy.var((self.Sdat[0].C.mean/n,
+                                                   self.Sdat[1].C.mean/n))
+        else:
+            chi4 = self.Sdat.C.var/self.ntype
+        #chi4 = self.FPData.C.var/self.ntype
+        return chi4
+
+
+class FourpointList(object):
+    def __init__(self, S, qmags, type_):
+        self.FPList = [ ]
+        self.FPDict = { }
+        for q in qmags:
+            FP = Fourpoint(S, q, type_)
+            self.FPList.append(FP)
+            self.FPDict[q] = FP
+    def __iadd__(self, (S0, S)):
+        for FP in self.FPList:
+            FP += S0, S
+        return self
+    def qList(self):
+        return [ FP.qmag for FP in self.FPList ]
+    def S4List(self):
+        return [ FP.S4() for FP in self.FPList ]
+    def S4Dict(self):
+        dict( [(q, FP.S4()) for (q, FP) in self.FPDict.iteritems() ])
+    def FsList(self):
+        return [ FP.Fs() for FP in self.FPList ]
+
 if __name__ == "__main__":
     import sys
 
