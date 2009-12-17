@@ -406,6 +406,8 @@ class StructCorr(object):
             raise
 
     def fourpoint(self, S1, S2, qprime, dosin=False):
+        """Density definition (old way).  Should be named fourpointDensity_0
+        """
         q = 2 * qprime * math.pi / self.L
         q = numpy.asarray(((q, 0, 0),
                            (0, q, 0),
@@ -527,100 +529,49 @@ def makeSsfList(S, type_, kmag2s, L):
 
 
 
-
-
-class SpinGlass(object):
-    def __init__(self, S, types=(saiga12.S12_TYPE_ANY, saiga12.S12_TYPE_ANY)):
-        self._siteCorrelation = numpy.zeros(shape=(S.lattSize, S.lattSize),
-                                            dtype=saiga12.c_int)
-        self._siteCorrelation_p = self._siteCorrelation.ctypes.data_as(
-                                                               saiga12.c_int_p)
-        self.types = types
+class FourpointDensity(object):
+    def __init__(self, S, type_=saiga12.S12_TYPE_ANY):
+        #self._siteCorr4 = numpy.zeros(shape=(S.lattSize, S.lattSize),
+        #                              dtype=saiga12.c_int)
+        #self._siteCorr2 = numpy.zeros(shape=(S.lattSize, ),
+        #                              dtype=saiga12.c_int)
+        #self._siteCorr4_p = self._siteCorr4.ctypes.data_as(saiga12.c_int_p)
+        #self._siteCorr2_p = self._siteCorr2.ctypes.data_as(saiga12.c_int_p)
+        self._type = type_
         self.S = S
         self.n = 0
+        self.Q = saiga12.util.Averager()
     def __repr__(self):
-        return "<%s object (0x%x), types (%s,%s)>"%\
-               (self.__class__.__name__,id(self),self.types[0],self.types[1])
-
+        return "<%s object (0x%x)>"%\
+               (self.__class__.__name__,id(self))
     def __iadd__(self, (S0, S)):
-        S.C.spinGlass(S0.SD_p, S.SD_p, self.types[0], self.types[1],
-                      self._siteCorrelation_p,
-                      0) # flags
+        #S.C.fourpointDensity(S0.SD_p, S.SD_p, self._type,
+        #                     self._siteCorr4_p, self._siteCorr2_p,
+        #                     0) # flags
+        Q = S.C.Q(S0.SD_p, S.SD_p, self._type, 0)
+#        print "Chi4Density:", Q
+        self.Q += Q
         self.n += 1
         return self
-    def result(self):
-        n0   = self.S.numberOfType(self.types[0])
-        rho0 = self.S.densityOf(   self.types[0])
-        n1   = self.S.numberOfType(self.types[1])
-        rho1 = self.S.densityOf(   self.types[1])
+    def resultArray(self):
+        N       = self.S.N
+        density = self.S.density
 
-        #print self.types, n0, rho0, n1, rho1
-        #print self._siteCorrelation
-        #return ((1. / math.sqrt(n0*n1)) *
-        #       numpy.sum((self._siteCorrelation/float(self.n) - rho0*rho1)**2))
-#        print self.n
-        nn = self._siteCorrelation/float(self.n)
+        nn4 = self._siteCorr4/float(self.n)
+        nn2 = self._siteCorr2/float(self.n)
         d = self.S.density
         L = self.S.lattSize
-        print "*", "%.1f"%d, self.n, nn.sum(), \
-              "% -12.6g"%((((nn.diagonal()-rho0*rho1)**2).sum()/L) - (d*(1-d))**2), \
-              "% -12.6g"%((((nn-rho0*rho1)**2).sum() - ((nn.diagonal()-rho0*rho1)**2).sum())/L) , \
-              "% -12.6g"%(nn.diagonal()-rho0).mean(), \
-              "% -12.6g"%((nn.sum() - nn.diagonal().sum())/(nn.size-nn.diagonal().size)), \
-              "% -12.6g"%(((nn.sum() - nn.diagonal().sum())/(nn.size-nn.diagonal().size)
-                          - (rho0)*(rho1))) #, \
-#              "% -12.6g"%nn.mean(), \
-#              "% -12.6g"%(nn - rho0*rho1).mean(), \
-#              "% -12.6g"%nn.var()#, \
-#              "% -12.6g"%((nn - rho0*rho1)**2).mean()
-#        print
-        return ((1. / math.sqrt(n0*n1)) *
-               numpy.sum((nn - rho0*rho1)**2))
+        return ((1. / N) *
+               numpy.sum((nn4 - numpy.outer(nn2,nn2))))
+    def resultQ(self):
+        return (1./self.S.N)*self.Q.var
+    result = resultQ
 
-
-class SpinGlassList(object):
-    def __init__(self, S, types=None):
-        if types is None:
-            types = [t for t,n in enumerate(S.ntype) if n > 0 ]
-        self.types = types
-        # Make a matrix to hold all of our info.  This convoluted
-        # procedure is needed since otherwise we end up with shallow
-        # copies.
-        typeMatrix = [ ]
-        for _ in range(len(types)):
-            typeMatrix.append([ None ] * len(types))
-        # A simple list to hold all elements.  This only works if
-        # commutability of the types holds.
-        typeList = [ ]
-        # Go through and build up all of our lists.
-        for i,type0 in enumerate(types):
-            for j,type1 in list(enumerate(types))[i:]:
-                SG = SpinGlass(S, types=(type0, type1))
-                typeMatrix[i][j] = SG
-                typeMatrix[j][i] = SG
-                if i <= j:
-                    typeList += [SG]
-        self.typeMatrix = typeMatrix
-        self.typeList = typeList
-
-    def __iadd__(self, (S0, S)):
-        for SG in self.typeList:
-            SG += S0, S
-        return self
-    def typePairs(self):
-        return [ sg.types for sg in self.typeList ]
-    def resultMatrix(self):
-        result = [ ]
-        for row in self.typeMatrix:
-            result.append( [x.result() for x in row] )
-        return result
-    def resultList(self):
-        return [ x.result() for x in self.typeList]
 
 
 class FourpointData(object):
     pass
-class Fourpoint(object):
+class FourpointFs(object):
     """New S4 and chi4 calculation method.
 
     Berthier, Biroli, Bouchaud, Kob, Miyazaki, Reichman.  J Chem Phys
@@ -728,14 +679,12 @@ class Fourpoint(object):
             chi4 = self.Sdat.C.var/self.ntype
         #chi4 = self.FPData.C.var/self.ntype
         return chi4
-
-
-class FourpointList(object):
+class FourpointFsList(object):
     def __init__(self, S, qmags, type_):
         self.FPList = [ ]
         self.FPDict = { }
         for q in qmags:
-            FP = Fourpoint(S, q, type_)
+            FP = FourpointFs(S, q, type_)
             self.FPList.append(FP)
             self.FPDict[q] = FP
     def __iadd__(self, (S0, S)):
@@ -750,6 +699,100 @@ class FourpointList(object):
         dict( [(q, FP.S4()) for (q, FP) in self.FPDict.iteritems() ])
     def FsList(self):
         return [ FP.Fs() for FP in self.FPList ]
+
+
+
+class SpinGlass(object):
+    def __init__(self, S, types=(saiga12.S12_TYPE_ANY, saiga12.S12_TYPE_ANY)):
+        self._siteCorrelation = numpy.zeros(shape=(S.lattSize, S.lattSize),
+                                            dtype=saiga12.c_int)
+        self._siteCorrelation_p = self._siteCorrelation.ctypes.data_as(
+                                                               saiga12.c_int_p)
+        self.types = types
+        self.S = S
+        self.n = 0
+    def __repr__(self):
+        return "<%s object (0x%x), types (%s,%s)>"%\
+               (self.__class__.__name__,id(self),self.types[0],self.types[1])
+
+    def __iadd__(self, (S0, S)):
+        S.C.spinGlass(S0.SD_p, S.SD_p, self.types[0], self.types[1],
+                      self._siteCorrelation_p,
+                      0) # flags
+        self.n += 1
+        return self
+    def result(self):
+        n0   = self.S.numberOfType(self.types[0])
+        rho0 = self.S.densityOf(   self.types[0])
+        n1   = self.S.numberOfType(self.types[1])
+        rho1 = self.S.densityOf(   self.types[1])
+
+        #print self.types, n0, rho0, n1, rho1
+        #print self._siteCorrelation
+        #return ((1. / math.sqrt(n0*n1)) *
+        #       numpy.sum((self._siteCorrelation/float(self.n) - rho0*rho1)**2))
+#        print self.n
+        nn = self._siteCorrelation/float(self.n)
+        d = self.S.density
+        L = self.S.lattSize
+        print "*", "%.2f"%d, nn.sum(), nn.diagonal().sum(), \
+              "% -12.6g"%((((nn.diagonal()-rho0*rho1)**2).sum()/L) - (d*(1-d))**2), \
+              "% -12.6g"%((((nn.diagonal()-rho0*rho1)**2).sum()/L)), \
+              "% -12.6g"%((((nn-rho0*rho1)**2).sum() - ((nn.diagonal()-rho0*rho1)**2).sum())/L), \
+              "% -12.6g"%((((nn-rho0*rho1)**2).sum()/L)) #, \
+              #"% -12.6g"%((((nn-rho0*rho1)**2).sum() - ((nn.diagonal()-rho0*rho1)**2).sum())/L) , \
+              #"% -12.6g"%(nn.diagonal()-rho0).mean(), \
+              #"% -12.6g"%((nn.sum() - nn.diagonal().sum())/(nn.size-nn.diagonal().size)), \
+              #"% -12.6g"%(((nn.sum() - nn.diagonal().sum())/(nn.size-nn.diagonal().size)
+              #            - (rho0)*(rho1))) #, \
+#              "% -12.6g"%nn.mean(), \
+#              "% -12.6g"%(nn - rho0*rho1).mean(), \
+#              "% -12.6g"%nn.var()#, \
+#              "% -12.6g"%((nn - rho0*rho1)**2).mean()
+#        print
+        return ((1. / math.sqrt(n0*n1)) *
+               numpy.sum((nn - rho0*rho1)**2))
+
+class SpinGlassList(object):
+    def __init__(self, S, types=None):
+        if types is None:
+            types = [t for t,n in enumerate(S.ntype) if n > 0 ]
+        self.types = types
+        # Make a matrix to hold all of our info.  This convoluted
+        # procedure is needed since otherwise we end up with shallow
+        # copies.
+        typeMatrix = [ ]
+        for _ in range(len(types)):
+            typeMatrix.append([ None ] * len(types))
+        # A simple list to hold all elements.  This only works if
+        # commutability of the types holds.
+        typeList = [ ]
+        # Go through and build up all of our lists.
+        for i,type0 in enumerate(types):
+            for j,type1 in list(enumerate(types))[i:]:
+                SG = SpinGlass(S, types=(type0, type1))
+                typeMatrix[i][j] = SG
+                typeMatrix[j][i] = SG
+                if i <= j:
+                    typeList += [SG]
+        self.typeMatrix = typeMatrix
+        self.typeList = typeList
+
+    def __iadd__(self, (S0, S)):
+        for SG in self.typeList:
+            SG += S0, S
+        return self
+    def typePairs(self):
+        return [ sg.types for sg in self.typeList ]
+    def resultMatrix(self):
+        result = [ ]
+        for row in self.typeMatrix:
+            result.append( [x.result() for x in row] )
+        return result
+    def resultList(self):
+        return [ x.result() for x in self.typeList]
+
+
 
 if __name__ == "__main__":
     import sys

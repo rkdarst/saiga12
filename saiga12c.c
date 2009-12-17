@@ -1039,6 +1039,73 @@ void spinGlass(struct SimData *SD0, struct SimData *SD1,
   }
 }
 
+void fourpointDensity(struct SimData *SD0, struct SimData *SD1,
+		      int type,
+		      int *siteCorr4, int *siteCorr2,
+		      int flags) {
+  int lattSize = SD0->lattSize;
+  int pos0, pos1;
+  for(pos0=0; pos0<lattSize; pos0++){
+    // is the i0 atom correct?
+    if (SD0->lattsite[pos0] == S12_EMPTYSITE ||
+	SD1->lattsite[pos0] == S12_EMPTYSITE)
+      continue;
+    if ((type!=S12_TYPE_ANY) && (
+				 type!=SD0->atomtype[SD0->lattsite[pos0]] ||
+				 type!=SD1->atomtype[SD1->lattsite[pos0]]))
+      continue;
+    siteCorr2[pos0] += 1;
+    for(pos1=0; pos1<lattSize; pos1++) {
+      if (SD0->lattsite[pos1] == S12_EMPTYSITE ||
+	  SD1->lattsite[pos1] == S12_EMPTYSITE)
+	continue;
+      if ((type!=S12_TYPE_ANY) && (
+				   type!=SD0->atomtype[SD0->lattsite[pos1]] ||
+				   type!=SD1->atomtype[SD1->lattsite[pos1]]))
+	continue;
+      siteCorr4[pos0*lattSize+pos1] += 1;
+    }
+  }
+}
+
+int _Q(struct SimData *SD0, struct SimData *SD1,
+       int type, int flags) {
+  int lattSize = SD0->lattSize;
+  int pos0, pos1;
+  int Q=0;
+  for(pos0=0; pos0<lattSize; pos0++){
+    // is the i0 atom correct?
+    if (SD0->lattsite[pos0] == S12_EMPTYSITE)
+      continue;
+    if ((type!=S12_TYPE_ANY) && type!=SD0->atomtype[SD0->lattsite[pos0]])
+      continue;
+    for(pos1=0; pos1<lattSize; pos1++) {
+      if (SD1->lattsite[pos1] == S12_EMPTYSITE)
+	continue;
+      if ((type!=S12_TYPE_ANY) && type!=SD1->atomtype[SD1->lattsite[pos1]])
+	continue;
+      Q += 1;
+    }
+  }
+  return (Q);
+}
+int Q(struct SimData *SD0, struct SimData *SD1,
+       int type, int flags) {
+  int lattSize = SD0->lattSize;
+  int pos0;
+  int Q=0;
+  for(pos0=0; pos0<lattSize; pos0++){
+    // is the i0 atom correct?
+    if (SD0->lattsite[pos0] == S12_EMPTYSITE ||
+	SD1->lattsite[pos0] == S12_EMPTYSITE)
+      continue;
+    if ((type!=S12_TYPE_ANY) && (type!=SD0->atomtype[SD0->lattsite[pos0]] ||
+				 type!=SD1->atomtype[SD1->lattsite[pos0]]))
+      continue;
+    Q += 1;
+  }
+  return (Q);
+}
 
 
 
