@@ -86,6 +86,8 @@ class Averager(object):
         self.n = n
         self._mean = mean
         self._M2 = M2
+        return self
+    __iadd__ = add
 
     @property
     def mean(self):
