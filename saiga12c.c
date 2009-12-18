@@ -867,18 +867,24 @@ int fourpoint(struct SimData *SD1, struct SimData *SD2,
       double dot=0;
       for (d=0 ; d<nDim ; d++)
 	dot += dr[d]*kvecs[nDim*n_kvec+d];
-      double x;
-      if (!dosin)
-	x = cos(dot);
-      else
-	x = sin(dot);
+      double x = cos(dot);
+/*       double x; */
+/*       if (!dosin) */
+/* 	x = cos(dot); */
+/*       else */
+/* 	x = sin(dot); */
       C += x;
 
       // Now for the prefix part:
       dot = 0;
       for (d=0 ; d<nDim ; d++)
 	dot += (cords[nDim*pos1 + d])*q[d];
-      double y = cos(dot);
+/*       double y = cos(dot); */
+      double y;
+      if (!dosin)
+	y = cos(dot);
+      else
+	y = sin(dot);
       A += y*x;
       B += y;
 
