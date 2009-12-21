@@ -382,8 +382,10 @@ if __name__ == "__main__":
             print "density:", S.density
             for t,n in enumerate(S.ntype):
                 if n == 0: continue
-                print ("  type %d, density: %0.4f(%0.4f)"%
-                      (t, S.densityOf(t), S.densityOf(t)/S.density))
+                print ("  type %d, density: %0.4f(%0.4f)(%d)"%
+                      (t, S.densityOf(t), S.densityOf(t)/S.density,
+                       S.numberOfType(t)))
+            print "energy:", S.energy()
 
     else:
         print "command not found: %s"%sys.argv[1]
