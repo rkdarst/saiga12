@@ -101,6 +101,7 @@ def getClib():
         ("addParticle",            None,    (SimData_p, c_int, c_int)),
         ("delParticle",            None,    (SimData_p, c_int)),
         ("moveParticle",           None,    (SimData_p, c_int, c_int)),
+        ("randomizeSystem",        None,    (SimData_p, c_int, c_double)),
         ("getInsertType",          c_int,    (SimData_p,)),
         ("loadStateFromSave",      None,     (SimData_p,)),
         ("energy_posLocal",             c_double, (SimData_p, c_int)),

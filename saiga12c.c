@@ -254,6 +254,19 @@ inline void moveParticleShort(struct SimData *SD, int oldpos, int newpos) {
     SD->nneighbors[neighpos] ++;
   }
 }
+void randomizeSystem(struct SimData *SD, int type, double density) {
+  int pos, n;
+  for (n=SD->N-1 ; n >= 0 ; n--) {
+    delParticle(SD, SD->atompos[n]);
+  }
+  int numParticles = SD->lattSize * density;
+  for (n=0 ; n<numParticles ; n++) {
+    do {
+      pos = SD->lattSize * genrand_real2();
+    } while ( SD->lattsite[pos] != S12_EMPTYSITE );
+    addParticle(SD, pos, type);
+  }
+}
 
 
 void loadStateFromSave(struct SimData *SD) {
