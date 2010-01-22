@@ -704,7 +704,13 @@ class FourpointFsList(object):
 
 class SpinGlass(object):
     def __init__(self, S, types=(saiga12.S12_TYPE_ANY, saiga12.S12_TYPE_ANY)):
-        self._siteCorrelation = numpy.zeros(shape=(S.lattSize, S.lattSize),
+        gridSize = S.lattSize
+        self.orient = False
+        if S.orient is not None:
+            self._nConn = S.connMax
+            gridSize = S.lattSize*self._nConn
+            self.orient = True
+        self._siteCorrelation = numpy.zeros(shape=(gridSize, gridSize),
                                             dtype=saiga12.c_int)
         self._siteCorrelation_p = self._siteCorrelation.ctypes.data_as(
                                                                saiga12.c_int_p)
@@ -731,27 +737,46 @@ class SpinGlass(object):
         #print self._siteCorrelation
         #return ((1. / math.sqrt(n0*n1)) *
         #       numpy.sum((self._siteCorrelation/float(self.n) - rho0*rho1)**2))
-#        print self.n
-        nn = self._siteCorrelation/float(self.n)
+        #print self.n
         d = self.S.density
         L = self.S.lattSize
-        print "*", "%.2f"%d, nn.sum(), nn.diagonal().sum(), \
-              "% -12.6g"%((((nn.diagonal()-rho0*rho1)**2).sum()/L) - (d*(1-d))**2), \
-              "% -12.6g"%((((nn.diagonal()-rho0*rho1)**2).sum()/L)), \
-              "% -12.6g"%((((nn-rho0*rho1)**2).sum() - ((nn.diagonal()-rho0*rho1)**2).sum())/L), \
-              "% -12.6g"%((((nn-rho0*rho1)**2).sum()/L)) #, \
+        mean = rho0*rho1
+        prefactor = 1. / math.sqrt(n0*n1)
+        if self.orient:
+            mean /= self._nConn*self._nConn
+            #prefactor
+        #print "*", "%.2f"%d, nn.sum(), nn.diagonal().sum(), \
+        #      "% -12.6g"%((((nn.diagonal()-rho0*rho1)**2).sum()/L) - (d*(1-d))**2), \
+        #      "% -12.6g"%((((nn.diagonal()-rho0*rho1)**2).sum()/L)), \
+        #      "% -12.6g"%((((nn-rho0*rho1)**2).sum() - ((nn.diagonal()-rho0*rho1)**2).sum())/L), \
+        #      "% -12.6g"%((((nn-rho0*rho1)**2).sum()/L)) #, \
               #"% -12.6g"%((((nn-rho0*rho1)**2).sum() - ((nn.diagonal()-rho0*rho1)**2).sum())/L) , \
               #"% -12.6g"%(nn.diagonal()-rho0).mean(), \
               #"% -12.6g"%((nn.sum() - nn.diagonal().sum())/(nn.size-nn.diagonal().size)), \
               #"% -12.6g"%(((nn.sum() - nn.diagonal().sum())/(nn.size-nn.diagonal().size)
               #            - (rho0)*(rho1))) #, \
-#              "% -12.6g"%nn.mean(), \
-#              "% -12.6g"%(nn - rho0*rho1).mean(), \
-#              "% -12.6g"%nn.var()#, \
-#              "% -12.6g"%((nn - rho0*rho1)**2).mean()
-#        print
-        return ((1. / math.sqrt(n0*n1)) *
-               numpy.sum((nn - rho0*rho1)**2))
+        #      "% -12.6g"%nn.mean(), \
+        #      "% -12.6g"%(nn - rho0*rho1).mean(), \
+        #      "% -12.6g"%nn.var()#, \
+        #      "% -12.6g"%((nn - rho0*rho1)**2).mean()
+        #print
+
+        ##nn = self._siteCorrelation/float(self.n)
+        ##nn = numpy.subtract(nn, mean, nn)
+        ##nn = numpy.square(nn, nn)
+        ##result = ( prefactor * numpy.sum(nn))
+        ##print "1"*10, result
+
+        nn = self._siteCorrelation
+        result = self.S.C.spinGlass_sumArray(
+            nn.ctypes.data_as(saiga12.c_int_p), nn.size,
+            self.n, mean, prefactor
+            )
+        #print "2"*10, result
+
+        del nn
+        return result
+        #return ( prefactor * numpy.sum((nn - mean)**2))
 
 class SpinGlassList(object):
     def __init__(self, S, types=None):

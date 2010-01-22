@@ -1033,13 +1033,19 @@ int istructure(struct SimData *SD) {
 }
 
 
-
+void spinGlass_withOrient(struct SimData *SD0, struct SimData *SD1,
+		  int type0, int type1, int *siteCorrelation,int flags);
 void spinGlass(struct SimData *SD0, struct SimData *SD1,
 		 int type0, int type1,
 		 int *siteCorrelation,
 		 int flags) {
   int lattSize = SD0->lattSize;
   int pos0, pos1;
+  //int hasOrient=0;
+  if (SD0->orient != NULL && SD1->orient != NULL) {
+    //hasOrient = 1;
+    return spinGlass_withOrient(SD0,SD1, type0,type1, siteCorrelation, flags);
+  }
   for(pos0=0; pos0<lattSize; pos0++){
     // is the i0 atom correct?
     if (SD0->lattsite[pos0] == S12_EMPTYSITE)
@@ -1053,7 +1059,51 @@ void spinGlass(struct SimData *SD0, struct SimData *SD1,
 	continue;
       if ((type1!=S12_TYPE_ANY) && (type1!=SD1->atomtype[SD1->lattsite[pos1]]))
 	continue;
+      //if (hasOrient && (SD0->orient[pos0] != SD1->orient[pos1]))
+      //  continue;
       siteCorrelation[pos0*lattSize+pos1] += 1;
+    }
+  }
+}
+double spinGlass_sumArray(int *data, int size, int nPoints, double mean,
+			  double prefactor) {
+  int i;
+  double result=0;
+  double tmp;
+  //int sum=0;
+  for (i=0 ; i<size ; i++) {
+    //sum += data[i];
+    //printf("%d %d %d\n", i, data[i], sum);
+    tmp = (((double)data[i])/nPoints) - mean;
+    tmp *= tmp;
+    result += tmp;
+  }
+  //printf("sum: %d\n", sum);
+  return (prefactor * result);
+}
+void spinGlass_withOrient(struct SimData *SD0, struct SimData *SD1,
+		 int type0, int type1,
+		 int *siteCorrelation,
+		 int flags) {
+  int lattSize = SD0->lattSize;
+  int pos0, pos1;
+  int nOrient = SD0->connMax;
+  for(pos0=0; pos0<lattSize; pos0++){
+    // is the i0 atom correct?
+    if (SD0->lattsite[pos0] == S12_EMPTYSITE)
+      continue;
+    if ((type0!=S12_TYPE_ANY) && (type0!=SD0->atomtype[SD0->lattsite[pos0]]))
+      continue;
+    for(pos1=0; pos1<lattSize; pos1++) {
+      if (SD1->lattsite[pos1] == S12_EMPTYSITE)
+	continue;
+      if ((type1!=S12_TYPE_ANY) && (type1!=SD1->atomtype[SD1->lattsite[pos1]]))
+	continue;
+      //if (hasOrient && (SD0->orient[pos0] != SD1->orient[pos1]))
+      //  continue;
+      int index0 = pos0*nOrient+SD0->orient[pos0];
+      int index1 = pos1*nOrient+SD1->orient[pos1];
+      siteCorrelation[lattSize*nOrient*index0+index1] += 1;
     }
   }
 }

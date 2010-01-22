@@ -130,6 +130,9 @@ def getClib():
                                              c_int, c_int, # type0, type1
                                              c_int_p,    # *siteCorrelation
                                              c_int)),    # flags
+        ("spinGlass_sumArray",     c_double,(c_int_p, # *data
+                                             c_int, c_int, # *size, *nPoints
+                                             c_double, c_double)),# mean, pref
         ("fourpointDensity",       None,    (SimData_p, SimData_p, # SD0, SD1
                                              c_int,      # type
                                              c_int_p, c_int_p, # sc4_p, sc2_p
