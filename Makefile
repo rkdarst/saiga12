@@ -25,3 +25,13 @@ darcs-test: saiga12c.so
 	PYTHONPATH=${PWD}/run-dir/ python tests/unittests_run.py
 
 
+
+
+#libcutil.py: _cutil.c _cutil.h _cutil.so
+#	python -m ctypeslib.h2xml -c $(PWD)/_cutil.h -o __tmp-mpi.xml
+#	python -m ctypeslib.xml2py __tmp-mpi.xml -l $(PWD)/_cutil.so \
+#	    -o libcutil.py
+#	rm __tmp-mpi.xml
+#_cutil.so: _cutil.c
+#	gcc ${opts} ${extra} -c _cutil.c
+#	gcc ${opts} ${extra} _cutil.o -o _cutil.so
