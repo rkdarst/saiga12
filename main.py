@@ -1043,6 +1043,12 @@ def diff(S1, S2):
         print
         
     from rkddp.interact import interact ; interact()
+def distance(coord1, coord2):
+    """Naive distance algorithm - does not consider periodic boundries
+    """
+    if len(coord1) != len(coord2):
+        raise Exception("coord1 different dimensionality from coord2")
+    return math.sqrt(sum([(x0-x1)**2 for (x0,x1) in zip(coord1, coord2) ]))
 
 
 if __name__ == "__main__":
