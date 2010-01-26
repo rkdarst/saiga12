@@ -1,5 +1,8 @@
 # Richard Darst, April 2008
 
+import math
+import numpy
+
 import saiga12
 from saiga12.geom.grid import Grid2d
 
@@ -42,4 +45,19 @@ for i in range(iterations):
     
 #print S.lattsite
 #print S.atompos
+
+
+
+S = saiga12.Grid2d()
+S.makegrid(5, 5)
+sqrt2 = math.sqrt(2)
+
+assert S.distance(6, 12) == sqrt2
+assert (S.distance((6, 11), (12, 17)) == sqrt2).all()
+assert (S.distance((6, 11), 12) == (sqrt2, 1)).all()
+
+assert S.distanceToPoint(6, (2,2)) == sqrt2
+assert (S.distanceToPoint((6, 11), ((2,2), (3,2))) == sqrt2).all()
+assert (S.distanceCoords(numpy.asarray(((1.,1), (2,1))), ((2,2), (3,2))) ==
+                                                        (sqrt2, sqrt2)).all()
 

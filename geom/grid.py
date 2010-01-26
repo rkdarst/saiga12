@@ -124,7 +124,9 @@ class GridNd(saiga12.Sys):
 
         Depends on distance2 to work.
         """
-        return numpy.sqrt(self.distance2(index0, index1))
+        coords0 = self.coords(index0)
+        coords1 =  self.coords(index1)
+        return numpy.sqrt(self.distance2Coords(coords0, coords1))
     def distance2(self, index0, index1, otherS=None):
         """Distance-squared between any two lattice points.
 
@@ -132,10 +134,28 @@ class GridNd(saiga12.Sys):
         Depends on a functioning coords() method to work.
         """
         coords0 = self.coords(index0)
-        if otherS is None:
-            coords1 = self.coords(index1)
-        else:
-            coords1 = otherS.coords(index1)
+        if otherS is None: coords1 = self.coords(index1)
+        else:              coords1 = otherS.coords(index1)
+        return self.distance2Coords(coords0, coords1)
+    def distanceToPoint(self, index0, coords1):
+        """Distance between one lattice point and a coordinate.
+        """
+        coords0 = self.coords(index0)
+        return numpy.sqrt(self.distance2Coords(coords0, coords1))
+    def distanceCoords(self, coords0, coords1):
+        """Distance between any two coordinates.
+
+        One or both coordinate arguments can be a list, if they are
+        both lists they must be the same lengths.
+        """
+        return numpy.sqrt(self.distance2Coords(coords0, coords1))
+    def distance2Coords(self, coords0, coords1):
+        """Distance-squared between any two coordinates.
+
+        One or both coordinate arguments can be a list, if they are
+        both lists they must be the same lengths.
+        """
+        #print coords0, coords1
         lindistances = coords0 - coords1
         # v-- this 
         delta = (numpy.floor(lindistances/self.physicalShape + .5)) * \
