@@ -41,6 +41,7 @@ class SimData(ctypes.Structure):
         ("hardness", c_double),   # hardness of the hard spheres
         ("cycleMode", c_int),     # 1=MC, 2=kob-andersen
         ("energyMode", c_int),    # 1=BM, 2=all zero
+        ("flags", c_int),         # flags for certain sim parameters
 
         ("uVTchempotential", c_double),
         ("inserttype", c_int),
@@ -70,6 +71,9 @@ class SimData(ctypes.Structure):
         ("atompos", c_void_p),    # atomnumber -> pos (latt position)
         ("persist", c_void_p),    # pos -> persistence func (has it moved?)
         ("orient", c_void_p),     # pos -> direction particle points.
+        ("frozen", c_void_p),     # pos -> is site frozen (cannot move)?
+        ("selected", c_void_p),   # pos -> is site selected for analysis?
+
 
         ("cumProbAdd", c_double),
         ("cumProbDel", c_double),
@@ -385,8 +389,44 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
         # ntype
         self._allocArray("ntype", shape=(self.ntypeMax+1),
                                   dtype=numpy_int)
+    def setFrozenSites(self, sites):
+        """Set or unselect certain sites as immobile
 
-        
+        `sites` is a list of the sites to freeze.  Note that freezing
+        is by lattice site, not by particle number.  Not all
+        cycle modes are guarenteed to support this.
+
+        If `sites` is None, then unset frozen sites, so that all
+        particles are mobile again.
+        """
+        if sites is None:
+            self.flags &= ~S12_FLAG_FROZEN
+            del self.frozen
+            self.SD.frozen = None
+            return
+        if self.frozen is None:
+            self._allocArray("frozen", shape=(self.lattSize), dtype=numpy_int)
+        self.flags |= S12_FLAG_FROZEN
+        self.frozen[:] = 0
+        self.frozen[sites] = 1
+    def setSelectSites(self, sites):
+        """Set or unselect certain sites as ``selected''.
+
+        `sites` is a list of the sites to select.  Selected simply
+        means that certain analyzes methods can operate on only a
+        subset of all particles.  Respecting this is up to each
+        individual analysis calculation.
+
+        If `sites` is None, then unset the list of selected sites.
+        """
+        if sites is None:
+            del self.selected
+            self.SD.selected = None
+            return
+        if self.selected is None:
+            self._allocArray("selected",shape=(self.lattSize), dtype=numpy_int)
+        self.selected[:] = 0
+        self.selected[sites] = 1
         
 
     def addParticle(self, pos, type_=1):

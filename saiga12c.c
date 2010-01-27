@@ -26,6 +26,10 @@
 #define S12_CYCLE_CTCCclassic (10)
 #define S12_FLAG_VIB_ENABLED (1)
 #define S12_FLAG_DOSIN (2)
+#define S12_FLAG_FROZEN (4)
+
+#define S12_FLAG_INCOMPAT (S12_FLAG_FROZEN)
+
 
 int debug = 0;
 int errorcheck = 1;  // print errors if inconsistent
@@ -40,6 +44,7 @@ struct SimData {
   double hardness;
   int cycleMode;   // see python for definition
   int energyMode;  // see python for definition
+  int flags;
 
   double uVTchempotential;
   int inserttype;  // must be generalized later.
@@ -67,6 +72,8 @@ struct SimData {
   int *atompos;
   int *persist;
   int *orient;
+  int *frozen;
+  int *selected;
 
   double cumProbAdd;
   double cumProbDel;
