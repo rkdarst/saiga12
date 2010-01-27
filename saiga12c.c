@@ -400,6 +400,9 @@ int cycleMC_GCadd(struct SimData *SD, int pos) {
       return(0);
     }
   }
+  // Skip if site is frozen
+  if ((SD->flags & S12_FLAG_FROZEN) && SD->frozen[pos])
+    return(0);
   if (errorcheck) if (SD->lattsite[pos] != S12_EMPTYSITE) {
       printf("error: GCadd atom at not empty location: %d\n", pos);
       exit(57); }
@@ -458,6 +461,9 @@ int cycleMC_GCdel(struct SimData *SD, int pos) {
 /*     } while (SD->lattsite[pos] == S12_EMPTYSITE); */
     pos = SD->atompos[ (int)(SD->N * genrand_real2()) ];
   }
+  // Skip if site is frozen
+  if ((SD->flags & S12_FLAG_FROZEN) && SD->frozen[pos])
+    return(0);
   if (errorcheck) if (SD->lattsite[pos] == S12_EMPTYSITE) {
       printf("error: GCdel: removing particle from empty lattsite: %d", pos);
       exit(56); }
@@ -626,12 +632,18 @@ inline int cycleMC_translate(struct SimData *SD) {
     }
     int pos;
     pos = SD->atompos[ (int)(SD->N * genrand_real2()) ];
-
+    int frozenEnabled = SD->flags & S12_FLAG_FROZEN;
+    // Skip if site is frozen
+    if (frozenEnabled && SD->frozen[pos])
+      return(0);
 
     // Find an arbitrary connection:
     int i_conn = SD->connN[pos] * genrand_real2();
     //int *connLocal = SD->conn + pos*SD->connMax;
     int newPos = SD->conn[ pos*SD->connMax + i_conn];
+    // Skip if adjecent site is frozen
+    if (frozenEnabled && SD->frozen[newPos])
+      return(0);
     
     if (debug) printf("%d %d %d\n", pos, i_conn, newPos);
     
@@ -694,6 +706,12 @@ int cycleMC(struct SimData *SD, double n) {
 
   int i_trial;
   int naccept = 0;
+  // Are there features enabled which if we don't know about them,
+  // should cause an error?
+  if (SD->flags & S12_FLAG_INCOMPAT & ~S12_FLAG_FROZEN ) {
+    printf("Incompatible features seen: %d\n", SD->flags);
+    exit(216);
+  }
 
   for (i_trial=0 ; i_trial<n ; i_trial++) {
 
