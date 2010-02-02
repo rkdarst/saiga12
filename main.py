@@ -579,10 +579,12 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
         """
         moves = int(n * self.movesPerCycle)
         if self._eddEnabled:
-            self.naccept += self._eddCycle(self.SD_p, moves)
+            naccept = self._eddCycle(self.SD_p, moves)
         else:
-            self.naccept += self.C.cycle(self.SD_p, moves)
+            naccept = self.C.cycle(self.SD_p, moves)
         self.mctime += n
+        self.naccept += naccept
+        return naccept
     def resetTime(self):
         """Sets time back to zero.
 
