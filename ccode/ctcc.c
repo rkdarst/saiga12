@@ -11,6 +11,9 @@ inline int cycleCTCC_translate(struct SimData *SD) {
     }
     int pos;
     pos = SD->atompos[ (int)(SD->N * genrand_real2()) ];
+    int frozenEnabled = SD->flags & S12_FLAG_FROZEN;
+    if (frozenEnabled && SD->frozen[pos])
+      return(0);
 
     // Find an arbitrary connection:
     int i_conn = SD->connN[pos] * genrand_real2();
@@ -21,6 +24,8 @@ inline int cycleCTCC_translate(struct SimData *SD) {
     if (i_conn == SD->orient[pos]) {
       // translation.
       newPos = SD->conn[ pos*SD->connMax + i_conn];
+      if (frozenEnabled && SD->frozen[newPos])
+	return(0);
       if (debug) printf("%d %d %d\n", pos, i_conn, newPos);
       if (SD->lattsite[newPos] != S12_EMPTYSITE) {
 	// can't move to an adjecent occupied site, reject move.
@@ -127,15 +132,26 @@ inline void EddCTCC_updateLatPos(struct SimData *SD, int pos) {
   int conni;
   if (debugedd)
     printf("EddCTCC_updateLatPos: pos:%d\n", pos);
+  int frozenEnabled = SD->flags & S12_FLAG_FROZEN;
+  int posFrozen = 0;
+  // Skip if site is frozen
+  if (frozenEnabled && SD->frozen[pos])
+    posFrozen = 1;
   int orient = SD->orient[pos];
 
   for(conni=0 ; conni < SD->connN[pos] ; conni++) {
     // Is this the move where we shift positions?
     int adjpos = SD->conn[SD->connMax*pos + conni];
+    // If site is frozen, nothing can move, ever.
+    if (posFrozen) {
+      ensureNotInMLL(SD, pos, conni);
+      continue;
+    }
     if (conni == orient) {
       if (debugedd)
 	printf("  adjpos: %d\n", adjpos);
-      if (SD->lattsite[adjpos] != S12_EMPTYSITE) {
+      if ((SD->lattsite[adjpos] != S12_EMPTYSITE)
+	  || (frozenEnabled && SD->frozen[adjpos])) {
 	ensureNotInMLL(SD, pos, conni);
 	continue;
       }
@@ -176,6 +192,7 @@ int EddCTCC_consistencyCheck(struct SimData *SD) {
   // first check that all things in MLLr map to the right thing in MLL
   int MLLlocation;
   int moveIndex;
+  int frozenEnabled = SD->flags & S12_FLAG_FROZEN;
   int connMax = SD->connMax;
   int retval=0;
   for (moveIndex=0 ; moveIndex<SD->lattSize * connMax ; moveIndex++) {
@@ -210,7 +227,8 @@ int EddCTCC_consistencyCheck(struct SimData *SD) {
   // be...
   int pos, conni;
   for (pos=0 ; pos<SD->lattSize ; pos++) {
-    if (SD->lattsite[pos] == S12_EMPTYSITE) {
+    if (SD->lattsite[pos] == S12_EMPTYSITE
+	|| (frozenEnabled && SD->frozen[pos])) {
       // be sure that it is not in any of the lookups.
       for (conni=0 ; conni<SD->connMax ; conni++) {
 	if (SD->MLLr[pos*connMax + conni] != -1) {
@@ -233,8 +251,17 @@ int EddCTCC_consistencyCheck(struct SimData *SD) {
 	// there is a particle here.
 	moveIndex = pos*connMax + conni;
 	if (conni == SD->orient[pos]) {
-	  // We are oriented this way.  Can we move?
+	  // We are oriented this way.
 	  int adjpos = SD->conn[moveIndex];
+	  // Is the adjecent site frozen?
+	  if (frozenEnabled && SD->frozen[adjpos]) {
+	    if (SD->MLLr[moveIndex] != -1) {
+	      retval += 1;
+	      printf("error ecrekxntokr\n");
+	    }
+	    continue;
+	  }
+	  //Can we move?
 	  if (SD->lattsite[adjpos] != S12_EMPTYSITE){
 	    // not empty adjecent position, impossible to move there.
 	    if (SD->MLLr[moveIndex] != -1) {
@@ -281,10 +308,16 @@ int EddCTCC_consistencyCheck(struct SimData *SD) {
   return(retval);
 }
 int EddCTCC_cycle(struct SimData *SD, double n) {
+  if (SD->flags & S12_FLAG_INCOMPAT & ~S12_FLAG_FROZEN ) {
+    printf("Incompatible features seen: %d (cxnor)\n", SD->flags);
+    exit(205);
+  }
   if (SD->MLLlen == 0) {
     printf("EddCTCC_cycle: error, move list length is zero\n");
     exit(125);
   }
+  int frozenEnabled = SD->flags & S12_FLAG_FROZEN;
+
   int connMax = SD->connMax;
   int naccept = 0;
   struct LList llist; llist.n = 0;
@@ -310,7 +343,8 @@ int EddCTCC_cycle(struct SimData *SD, double n) {
     int oldOrient = -1;
     if (debugedd)
       printf("edd move: moving from oldpos:%d, conni:%d\n", oldpos, conni);
-
+    if (debugedd && frozenEnabled &&(SD->frozen[oldpos] || SD->frozen[newpos]))
+      printf("error: nrocknot\n");
     if (conni == SD->orient[oldpos]) {
       // translation.
       if (debugedd)
