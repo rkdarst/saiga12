@@ -14,13 +14,19 @@ inline void EddBM_updateLatPos(struct SimData *SD, int pos) {
   int conni;
   if (debugedd)
     printf("update: pos:%d\n", pos);
+  int frozenEnabled = SD->flags & S12_FLAG_FROZEN;
+  int posFrozen = 0;
+  // Skip if site is frozen
+  if (frozenEnabled && SD->frozen[pos])
+    posFrozen = 1;
 
   for(conni=0 ; conni < SD->connN[pos] ; conni++) {
     int adjpos = SD->conn[SD->connMax*pos + conni];
     if (debugedd)
       printf("adjpos: %d\n", adjpos);
     int isAllowedMove = 1;
-    if (SD->lattsite[adjpos] != S12_EMPTYSITE)
+    if (SD->lattsite[adjpos] != S12_EMPTYSITE
+	|| (frozenEnabled && (posFrozen	|| SD->frozen[adjpos] )) )
       isAllowedMove = 0;
     else {
       // we know it is empty, try moving and see if energy becomes inf.
@@ -57,6 +63,7 @@ int EddBM_consistencyCheck(struct SimData *SD) {
   // first check that all things in MLLr map to the right thing in MLL
   int MLLlocation;
   int moveIndex;
+  int frozenEnabled = SD->flags & S12_FLAG_FROZEN;
   int connMax = SD->connMax;
   int retval=0;
   for (moveIndex=0 ; moveIndex<SD->lattSize * connMax ; moveIndex++) {
@@ -91,7 +98,8 @@ int EddBM_consistencyCheck(struct SimData *SD) {
   // be... 
   int pos, conni;
   for (pos=0 ; pos<SD->lattSize ; pos++) {
-    if (SD->lattsite[pos] == S12_EMPTYSITE) {
+    if (SD->lattsite[pos] == S12_EMPTYSITE
+	|| (frozenEnabled  &&  SD->frozen[pos]) ) {
       // be sure that it is not in any of the lookups.
       for (conni=0 ; conni<SD->connMax ; conni++) {
 	if (SD->MLLr[pos*connMax + conni] != -1) {
@@ -114,7 +122,8 @@ int EddBM_consistencyCheck(struct SimData *SD) {
 	// this is a real connection.
 	moveIndex = pos*connMax + conni;
 	int adjpos = SD->conn[moveIndex];
-	if (SD->lattsite[adjpos] != S12_EMPTYSITE) {
+	if (SD->lattsite[adjpos] != S12_EMPTYSITE
+	    || (frozenEnabled  &&  SD->frozen[adjpos]) ) {
 	  // there is a neighboring particle, this move is not allowed.
 	  if (SD->MLLr[pos*connMax + conni] != -1) {
 	    retval += 1;
@@ -150,10 +159,16 @@ int EddBM_consistencyCheck(struct SimData *SD) {
 
 
 int EddBM_cycle(struct SimData *SD, double n) {
+  if (SD->flags & S12_FLAG_INCOMPAT & ~S12_FLAG_FROZEN ) {
+    printf("Incompatible features seen: %d (bxcon)\n", SD->flags);
+    exit(205);
+  }
   if (SD->MLLlen == 0) {
     printf("EddBM_cycle: error, move list length is zero\n");
     exit(12);
   }
+  int frozenEnabled = SD->flags & S12_FLAG_FROZEN;
+
   int connMax = SD->connMax;
   int naccept = 0;
   struct LList llist; llist.n = 0;
@@ -176,6 +191,8 @@ int EddBM_cycle(struct SimData *SD, double n) {
     int newpos = SD->conn[movei]; // movei = connMax*oldpos + moveConni
     if (debugedd)
       printf("move: moving from oldpos:%d to newpos:%d\n", oldpos, newpos);
+    if (debugedd && frozenEnabled &&(SD->frozen[oldpos] || SD->frozen[newpos]))
+      printf("error: lrmnwqrkao\n");
     moveParticle(SD, oldpos, newpos);  // should always be valid, else
 				       // prev prob.
     if (SD->persist != NULL) {  // Update persistence function array if there
