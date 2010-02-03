@@ -399,6 +399,10 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
         If `sites` is None, then unset frozen sites, so that all
         particles are mobile again.
         """
+        if self._eddEnabled:
+            raise Exception("You can't adjust the frozen particles while EDD"
+                            " is enabled, mobile particles must be"
+                            " recalculated")
         if sites is None:
             self.flags &= ~S12_FLAG_FROZEN
             del self.frozen
