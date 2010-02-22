@@ -921,7 +921,9 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
             n = 100
         elif self.cycleModeStr in ('fredricksonandersen', 'east'):
             return # it should always be enabled for FA.
-        if copy:
+        elif self.cycleModeStr == 'ctcc':
+            n = 100
+        if nomodify:
             origHash = self.hash()
             origSelf = self
             self = copy.copy(self)
@@ -933,6 +935,11 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
         if not quiet: print 'regular moves:', t1
 
         self.eddEnable()
+        if self.MLLlen == 0:
+            if not quiet: print "No EDD moves possible, disabling"
+            self.eddDisable()
+            return
+
         t = time.time()
         self.cycle(n)
         t2 = time.time() - t   # with EDD
@@ -941,7 +948,7 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
             if not quiet: print "disabling event driven dynamics"
             self.eddDisable()
 
-        if copy:
+        if nomodify:
             # enable EDD for the original one, if we need
             if self._eddEnabled: origSelf.eddEnable()
             else:                origSelf.eddDisable()
