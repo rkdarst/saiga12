@@ -69,11 +69,16 @@ class Averager(object):
 
     From the 'On-Line Algorithm' from
     http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+
+    The optional initialization argument datatype= should be a
+    generator function which returns zeros of the type being averaged.
+    For example, to average numpy arrays of ten values, use:
+      Averager(datatype=lambda: numpy.zeros(10))
     """
-    def __init__(self):
+    def __init__(self, datatype=float):
         self.n       = 0
-        self._mean    = 0.   # mean
-        self._M2     = 0.   # variance accumulator
+        self._mean   = datatype()   # mean
+        self._M2     = datatype()   # variance accumulator
         #self._var_n  = 0.
         #self._var_n1 = 0.
     def add(self, value):
