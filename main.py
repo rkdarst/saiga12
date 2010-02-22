@@ -835,7 +835,11 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
         sum_ = self.C.chempotential_innersum(self.SD_p, inserttype)
         return sum_
     def persistFunction(self):
-        return (self.lattSize - numpy.sum(self.persist)) / float(self.lattSize)
+        if self.flags & S12_FLAG_SELECTED:
+            p = numpy.sum(self.persist*self.selected)/float(sum(self.selected))
+        else:
+            p = numpy.sum(self.persist) / float(self.lattSize)
+        return 1 - p
 
 
     def eddCheckAllowed(self, raiseException=False):
