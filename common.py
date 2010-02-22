@@ -23,6 +23,7 @@ S12_CYCLE_CTCCclassic    = 10     #
 S12_FLAG_VIB_ENABLED     = 1      # vibrations are enabled
 S12_FLAG_DOSIN           = 2      # use 'sin' in fourpoint C func
 S12_FLAG_FROZEN          = 4
+S12_FLAG_SELECTED        = 8
 
 # These are flags which a simulation routine should refuse to continue
 # if it sees set, since that means a feature it doesn't know about is

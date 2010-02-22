@@ -413,7 +413,7 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
         self.flags |= S12_FLAG_FROZEN
         self.frozen[:] = 0
         self.frozen[sites] = 1
-    def setSelectSites(self, sites):
+    def setSelectedSites(self, sites):
         """Set or unselect certain sites as ``selected''.
 
         `sites` is a list of the sites to select.  Selected simply
@@ -429,6 +429,7 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
             return
         if self.selected is None:
             self._allocArray("selected",shape=(self.lattSize), dtype=numpy_int)
+        self.flags |= S12_FLAG_SELECTED
         self.selected[:] = 0
         self.selected[sites] = 1
         
