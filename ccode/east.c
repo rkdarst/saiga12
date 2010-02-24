@@ -214,7 +214,6 @@ int EddEast_consistencyCheck(struct SimData *SD) {
   for (pos=0 ; pos<SD->lattSize ; pos++) {
     if (debugedd) printf("--cc: pos: %d\n", pos);
     int atomtype = SD->atomtype[SD->lattsite[pos]];
-    int state = SD->lattsite[pos] != S12_EMPTYSITE;
     if (SD->lattsite[pos] == S12_EMPTYSITE) {
       if (EastNNeighbors(SD, pos) >= SD->inserttype) {
 	// It can flip up -- be sure it's in the right list.
@@ -240,29 +239,14 @@ int EddEast_consistencyCheck(struct SimData *SD) {
 	isAllowedMove = 0;
       
       if (isAllowedMove) {
-	if (state == 1) {
-	  if (SD->MLLr[pos] == -1) {
-	    retval += 1;
-	    printf("error ycorkon pos:%d\n", pos);
-	  }
-/* 	  if (SD->MLLr[pos] != -1) { */
-/* 	    retval += 1; */
-/* 	    printf("error kraon\n"); */
-/* 	  } */
-	} else {
-	  // state = 0 ; allowed move:
-	  if (SD->MLLr[pos] != -1) {
-	    retval += 1;
-	    printf("error firkro pos:%d\n", pos);
-	  }
-/* 	  if (SD->MLLr[pos] == -1) { */
-/* 	    retval += 1; */
-/* 	    printf("error yhoiru\n"); */
-/* 	  } */
+	// We can flip down
+	if (SD->MLLr[pos] == -1) {
+	  retval += 1;
+	  printf("error ycorkon pos:%d\n", pos);
 	}
       }
       else {
-	// not allowed to move here
+	// not allowed to flip down
 	if (SD->MLLr[pos] != -1) {
 	  retval += 1;
 	  printf("error xkrgcaon\n");
