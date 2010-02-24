@@ -100,7 +100,10 @@ inline void EddEast_updateLatPos(struct SimData *SD, int pos) {
   int state = SD->lattsite[pos] != S12_EMPTYSITE;
   if(debugedd) 
     printf("state is: %d (should be 0 or 1)\n", state);
-  if (state == 1) {
+  if (SD->flags & S12_FLAG_FROZEN  &&  SD->frozen[pos]) {
+    isAllowedMove = 0;
+    }
+  else if (state == 1) {
     int atomtype = SD->atomtype[SD->lattsite[pos]];
     if(debugedd) 
       printf("pos:%d nneighbors:%d atomtype:%d\n", pos, 
@@ -214,7 +217,14 @@ int EddEast_consistencyCheck(struct SimData *SD) {
   for (pos=0 ; pos<SD->lattSize ; pos++) {
     if (debugedd) printf("--cc: pos: %d\n", pos);
     int atomtype = SD->atomtype[SD->lattsite[pos]];
-    if (SD->lattsite[pos] == S12_EMPTYSITE) {
+    if (SD->flags & S12_FLAG_FROZEN  &&  SD->frozen[pos]) {
+      // Site is frozen.  It must not be in MLLr whether it is up or down.
+      if (SD->MLLr[pos] != -1) {
+	retval += 1;
+	printf("error yerko: frozen but in MLLr: pos:%d\n", pos);
+      }
+    }
+    else if (SD->lattsite[pos] == S12_EMPTYSITE) {
       if (EastNNeighbors(SD, pos) >= SD->inserttype) {
 	// It can flip up -- be sure it's in the right list.
         if (SD->MLLr[pos] == -1) {
@@ -260,6 +270,10 @@ int EddEast_consistencyCheck(struct SimData *SD) {
 
 
 int EddEast_cycle(struct SimData *SD, double n) {
+  if (SD->flags & S12_FLAG_INCOMPAT & ~S12_FLAG_FROZEN ) {
+    printf("Incompatible features seen: %d (bxcon)\n", SD->flags);
+    exit(205);
+  }
   if (SD->MLLlen == 0 && SD->MLLlen_down == 0) {
     printf("EddEast_cycle: error, move list length is zero\n");
     exit(12);
