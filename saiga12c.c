@@ -747,6 +747,12 @@ int cycleKA(struct SimData *SD, double n) {
 
   int i_trial;
   int naccept = 0;
+  // Are there features enabled which if we don't know about them,
+  // should cause an error?
+  if (SD->flags & S12_FLAG_INCOMPAT & ~S12_FLAG_FROZEN ) {
+    printf("Incompatible features seen: %d\n", SD->flags);
+    exit(216);
+  }
 
   for (i_trial=0 ; i_trial<n ; i_trial++) {
     naccept += cycleKA_translate(SD);
@@ -765,13 +771,19 @@ inline int cycleKA_translate(struct SimData *SD) {
     }
     int pos;
     pos = SD->atompos[ (int)(SD->N * genrand_real2()) ];
+    int frozenEnabled = SD->flags & S12_FLAG_FROZEN;
+    // Skip if site is frozen
+    if (frozenEnabled && SD->frozen[pos])
+      return(0);
+
     int atomtype = atomType(SD, pos);
     if (debug) printf("try kob-andersen move: from %d\n", pos);
 
     // Is our current site too packed to move from?
     int nneighbors = SD->nneighbors[pos];
-    if (nneighbors > atomtype) {
-      if(debug) printf("    old site has too many neighbors\n");
+    if (nneighbors > atomtype
+	|| (frozenEnabled && SD->frozen[pos])) {
+      if(debug) printf("    old site has too many neighbors or frozen\n");
       return(0);
     }
 
@@ -781,8 +793,9 @@ inline int cycleKA_translate(struct SimData *SD) {
 
     if (debug) printf("                     ... to %d\n", newPos);
     // can't move to an adjecent occupied site, reject move:
-    if (SD->lattsite[newPos] != S12_EMPTYSITE) {
-      if(debug) printf("    can't move to adjecent occpuied site\n");
+    if (SD->lattsite[newPos] != S12_EMPTYSITE
+	|| (frozenEnabled && SD->frozen[newPos])) {
+      if(debug) printf("    can't move to adjecent occpuied or frozen site\n");
       return(0);
     }
 
