@@ -13,7 +13,8 @@ def frozen_bubble(S, length, radius):
             frozen.append(pos)
     return frozen
 
-for cycleMode in ('montecarlo', 'ctcc'):
+for cycleMode in ('montecarlo', 'ctcc', 'kobandersen',):
+    print
     print "Mode:", cycleMode
     S = saiga12.Grid2d()
     length = 15
@@ -23,6 +24,8 @@ for cycleMode in ('montecarlo', 'ctcc'):
         S.addParticles({2:.5})
     elif cycleMode == 'ctcc':
         S.addParticles({1:.3})
+    elif cycleMode == 'kobandersen':
+        S.addParticles({3:.5})
     S.setCycleMoves()
 
     print S.lattsite
@@ -48,6 +51,7 @@ for cycleMode in ('montecarlo', 'ctcc'):
     S.setFrozenSites(frozenSites)
     nacceptRegular = S.cycle(10000)
     S.eddEnable()
+    assert not S.eddConsistencyCheck()
     print S.MLLlen
     nacceptEDD = 0
     for i in range(10):
@@ -56,3 +60,43 @@ for cycleMode in ('montecarlo', 'ctcc'):
     print nacceptRegular, nacceptEDD
     assert (origContents == S.lattsite[frozenSites]).all()
     assert abs(nacceptRegular-nacceptEDD)/(.5*(nacceptRegular+nacceptEDD)) < .05
+
+
+for cycleMode in ('fredricksonandersen', 'east',):
+    print
+    print "Mode:", cycleMode
+    S = saiga12.Grid2d()
+    #length = 5
+    length = 10
+    S.makegrid(length, length)
+    S.setCycleMode(cycleMode)
+    if cycleMode == 'fredricksonandersen':
+        S.addParticles({1:.4})
+        S.inserttype = 1
+        S.beta = 1/.5
+    elif cycleMode == 'east':
+        S.addParticles({1:.4})
+        S.inserttype = 1
+        S.beta = 1/.5
+    #S.setCycleMoves()
+
+    #frozenSites = frozen_bubble(S, length, radius=5)
+    #frozenSites = [0,1,2,3,4, 5,9, 10,14, 15,19, 20,21,22,23,24]
+    frozenSites = [0,1,2,3,4,5,6,7,8,9,
+                   10,19, 20,29, 30,39, 40,49, 50,59, 60,69, 70,79, 80,89,
+                   90,91,92,93,94,95,96,97,98,99, ]
+    S.setFrozenSites(frozenSites)
+    origContents = S.lattsite[frozenSites] != saiga12.S12_EMPTYSITE
+
+    S.eddEnable()
+    assert not S.eddConsistencyCheck()
+    S.printLattice()
+    for i in range(100):
+        S.cycle(100)
+        assert not S.eddConsistencyCheck()
+        assert ((S.lattsite[frozenSites] != saiga12.S12_EMPTYSITE)
+                == origContents).all()
+
+
+        #print S.printLattice().reshape(length, length)
+        #raw_input('> ')
