@@ -934,21 +934,19 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
         t = time.time()
         self.cycle(n)
         t1 = time.time() - t   # without EDD
-        if not quiet: print 'regular moves:', t1
+        if not quiet: print 'eddFindBestMode: real-time:', t1
 
         self.eddEnable()
-        if self.MLLlen == 0:
-            if not quiet: print "No EDD moves possible, disabling"
-            self.eddDisable()
-            return
 
         t = time.time()
         self.cycle(n)
         t2 = time.time() - t   # with EDD
-        if not quiet: print 'event driven dynamics:', t2
+        if not quiet: print 'eddFindBestMode: event-driven:', t2
         if t1 < t2:
-            if not quiet: print "disabling event driven dynamics"
+            if not quiet: print "eddFindBestMode: Using real-time dynamics"
             self.eddDisable()
+        else:
+            if not quiet: print "eddFindBestMode: Using event-driven dynamics"
 
         if nomodify:
             # enable EDD for the original one, if we need
