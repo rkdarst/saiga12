@@ -391,6 +391,7 @@ if __name__ == "__main__":
                       (t, S.densityOf(t), S.densityOf(t)/S.density,
                        S.numberOfType(t)))
             print "energy:", S.energy()
+            print "coords:", S.__class__.__name__, S.lattShape
 
     else:
         print "command not found: %s"%sys.argv[1]
