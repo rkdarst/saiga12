@@ -275,8 +275,9 @@ int EddEast_cycle(struct SimData *SD, double n) {
     exit(205);
   }
   if (SD->MLLlen == 0 && SD->MLLlen_down == 0) {
-    printf("EddEast_cycle: error, move list length is zero\n");
-    exit(12);
+    // If no moves are possible, then time passes by instantly.
+    SD->MLLextraTime = 0;
+    return(0);
   }
   int naccept = 0;
   //struct LList llist; llist.n = 0;

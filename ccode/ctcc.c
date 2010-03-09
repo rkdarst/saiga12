@@ -313,8 +313,9 @@ int EddCTCC_cycle(struct SimData *SD, double n) {
     exit(205);
   }
   if (SD->MLLlen == 0) {
-    printf("EddCTCC_cycle: error, move list length is zero\n");
-    exit(125);
+    // If no moves are possible, then time passes by instantly.
+    SD->MLLextraTime = 0;
+    return(0);
   }
   int frozenEnabled = SD->flags & S12_FLAG_FROZEN;
 

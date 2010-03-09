@@ -164,8 +164,9 @@ int EddBM_cycle(struct SimData *SD, double n) {
     exit(205);
   }
   if (SD->MLLlen == 0) {
-    printf("EddBM_cycle: error, move list length is zero\n");
-    exit(12);
+    // If no moves are possible, then time passes by instantly.
+    SD->MLLextraTime = 0;
+    return(0);
   }
   int frozenEnabled = SD->flags & S12_FLAG_FROZEN;
 
