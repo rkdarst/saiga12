@@ -386,133 +386,131 @@ double energy(struct SimData *SD) {
 
 
 
-
-
-int cycleMC_GCadd(struct SimData *SD, int pos) {
-  /*  Grand-canonical move where we trial insert a particle.  cycle()
-   *  decides when it is time to call this function.
-   */
-  if (pos == -1) {
-    // pick a random position, occupied or not.
-    pos = SD->lattSize * genrand_real2();
-    if (SD->lattsite[pos] != S12_EMPTYSITE) {
-      // already occupied-- new energy is infinite, can't insert.
-      return(0);
-    }
+/* These functions make a simple list of numbers.  They are used to
+ * optimize later code, so that when a site is processed, you add it
+ * to the list with LlistAdd.  Then, before processing again, you
+ * check with LlistLooup to see if it has already been processed.
+ *
+ * So basically it as a data structure where you can a) add things b)
+ * see if an element is already in it c) zero it (letting
+ * llist.len=0).
+ */
+inline void LlistAdd(struct LList *llist, int elem) {
+  if (llist->n == LListN) {
+    return ; // We are already full, silently ignore adding it.
   }
-  // Skip if site is frozen
-  if ((SD->flags & S12_FLAG_FROZEN) && SD->frozen[pos])
-    return(0);
-  if (errorcheck) if (SD->lattsite[pos] != S12_EMPTYSITE) {
-      printf("error: GCadd atom at not empty location: %d\n", pos);
-      exit(57); }
-  
-  int inserttype;
-  double inserttype_prob, uVTchempotential;
-  if (SD->inserttype != S12_EMPTYSITE) { // Single Component
-    inserttype = SD->inserttype;
-    inserttype_prob = 1.;
-    uVTchempotential = SD->uVTchempotential;
+  llist->elem[llist->n] = elem ;
+  llist->n ++;
+}
+inline int LlistLookup(struct LList *llist, int elem) {
+  int i = llist->n;
+  //printf("Doing LlistLookup: n:%d\n", llist->n);
+  while (i--) {
+    //printf(" ..LlistLookup: %d %d\n", llist->n, i);
+    if (llist->elem[i] == elem)
+      return 1;
   }
-  else {  // Multicomponent
-    inserttype = getInsertType(SD);
-    inserttype_prob = SD->inserttypes_plookup[inserttype];
-    uVTchempotential = SD->inserttypes_mulookup[inserttype];
-  }
-
-  double Eold = energy_pos(SD, pos);
-  addParticle(SD, pos, inserttype);
-  double Enew = energy_pos(SD, pos);
-  double x = //(SD->lattSize/(double)(SD->N+1)) *   // this for method A only
-               exp( SD->beta * (uVTchempotential - Enew + Eold))
-               / inserttype_prob;
-  int accept;
-  if (x >= 1) {
-    accept = 1;
-  } else {
-    double ran = genrand_real2();
-    if (ran < x)
-      accept = 1;
-    else
-      accept = 0;
-  }
-  
-  if (accept) {
-    //SD->N += 1;
-  } else {
-    // revert
-    delParticle(SD, pos);
-  }
-  return(0);
+  return 0;
 }
 
-int cycleMC_GCdel(struct SimData *SD, int pos) {
-  /* Grand-canonical move where we try to remove a particle.  Called
-   * from cycle().
-   */
-  if (pos == -1) {
-    // pick a random particle.
-    if (SD->N == 0) {
-      printf("eNo particles remaining (grandcanonical_del), exiting\n");
-      exit(45);
-    }
-/*     do { */
-/*       pos = SD->lattSize * genrand_real2(); */
-/*     } while (SD->lattsite[pos] == S12_EMPTYSITE); */
-    pos = SD->atompos[ (int)(SD->N * genrand_real2()) ];
-  }
-  // Skip if site is frozen
-  if ((SD->flags & S12_FLAG_FROZEN) && SD->frozen[pos])
-    return(0);
-  if (errorcheck) if (SD->lattsite[pos] == S12_EMPTYSITE) {
-      printf("error: GCdel: removing particle from empty lattsite: %d", pos);
-      exit(56); }
 
-  int inserttype;
-  double inserttype_prob, uVTchempotential;
-  if (SD->inserttype != S12_EMPTYSITE) {  //Singlecomponent
-    inserttype_prob = 1.;
-    uVTchempotential = SD->uVTchempotential;
-  }
-  else { // Multicomponent
-    inserttype = SD->atomtype[SD->lattsite[pos]];
-    inserttype_prob = SD->inserttypes_plookup[inserttype];
-    uVTchempotential = SD->inserttypes_mulookup[inserttype];
-  }
 
-  double Eold = energy_pos(SD, pos);
-  int origtype = atomType(SD, pos);
-  int oldOrient = -1;
-  if (SD->orient != NULL)
-    oldOrient = SD->orient[pos];
-  delParticle(SD, pos);  // this WILL result in particle nums being shifted.
-  double Enew = energy_pos(SD, pos);
-  
 
-  double x = //((SD->N+1)/(double)SD->lattSize) *  // this for method A only
-               ((inserttype_prob)) *
-               exp( - SD->beta * (uVTchempotential - Eold + Enew));
-  int accept;
-  if (x >= 1) {
-    accept = 1;
-  } else {
-    double ran = genrand_real2();
-    if (ran < x)
-      accept = 1;
-    else
-      accept = 0;
+inline void addToMLL(struct SimData *SD, int pos, int conni) {
+  int lookup = pos * SD->connMax + conni;
+  if (errorcheck && (SD->MLLr[lookup] != S12_EMPTYSITE)) {
+    printf("error rhoeacurk %d %d \n", pos, conni);
   }
-  
-  if (accept) {
-    //SD->N -= 1;
-  } else {
-    // revert
-    addParticle(SD, pos, origtype);
-    if (oldOrient != -1)
-      SD->orient[pos] = oldOrient;
-  }
-  return(0);
+  SD->MLL[SD->MLLlen] = lookup;
+  SD->MLLr[lookup] = SD->MLLlen;
+  SD->MLLlen += 1;
 }
+inline void removeFromMLL(struct SimData *SD, int pos, int conni) {
+  int moveIndex = pos * SD->connMax + conni;
+  if (errorcheck && (SD->MLLr[moveIndex] == S12_EMPTYSITE)) {
+    printf("error torknotur %d %d \n", pos, conni);
+  }
+  int mllLocation = SD->MLLr[moveIndex];
+  if (mllLocation == SD->MLLlen-1 ) {
+    SD->MLL[mllLocation] = -1;
+    SD->MLLr[moveIndex] = -1;
+  } else {
+    SD->MLL[mllLocation] = SD->MLL[SD->MLLlen-1];
+    SD->MLLr[SD->MLL[SD->MLLlen-1]] = mllLocation;
+
+    SD->MLLr[moveIndex] = -1;
+    SD->MLL[SD->MLLlen-1] = -1;
+  }
+  SD->MLLlen -= 1 ;
+}
+
+inline int isInMLL(struct SimData *SD, int pos, int conni) {
+  if (SD->MLLr[pos*SD->connMax + conni] == S12_EMPTYSITE)
+    return 0;
+  else
+    return 1;
+}
+inline void ensureInMLL(struct SimData *SD, int pos, int conni) {
+  if (SD->MLLr[pos*SD->connMax + conni] == S12_EMPTYSITE)
+    addToMLL(SD, pos, conni);
+}
+inline void ensureNotInMLL(struct SimData *SD, int pos, int conni) {
+  if (SD->MLLr[pos*SD->connMax + conni] != S12_EMPTYSITE)
+    removeFromMLL(SD, pos, conni);
+}
+inline void ensureInMLLIf(int isAllowed, struct SimData *SD,int pos,int conni){
+  if (isAllowed)
+    ensureInMLL(SD, pos, conni);
+  else
+    ensureNotInMLL(SD, pos, conni);
+}
+
+
+
+int cycleMC(struct SimData *SD, double n);
+int cycleKA(struct SimData *SD, double n);
+int cycleFA(struct SimData *SD, double n);
+int cycleCTCC(struct SimData *SD, double n);
+int cycleCTCCclassic(struct SimData *SD, double n);
+inline int cycleKA_translate(struct SimData *SD);
+
+
+int cycle(struct SimData *SD, double n) {
+  // If there is no cycle mode set (defaults to empty zero), we should
+  // have an error.
+  if (SD->cycleMode == S12_CYCLE_MC)
+    return cycleMC(SD, n);
+  else if (SD->cycleMode == S12_CYCLE_KA)
+    return cycleKA(SD, n);
+  else if (SD->cycleMode == S12_CYCLE_FA)
+    return cycleFA(SD, n);
+  else if (SD->cycleMode == S12_CYCLE_CTCC)
+    return cycleCTCC(SD, n);
+  else if (SD->cycleMode == S12_CYCLE_CTCCclassic)
+    return cycleCTCCclassic(SD, n);
+  else {
+    printf("Cycle mode not set: %d", SD->cycleMode);
+    exit(49);
+  }
+}
+
+#include "ccode/montecarlo.c"
+
+inline void EddBM_updateLatPos(struct SimData *SD, int pos);
+#include "ccode/birolimezard.c"
+
+inline void EddKA_updateLatPos(struct SimData *SD, int pos);
+#include "ccode/kobandersen.c"
+
+inline void EddFA_updateLatPos(struct SimData *SD, int pos);
+#include "ccode/fredricksonandersen.c"
+
+inline void EddCTCC_updateLatPos(struct SimData *SD, int pos);
+#include "ccode/ctcc.c"
+#include "ccode/ctccclassic.c"
+
+inline void EddEast_updateLatPos(struct SimData *SD, int pos);
+#include "ccode/east.c"
 
 
 
@@ -568,253 +566,6 @@ double chempotential_innersum(struct SimData *SD, int inserttype) {
   }
   return(totalsum / (SD->ntype[inserttype]));
 }
-
-
-
-int cycleMC(struct SimData *SD, double n);
-int cycleKA(struct SimData *SD, double n);
-int cycleFA(struct SimData *SD, double n);
-int cycleCTCC(struct SimData *SD, double n);
-int cycleCTCCclassic(struct SimData *SD, double n);
-inline int cycleKA_translate(struct SimData *SD);
-
-
-int cycle(struct SimData *SD, double n) {
-  // If there is no cycle mode set (defaults to empty zero), we should
-  // have an error.
-  if (SD->cycleMode == S12_CYCLE_MC)
-    return cycleMC(SD, n);
-  else if (SD->cycleMode == S12_CYCLE_KA)
-    return cycleKA(SD, n);
-  else if (SD->cycleMode == S12_CYCLE_FA)
-    return cycleFA(SD, n);
-  else if (SD->cycleMode == S12_CYCLE_CTCC)
-    return cycleCTCC(SD, n);
-  else if (SD->cycleMode == S12_CYCLE_CTCCclassic)
-    return cycleCTCCclassic(SD, n);
-  else {
-    printf("Cycle mode not set: %d", SD->cycleMode);
-    exit(49);
-  }
-}
-
-
-inline void cycleMC_GCmodeAAdd(struct SimData *SD) {
-  // try adding a particle
-  //printf("grand canonical: trial add\n");
-  cycleMC_GCadd(SD, -1);
-}
-inline void cycleMC_GCmodeADelete(struct SimData *SD) {
-  // try removing a particle
-  //printf("grand canonical: trial del\n");
-  cycleMC_GCdel(SD, -1);
-}
-
-inline void cycleMC_GCmodeB(struct SimData *SD) {
-  // try adding a particle
-  //printf("grand canonical: trial add\n");
-  int pos = SD->lattSize * genrand_real2();
-  if (SD->lattsite[pos] == S12_EMPTYSITE)
-    cycleMC_GCadd(SD, pos);
-  else
-    cycleMC_GCdel(SD, pos);
-}
-
-
-inline int cycleMC_translate(struct SimData *SD) {
-    // otherwise, do a regular move (this should be the most common
-    // case and thus inlined)
-
-    // Find a lattice site with a particle:
-    if (SD->N == 0) {
-      printf("we are out of particles!\n");
-      exit(165);
-    }
-    int pos;
-    pos = SD->atompos[ (int)(SD->N * genrand_real2()) ];
-    int frozenEnabled = SD->flags & S12_FLAG_FROZEN;
-    // Skip if site is frozen
-    if (frozenEnabled && SD->frozen[pos])
-      return(0);
-
-    // Find an arbitrary connection:
-    int i_conn = SD->connN[pos] * genrand_real2();
-    //int *connLocal = SD->conn + pos*SD->connMax;
-    int newPos = SD->conn[ pos*SD->connMax + i_conn];
-    // Skip if adjecent site is frozen
-    if (frozenEnabled && SD->frozen[newPos])
-      return(0);
-    
-    if (debug) printf("%d %d %d\n", pos, i_conn, newPos);
-    
-    if (SD->lattsite[newPos] != S12_EMPTYSITE) {
-      // can't move to an adjecent occupied site, reject move.
-      if(debug) printf("can't move to adjecent occpuied site\n");
-      return(0);
-      //continue;
-    }
-    
-    int accept;
-    double Eold = energy_pos(SD, pos) +
-                  energy_pos(SD, newPos);
-    //int atomtype = atomType(SD, pos);
-    //delParticle(SD, pos);
-    //addParticle(SD, newPos, atomtype);
-    moveParticle(SD, pos, newPos);
-    double Enew = energy_pos(SD, newPos) +
-                  energy_pos(SD, pos);
-
-    if (Enew == 1./0.) {
-      // always reject moves producing infinite energy
-      if (debug) printf("illegal move, energy becomes infinite\n");
-      accept = 0;
-    }
-    else if (Enew <= Eold)
-      // always accept energy decreasing moves
-      accept = 1;
-    else {
-      // accept increasing energy moves with metropolis criteria
-      double x;
-      x = exp(SD->beta*(Eold-Enew));
-      double ran = genrand_real2();
-      if (ran < x)
-        accept = 1;
-      else
-        accept = 0;
-    }
-  
-    if (accept == 0) {
-      // Restore the particle location if it wasn't accepted.
-      //atomtype = atomType(SD, newPos);
-      //delParticle(SD, newPos);
-      //addParticle(SD, pos, atomtype);
-      moveParticle(SD, newPos, pos);
-    }
-    else {
-      if (debug) printf("accepting move\n");
-      if (SD->persist != NULL) { // Update persistence function array if there
-        SD->persist[pos] = 1;
-        SD->persist[newPos] = 1;
-      }
-      return(1);  // Return 1, since we accepted one move
-    }
-    if(debug) printf("Eold: %.3f Enew: %.3f\n", Eold, Enew);
-    return(0);    // Return zero, representing accepting no move
-}
-
-int cycleMC(struct SimData *SD, double n) {
-
-  int i_trial;
-  int naccept = 0;
-  // Are there features enabled which if we don't know about them,
-  // should cause an error?
-  if (SD->flags & S12_FLAG_INCOMPAT & ~S12_FLAG_FROZEN ) {
-    printf("Incompatible features seen: %d\n", SD->flags);
-    exit(216);
-  }
-
-  for (i_trial=0 ; i_trial<n ; i_trial++) {
-
-    // Decide what kind of trial move we should do;
-    double ran = genrand_real2();
-
-    // method A (pick add or del, then pick a spot needed to make that move)
-/*     if (ran < 0 /\*SD->cumProbAdd*\/) { */
-/*       cycleMC_GCmodeAAdd(SD); */
-/*     } */
-/*     else if (ran < 0/\*SD->cumProbDel*\/) { */
-/*       cycleMC_GCmodeADelete(SD); */
-/*     } */
-    // end method A
-
-    // method B  (pick a spot, and then decide if you should try add/del)
-    if (ran < SD->cumProbDel) {
-      cycleMC_GCmodeB(SD);
-    }
-    // end method B
-
-    else {
-      naccept += cycleMC_translate(SD);
-    }
-  }
-  return(naccept);
-}
-
-
-
-
-int cycleKA(struct SimData *SD, double n) {
-
-  int i_trial;
-  int naccept = 0;
-  // Are there features enabled which if we don't know about them,
-  // should cause an error?
-  if (SD->flags & S12_FLAG_INCOMPAT & ~S12_FLAG_FROZEN ) {
-    printf("Incompatible features seen: %d\n", SD->flags);
-    exit(216);
-  }
-
-  for (i_trial=0 ; i_trial<n ; i_trial++) {
-    naccept += cycleKA_translate(SD);
-  }
-  return(naccept);
-}
-
-inline int cycleKA_translate(struct SimData *SD) {
-    // otherwise, do a regular move (this should be the most common
-    // case and thus inlined)
-
-    // Find a lattice site with a particle:
-    if (SD->N == 0) {
-      printf("we are out of particles!\n");
-      exit(165);
-    }
-    int pos;
-    pos = SD->atompos[ (int)(SD->N * genrand_real2()) ];
-    int frozenEnabled = SD->flags & S12_FLAG_FROZEN;
-    // Skip if site is frozen
-    if (frozenEnabled && SD->frozen[pos])
-      return(0);
-
-    int atomtype = atomType(SD, pos);
-    if (debug) printf("try kob-andersen move: from %d\n", pos);
-
-    // Is our current site too packed to move from?
-    int nneighbors = SD->nneighbors[pos];
-    if (nneighbors > atomtype
-	|| (frozenEnabled && SD->frozen[pos])) {
-      if(debug) printf("    old site has too many neighbors or frozen\n");
-      return(0);
-    }
-
-    // Find an arbitrary connection:
-    int i_conn = SD->connN[pos] * genrand_real2();
-    int newPos = SD->conn[ pos*SD->connMax + i_conn];
-
-    if (debug) printf("                     ... to %d\n", newPos);
-    // can't move to an adjecent occupied site, reject move:
-    if (SD->lattsite[newPos] != S12_EMPTYSITE
-	|| (frozenEnabled && SD->frozen[newPos])) {
-      if(debug) printf("    can't move to adjecent occpuied or frozen site\n");
-      return(0);
-    }
-
-    // Is the new site too packed to move to?
-    nneighbors = SD->nneighbors[newPos];
-    if (nneighbors > (atomtype+1)) {
-      if(debug) printf("    new site has too many neighbors\n");
-      return(0);
-    }
-
-    moveParticle(SD, pos, newPos);
-    if (SD->persist != NULL) { // Update persistence function array if there
-      SD->persist[pos] = 1;
-      SD->persist[newPos] = 1;
-    }
-
-    return(1);  // Return 1, since we accepted one move
-}
-
 
 
 
@@ -948,107 +699,6 @@ int fourpoint(struct SimData *SD1, struct SimData *SD2,
   *C_ += (double)C/Nk;
   return(1);
 }
-
-
-
-
-/* These functions make a simple list of numbers.  They are used to
- * optimize later code, so that when a site is processed, you add it
- * to the list with LlistAdd.  Then, before processing again, you
- * check with LlistLooup to see if it has already been processed.
- *
- * So basically it as a data structure where you can a) add things b)
- * see if an element is already in it c) zero it (letting
- * llist.len=0).
- */
-inline void LlistAdd(struct LList *llist, int elem) {
-  if (llist->n == LListN) {
-    return ; // We are already full, silently ignore adding it.
-  }
-  llist->elem[llist->n] = elem ;
-  llist->n ++;
-}
-inline int LlistLookup(struct LList *llist, int elem) {
-  int i = llist->n;
-  //printf("Doing LlistLookup: n:%d\n", llist->n);
-  while (i--) {
-    //printf(" ..LlistLookup: %d %d\n", llist->n, i);
-    if (llist->elem[i] == elem)
-      return 1;
-  }
-  return 0;
-}
-
-
-
-
-inline void addToMLL(struct SimData *SD, int pos, int conni) {
-  int lookup = pos * SD->connMax + conni;
-  if (errorcheck && (SD->MLLr[lookup] != S12_EMPTYSITE)) {
-    printf("error rhoeacurk %d %d \n", pos, conni);
-  }
-  SD->MLL[SD->MLLlen] = lookup;
-  SD->MLLr[lookup] = SD->MLLlen;
-  SD->MLLlen += 1;
-}
-inline void removeFromMLL(struct SimData *SD, int pos, int conni) {
-  int moveIndex = pos * SD->connMax + conni;
-  if (errorcheck && (SD->MLLr[moveIndex] == S12_EMPTYSITE)) {
-    printf("error torknotur %d %d \n", pos, conni);
-  }
-  int mllLocation = SD->MLLr[moveIndex];
-  if (mllLocation == SD->MLLlen-1 ) {
-    SD->MLL[mllLocation] = -1;
-    SD->MLLr[moveIndex] = -1;
-  } else {
-    SD->MLL[mllLocation] = SD->MLL[SD->MLLlen-1];
-    SD->MLLr[SD->MLL[SD->MLLlen-1]] = mllLocation;
-
-    SD->MLLr[moveIndex] = -1;
-    SD->MLL[SD->MLLlen-1] = -1;
-  }
-  SD->MLLlen -= 1 ;
-}
-
-inline int isInMLL(struct SimData *SD, int pos, int conni) {
-  if (SD->MLLr[pos*SD->connMax + conni] == S12_EMPTYSITE)
-    return 0;
-  else
-    return 1;
-}
-inline void ensureInMLL(struct SimData *SD, int pos, int conni) {
-  if (SD->MLLr[pos*SD->connMax + conni] == S12_EMPTYSITE)
-    addToMLL(SD, pos, conni);
-}
-inline void ensureNotInMLL(struct SimData *SD, int pos, int conni) {
-  if (SD->MLLr[pos*SD->connMax + conni] != S12_EMPTYSITE)
-    removeFromMLL(SD, pos, conni);
-}
-inline void ensureInMLLIf(int isAllowed, struct SimData *SD,int pos,int conni){
-  if (isAllowed)
-    ensureInMLL(SD, pos, conni);
-  else
-    ensureNotInMLL(SD, pos, conni);
-}
-
-
-inline void EddBM_updateLatPos(struct SimData *SD, int pos);
-#include "ccode/birolimezard.c"
-
-
-inline void EddKA_updateLatPos(struct SimData *SD, int pos);
-#include "ccode/kobandersen.c"
-
-inline void EddFA_updateLatPos(struct SimData *SD, int pos);
-#include "ccode/fredricksonandersen.c"
-
-inline void EddCTCC_updateLatPos(struct SimData *SD, int pos);
-#include "ccode/ctcc.c"
-#include "ccode/ctccclassic.c"
-
-inline void EddEast_updateLatPos(struct SimData *SD, int pos);
-#include "ccode/east.c"
-
 
 
 

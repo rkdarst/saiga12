@@ -1,3 +1,76 @@
+int cycleKA(struct SimData *SD, double n) {
+
+  int i_trial;
+  int naccept = 0;
+  // Are there features enabled which if we don't know about them,
+  // should cause an error?
+  if (SD->flags & S12_FLAG_INCOMPAT & ~S12_FLAG_FROZEN ) {
+    printf("Incompatible features seen: %d\n", SD->flags);
+    exit(216);
+  }
+
+  for (i_trial=0 ; i_trial<n ; i_trial++) {
+    naccept += cycleKA_translate(SD);
+  }
+  return(naccept);
+}
+
+inline int cycleKA_translate(struct SimData *SD) {
+    // otherwise, do a regular move (this should be the most common
+    // case and thus inlined)
+
+    // Find a lattice site with a particle:
+    if (SD->N == 0) {
+      printf("we are out of particles!\n");
+      exit(165);
+    }
+    int pos;
+    pos = SD->atompos[ (int)(SD->N * genrand_real2()) ];
+    int frozenEnabled = SD->flags & S12_FLAG_FROZEN;
+    // Skip if site is frozen
+    if (frozenEnabled && SD->frozen[pos])
+      return(0);
+
+    int atomtype = atomType(SD, pos);
+    if (debug) printf("try kob-andersen move: from %d\n", pos);
+
+    // Is our current site too packed to move from?
+    int nneighbors = SD->nneighbors[pos];
+    if (nneighbors > atomtype
+	|| (frozenEnabled && SD->frozen[pos])) {
+      if(debug) printf("    old site has too many neighbors or frozen\n");
+      return(0);
+    }
+
+    // Find an arbitrary connection:
+    int i_conn = SD->connN[pos] * genrand_real2();
+    int newPos = SD->conn[ pos*SD->connMax + i_conn];
+
+    if (debug) printf("                     ... to %d\n", newPos);
+    // can't move to an adjecent occupied site, reject move:
+    if (SD->lattsite[newPos] != S12_EMPTYSITE
+	|| (frozenEnabled && SD->frozen[newPos])) {
+      if(debug) printf("    can't move to adjecent occpuied or frozen site\n");
+      return(0);
+    }
+
+    // Is the new site too packed to move to?
+    nneighbors = SD->nneighbors[newPos];
+    if (nneighbors > (atomtype+1)) {
+      if(debug) printf("    new site has too many neighbors\n");
+      return(0);
+    }
+
+    moveParticle(SD, pos, newPos);
+    if (SD->persist != NULL) { // Update persistence function array if there
+      SD->persist[pos] = 1;
+      SD->persist[newPos] = 1;
+    }
+
+    return(1);  // Return 1, since we accepted one move
+}
+
+
 void EddKA_init(struct SimData *SD) {
   int pos;
   for (pos=0 ; pos<SD->lattSize ; pos++) {
@@ -255,7 +328,7 @@ int EddKA_cycle(struct SimData *SD, double n) {
         }
       }
     }
-  
+
     // NEWpos stuff
     //printf(" .=new neighbors:\n");
     // we already updated the new position of the moved particle above.
@@ -288,7 +361,7 @@ int EddKA_cycle(struct SimData *SD, double n) {
       }
     }
     naccept += 1;
-    
+
     // Advance time
     double timestep = (SD->N * SD->connMax) / ((double)SD->MLLlen);
     timestep *= -log(genrand_real3());  // exponential distribution of times.
@@ -298,7 +371,7 @@ int EddKA_cycle(struct SimData *SD, double n) {
   }
   // MLLextraTime is a positive, the amount to increment before our next stop.
   SD->MLLextraTime = time - maxTime;
-  //printf("eddCycle: final time:%f maxTime:%f extraTime:%f\n", 
+  //printf("eddCycle: final time:%f maxTime:%f extraTime:%f\n",
   // time, maxTime, SD->MLLextraTime);
 
   return(naccept);
