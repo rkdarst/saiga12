@@ -10,7 +10,14 @@ int cycleKA(struct SimData *SD, double n) {
   }
 
   for (i_trial=0 ; i_trial<n ; i_trial++) {
-    naccept += cycleKA_translate(SD);
+    double ran = genrand_real2();
+    // Mode B: pick spot, insert or del as-
+    if (ran < SD->cumProbDel) {
+      cycleMC_GCmodeB(SD);
+    }
+    else {
+      naccept += cycleKA_translate(SD);
+    }
   }
   return(naccept);
 }
