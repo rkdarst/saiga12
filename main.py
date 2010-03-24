@@ -970,7 +970,7 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
         if getattr(S0, 'vibEnabled', False) or S0.orient is not None:
             # Vibrations enabled: if we have vibrations enabled, we
             # have to use different coordinates for every timestep.
-            flags = saiga12.S12_FLAG_VIB_ENABLED
+            flags = S12_FLAG_VIB_ENABLED
             c1 = S0  .getCCords(returnPointer=True)
             c2 = self.getCCords(returnPointer=True)
         else:
