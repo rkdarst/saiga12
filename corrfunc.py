@@ -372,7 +372,6 @@ class StructCorr(object):
                   "Fs assumes you aren't doing that."
 
         totalsum = S._corrfunc_calcFs(self, S0)
-        print totalsum
 
         Sk = totalsum / (N * len(self.kvecs))
         self._SkTotal += Sk
