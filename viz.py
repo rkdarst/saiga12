@@ -11,6 +11,8 @@ This module is primarily used via the `VizSystem` object.
 import saiga12
 import numpy
 import visual
+import math
+from math import log, exp, sqrt
 
 class VizSystem(object):
     """Visualize the system using python-visual.
@@ -114,7 +116,7 @@ class VizSystem(object):
         # Now go add/update all atom positions, etc.
         for i in range(self.S.N):
             pos =    S.atompos[i]
-            coords = S.coords(pos)
+            coords = S.coords(pos, raw=True)
             type_ =  S.atomtype[i]
             radius = vizRadius.get(type_, self.radius)
             color = vizColors.get(type_, visual.color.white)
@@ -258,21 +260,15 @@ def visualizeKvectors(SsfList):
         Ssf = SsfList.SsfDict[kmag]
         for i, (kvec, Sk) in enumerate(
               zip(Ssf.kvecsOrig, Ssf.SkArraysByKvec())):
-            #Sk -= .3
-            #Sk -= .53
             avg.add(Sk)
-            if Sk <= 0 or 1:
-                print kvec, Sk, 
-            #Sk /= (1 - .3)
-            if Sk <= 0 or 1:
-                print Sk
-                
+            #print kvec, Sk
+
             widthfactor = .2
-            col = (Sk-.5)*2.
+            col = (Sk-.25)*.25
             #col = Sk
-            col = min(1., max(0,  col+.05))
+            col = min(1., max(.1,  col))
             col = (col, col, col)
-            radius = max(.01, (Sk)*widthfactor)
+            radius = max(.05, (Sk)*widthfactor)
             #visual.arrow(pos=(0,0,0), axis=kvec,
             #             shaftwidth=Sk*widthfactor,
             #             fixedwidth=1)

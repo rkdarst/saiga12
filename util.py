@@ -306,8 +306,8 @@ def visualizeKvectors(fileNames, mode='avg'):
             type_ = list(frame.ntype).index(max(frame.ntype))
             #type_ = 2
             SsfList = corrfunc.StructCorrList(
-                frame, kmags=range(1, 8), type_=type_,
-                orthogonal=False)
+                frame, kmag2s=range(1, int(math.floor((frame.L/2.)**2))),
+                type_=type_, orthogonal=False)
             SsfList.calcSk(frame)
             scene = viz.visualizeKvectors(SsfList)
             sys.stdout.flush()
@@ -329,8 +329,8 @@ def visualizeKvectors(fileNames, mode='avg'):
             type_ = list(frame.ntype).index(max(frame.ntype))
             if SsfList==None: 
                 SsfList = corrfunc.StructCorrList(
-                    frame, kmag2s=range(1, 8**2), type_=type_,
-                    orthogonal=False)
+                    frame, kmag2s=range(1, int(math.floor((frame.L/2.)**2))),
+                    type_=type_, orthogonal=False)
             SsfList.calcSk(frame)
         scene = viz.visualizeKvectors(SsfList)
         while True:
