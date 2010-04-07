@@ -856,7 +856,8 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
         if (
             self.cycleModeStr == 'fredricksonandersen' or
             self.cycleModeStr == 'east' or
-            self.cycleModeStr == 'kobandersen' or
+            ( self.cycleModeStr == 'kobandersen' and
+              not (self.flags & S12_FLAG_KA_SOFT) ) or
             ( self.cycleModeStr == 'montecarlo' and
               self.energyModeStr == 'birolimezard' and
               ( self.beta == inf or self.hardness == inf )

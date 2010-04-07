@@ -23,38 +23,41 @@ int cycleKA(struct SimData *SD, double n) {
 }
 
 inline int cycleKA_translate(struct SimData *SD) {
-    // otherwise, do a regular move (this should be the most common
-    // case and thus inlined)
-
-    // Find a lattice site with a particle:
     if (SD->N == 0) {
       printf("we are out of particles!\n");
       exit(165);
     }
+    int frozenEnabled = SD->flags & S12_FLAG_FROZEN;
+    int softKA = SD->flags & S12_FLAG_KA_SOFT;
+
+    // Find a lattice site with a particle:
     int pos;
     pos = SD->atompos[ (int)(SD->N * genrand_real2()) ];
-    int frozenEnabled = SD->flags & S12_FLAG_FROZEN;
+    int atomtype = atomType(SD, pos);
+    if (debug) printf("try kob-andersen move: from %d\n", pos);
     // Skip if site is frozen
     if (frozenEnabled && SD->frozen[pos])
       return(0);
 
-    int atomtype = atomType(SD, pos);
-    if (debug) printf("try kob-andersen move: from %d\n", pos);
-
     // Is our current site too packed to move from?
     int nneighbors = SD->nneighbors[pos];
-    if (nneighbors > atomtype
-	|| (frozenEnabled && SD->frozen[pos])) {
-      if(debug) printf("    old site has too many neighbors or frozen\n");
+    if (nneighbors <= atomtype) {
+      // continue, unblocked
+    }
+    else if (softKA) { // Immobile, but soft dynamics
+      softKA = 2;  // 2 = we are blocked from normal moves.
+    }
+    else {
+      if(debug) printf("    old site has too many neighbors\n");
       return(0);
     }
 
     // Find an arbitrary connection:
     int i_conn = SD->connN[pos] * genrand_real2();
     int newPos = SD->conn[ pos*SD->connMax + i_conn];
-
     if (debug) printf("                     ... to %d\n", newPos);
-    // can't move to an adjecent occupied site, reject move:
+
+    // can't move to an adjecent occupied or frozen site, reject move:
     if (SD->lattsite[newPos] != S12_EMPTYSITE
 	|| (frozenEnabled && SD->frozen[newPos])) {
       if(debug) printf("    can't move to adjecent occpuied or frozen site\n");
@@ -63,7 +66,23 @@ inline int cycleKA_translate(struct SimData *SD) {
 
     // Is the new site too packed to move to?
     nneighbors = SD->nneighbors[newPos];
-    if (nneighbors > (atomtype+1)) {
+    if (nneighbors <= (atomtype+1) && softKA != 2) {
+      // KA dynamics allows us to move to the new site,
+      // AND softKA!=2 which means that KA rules lets us leave the other site
+    }
+    else if (softKA) {
+      // KA rules say we are blocked, but we are soft so we use our
+      // pseudo-activation energy rules:
+      double x;
+      x = exp(-SD->beta*SD->hardness);
+      double ran = genrand_real2();
+      if (ran < x) {
+	// accept
+      }
+      else
+	return(0); // we fail to move.
+    }
+    else {
       if(debug) printf("    new site has too many neighbors\n");
       return(0);
     }
