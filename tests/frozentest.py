@@ -100,3 +100,32 @@ for cycleMode in ('fredricksonandersen', 'east',):
 
         #print S.printLattice().reshape(length, length)
         #raw_input('> ')
+
+
+
+#### Soft KA model ###
+if True:
+    print "\nMode: kob-andersen soft"
+    S = saiga12.Grid2d()
+    length = 15
+    S.makegrid(length, length)
+    S.setCycleMode('kobandersen')
+    S.addParticles({3:.5})
+    S.setCycleMoves()
+    frozenSites = frozen_bubble(S, length, radius=5)
+
+    S.hardness = 1
+    S.beta = 1/.5
+    S.flags |= saiga12.S12_FLAG_KA_SOFT
+
+    # Test freezing
+    origContents = S.lattsite[frozenSites]
+    S.setFrozenSites(frozenSites)
+    # original atom numbers at these sites
+    S.cycle(1000)
+    assert (origContents == S.lattsite[frozenSites]).all()
+
+    # Test unfreezing
+    S.setFrozenSites(None)
+    S.cycle(1000)
+    assert not (origContents == S.lattsite[frozenSites]).all()

@@ -95,3 +95,86 @@ print S1.lattsite, S1.persist
 
 
 #from rkddp.interact import interact ; interact()
+
+
+
+
+#### Test Soft KA: ####
+S = Grid2d()
+S.setCycleMode('kobandersen')
+S.makegrid(5, 5)
+# Make a grid that has two open rows:
+# x  xx
+# x  xx
+# x  xx
+# x  xx
+# x  xx
+# Everything (with type 2 particles) should be immobile
+for pos in range(25):
+    if pos%25 in (1,2):  continue
+    S.addParticle(pos, type_=2)
+S.setCycleMoves()
+assert S.eddCheckAllowed()
+
+# Regular dynamics.  Nothing should be able to move:
+origContents = S.atompos.copy()
+S.cycle(1000)
+assert (origContents == S.atompos).all()
+assert S.naccept == 0
+
+# Now make it soft, and things should be able to move:
+S.hardness = 1
+S.beta = 1/.5
+S.flags |= saiga12.S12_FLAG_KA_SOFT
+assert not S.eddCheckAllowed()
+
+S.cycle(1000)
+assert not (origContents == S.atompos).all()
+assert S.naccept != 0
+
+
+#### Test grand canonical: ###
+# This test is like the one above - it should be completly blocked -
+# but we use grand canonical dynamics to allow sampling.
+S = Grid2d()
+S.setCycleMode('kobandersen')
+S.makegrid(5, 5)
+# Everything (with type 2 particles) should be immobile
+for pos in range(25):
+    if pos%25 in (1,2):  continue
+    S.addParticle(pos, type_=2)
+S.setCycleMoves()
+
+# Regular dynamics.  Nothing should be able to move:
+origContents = S.atompos.copy()
+S.cycle(1000)
+assert (origContents == S.atompos).all()
+assert S.naccept == 0
+
+# Now enable grand-canonical dynamics
+S.setCycleMoves(shift=.5*S.N, insertdel=.5*S.N)
+S.setInsertType({2: (1., .5)})
+# And insist that there is some motion once it moves
+S.cycle(1000)
+assert not (origContents == S.atompos).all()
+assert S.naccept != 0
+
+
+
+#### Test that type3 particles with the grid this can move ####
+S = Grid2d()
+S.setCycleMode('kobandersen')
+S.makegrid(5, 5)
+# Same grid with two open rows, but type 3 particles so they _should_ be modile
+for pos in range(25):
+    if pos%25 in (1,2):  continue
+    S.addParticle(pos, type_=3)
+S.setCycleMoves()
+
+# Regular dynamics.  Nothing should be able to move:
+origContents = S.atompos.copy()
+S.cycle(1000)
+assert not (origContents == S.atompos).all()
+assert S.naccept != 0
+
+
