@@ -72,17 +72,17 @@ inline void FAaddToMLL(struct SimData *SD, char which, int pos) {
   int *MLL, *MLLlen;
   if (errorcheck)
     if (which != 'u' && which != 'd')
-      printf("error: which is not 'u' or 'd': %c", which);
+      printf("error: which is not 'u' or 'd': %c\n", which);
   if (which == 'u') {
     if(debugedd) 
-      printf("up list: %c %d\n", which, pos);
+      printf("adding to up list: %c %d\n", which, pos);
     MLL    =   SD->MLL;
     //MLLr   =   SD->MLLr;
     MLLlen = &(SD->MLLlen);
   }
   else {
     if(debugedd) 
-      printf("down list: %c %d\n", which, pos);
+      printf("adding to down list: %c %d\n", which, pos);
     MLL    =   SD->MLL_down;
     //MLLr   =   SD->MLLr_down;
     MLLlen = &(SD->MLLlen_down);
@@ -98,12 +98,12 @@ inline void FAremoveFromMLL(struct SimData *SD, char which, int pos) {
   int *MLL, *MLLlen;
   if (errorcheck)
     if (which != 'u' && which != 'd')
-      printf("error: which is not 'u' or 'd': %c", which);
+      printf("error: which is not 'u' or 'd': %c\n", which);
     
   if (which == 'u') {
     if (errorcheck)
       if (SD->MLLr[pos] == -1)
-	printf("error: trying to remove from up list but is not up:%d", pos);
+	printf("error: trying to remove from up list but is not up:%d\n", pos);
     MLL    =   SD->MLL;
     //MLLr   =   SD->MLLr;
     MLLlen = &(SD->MLLlen);
@@ -111,7 +111,7 @@ inline void FAremoveFromMLL(struct SimData *SD, char which, int pos) {
   else {
     if (errorcheck)
       if (SD->MLLr[pos] == -1)
-	printf("error: trying to remove from down list but is not dn:%d", pos);
+	printf("error: trying to remove from down list but is not dn:%d\n", pos);
     MLL    =   SD->MLL_down;
     //MLLr   =   SD->MLLr_down;
     MLLlen = &(SD->MLLlen_down);
@@ -136,7 +136,6 @@ void EddFA_init(struct SimData *SD) {
   for (pos=0 ; pos<SD->lattSize ; pos++) {
     if (debugedd)
       printf("EddFA_init: at pos: %d\n", pos);
-    //if (SD->lattsite[pos] != S12_EMPTYSITE)
     EddFA_updateLatPos(SD, pos);
   }
 }
@@ -150,8 +149,8 @@ inline void EddFA_updateLatPos(struct SimData *SD, int pos) {
 
 
   int state = SD->lattsite[pos] != S12_EMPTYSITE;
-  if(debugedd) 
-    printf("state is: %d (should be 0 or 1)\n", state);
+  if (debugedd)
+    printf("EddFA_updateLatPos: at update: pos:%d, state=%d\n", pos, state);
   if (SD->flags & S12_FLAG_FROZEN  &&  SD->frozen[pos]) {
     isAllowedMove = 0;
     }
@@ -238,7 +237,8 @@ int EddFA_consistencyCheck(struct SimData *SD) {
       // all these greater ones should be blank
       if (SD->MLL[MLLlocation] != -1) {
 	retval += 1;
-	printf("error rcaohantohk\n");
+	printf("error rcaohantohk: MLL loc %d not empty (points to %d)\n",
+	       MLLlocation, SD->MLL[MLLlocation]);
       }
     }
   }
@@ -252,7 +252,8 @@ int EddFA_consistencyCheck(struct SimData *SD) {
       // if it's less than the list length, then it should be look-up able.
       if (MLLlocation != SD->MLLr[SD->MLL_down[MLLlocation]]) {
 	retval += 1;
-	printf("error yborkrk\n");
+	printf("error yborkrk: MLLlocation(down):%d pos:%d\n", MLLlocation,
+                                         SD->MLL_down[MLLlocation]);
       }
     }
     else {
@@ -267,7 +268,7 @@ int EddFA_consistencyCheck(struct SimData *SD) {
   // be... 
   int pos;
   for (pos=0 ; pos<SD->lattSize ; pos++) {
-    if (debugedd) printf("--cc: pos: %d\n", pos);
+    //if (debugedd) printf("--cc: pos: %d\n", pos);
     int atomtype = SD->atomtype[SD->lattsite[pos]];
     if (SD->flags & S12_FLAG_FROZEN  &&  SD->frozen[pos]) {
       // Site is frozen.  It must not be in MLLr whether it is up or down.
@@ -304,14 +305,14 @@ int EddFA_consistencyCheck(struct SimData *SD) {
 	// We can flip down
 	if (SD->MLLr[pos] == -1) {
 	  retval += 1;
-	  printf("error ycorkon pos:%d\n", pos);
+	  printf("error ycorkon: up site allowed to flip down but not in MLLr pos:%d\n", pos);
 	}
       }
       else {
 	// not allowed to flip down
 	if (SD->MLLr[pos] != -1) {
 	  retval += 1;
-	  printf("error xkrgcaon\n");
+	  printf("error xkrgcaon: up site not allowed to flip down but in MLLr: %d\n", pos);
 	}
       }
     }
@@ -331,6 +332,8 @@ int EddFA_cycle(struct SimData *SD, double n) {
     SD->MLLextraTime = 0;
     return(0);
   }
+  int frozenEnabled = SD->flags & S12_FLAG_FROZEN;
+
   int naccept = 0;
   //struct LList llist; llist.n = 0;
 
@@ -343,8 +346,19 @@ int EddFA_cycle(struct SimData *SD, double n) {
   //printf("beta:%f c:%f\n", SD->beta, c);
   double wUp = 1-(c);
   double wDown = c;
+  double eta = exp(-SD->beta*SD->hardness);
 
-  double wTot = SD->MLLlen_down * wDown   +   SD->MLLlen * wUp;
+  double pdf_wDown        = wDown * (SD->MLLlen_down);
+  double pdf_wUp          = wUp   * (SD->MLLlen     );
+  double pdf_wDown_frozen = eta*wDown*(SD->lattSize - SD->N - SD->MLLlen_down);
+  double pdf_wUp_frozen   = eta*wUp  *(SD->lattSize);
+  double cdf_wDown        =                    pdf_wDown;
+  double cdf_wUp          = cdf_wDown        + pdf_wUp;
+  double cdf_wDown_frozen = cdf_wUp          + pdf_wDown_frozen;
+  double cdf_wUp_frozen   = cdf_wDown_frozen + pdf_wUp_frozen;
+
+  double wTot = cdf_wUp_frozen ;
+
   if (time == -1.) {
     // pre-move, advance time until the first event.  Otherwise we
     // always end up moving right at time == 0
@@ -357,7 +371,7 @@ int EddFA_cycle(struct SimData *SD, double n) {
     int pos;
     double rand = genrand_real2() * wTot;
 
-    if (rand < (SD->MLLlen_down)*wDown) {
+    if (rand < cdf_wDown) {
       // pick some down spin to flip up
       int i = (int) (rand / wDown);
       pos = SD->MLL_down[i];
@@ -367,17 +381,60 @@ int EddFA_cycle(struct SimData *SD, double n) {
       addParticle(SD, pos, SD->inserttype);
       FAaddToMLL(SD, 'u', pos);
       SD->persist[pos] = 1;
-    }
-    else {
+    } else if (rand < cdf_wUp) {
       // pick some up spin to flip down
-      int i = (int) ((rand - (SD->MLLlen_down*wDown))  / wUp);
+      int i = (int) ((rand - cdf_wDown)  / wUp);
       pos = SD->MLL[i];
-      if (debugedd)
+      if (debugedd) {
 	printf("move: flipping up->down at pos:%d\n", pos);
+	if (i > SD->MLLlen )
+	  exit(158);
+      }
       FAremoveFromMLL(SD, 'u', pos);
       delParticle(SD, pos);
       FAaddToMLL(SD, 'd', pos);
       SD->persist[pos] = 1;
+    } else if (rand < cdf_wDown_frozen) {
+      // Pick a immobile down spin to flip.
+      exit(56); // This is not working yet!
+      while (1) {
+	// Find a down spin that isn't active
+	pos = SD->lattSize * genrand_real2();
+	if (SD->lattsite[pos] == S12_EMPTYSITE && /* site is down */
+	    SD->MLLr[pos] == -1 )                 /* site is not mobile */
+	  break;
+      }
+      if (debugedd) {
+	// Some error checking
+	printf("move: (immoblie) flipping down->up at pos:%d\n", pos);
+      }
+      if ( frozenEnabled && SD->frozen[pos]) {
+	// If we are frozen, do nothing.
+      } else {
+	addParticle(SD, pos, SD->inserttype);
+	SD->persist[pos] = 1;
+      }
+    } else { // (rand < cdf_wUp_frozen)
+      // Pick a immobile up spin to flip.
+      exit(56); // This is not working yet!
+      while (1) {
+	// Find a down spin that isn't active
+	int i = SD->N * genrand_real2();
+	pos = SD->atompos[i];
+	if (SD->MLLr[pos] == -1 )                 /* site is not mobile */
+	  break;
+      }
+      if (debugedd) {
+	// Some error checking
+	printf("move: (immobile) flipping up->down at pos:%d\n", pos);
+	if (SD->lattsite[pos] == S12_EMPTYSITE) exit(165);
+      }
+      if ( frozenEnabled && SD->frozen[pos]) {
+	// If we are frozen, do nothing.
+      } else {
+	delParticle(SD, pos);
+	SD->persist[pos] = 1;
+      }
     }
 
     //llist.n = 0;
@@ -387,11 +444,21 @@ int EddFA_cycle(struct SimData *SD, double n) {
       int adjpos = SD->conn[pos*connMax + conni];
       EddFA_updateLatPos(SD, adjpos);
     }
-    
+
     naccept += 1;
-    
+
+    pdf_wDown        = wDown * (SD->MLLlen_down);
+    pdf_wUp          = wUp   * (SD->MLLlen     );
+    pdf_wDown_frozen = eta*wDown*(SD->lattSize - SD->N - SD->MLLlen_down);
+    pdf_wUp_frozen   = eta*wUp  *(SD->lattSize);
+    cdf_wDown        =                    pdf_wDown;
+    cdf_wUp          = cdf_wDown        + pdf_wUp;
+    cdf_wDown_frozen = cdf_wUp          + pdf_wDown_frozen;
+    cdf_wUp_frozen   = cdf_wDown_frozen + pdf_wUp_frozen;
+
+    wTot = cdf_wUp_frozen ;
+
     // Advance time
-    wTot = SD->MLLlen_down * wDown   +   SD->MLLlen * wUp;
     double timestep = 1./wTot;
     timestep *= -log(genrand_real3());  // exponential distribution of times.
                                         // genrand_real3()  -> (0, 1)
