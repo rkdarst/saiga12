@@ -178,6 +178,18 @@ class GridNd(saiga12.Sys):
         """
         self.makegrid(*latticeReInitData)
 
+    def _formatLattSiteToPrint(self, pos):
+        active = False
+        if self.MLLr is not None and self.MLLr[pos] != S12_EMPTYSITE:
+            active = True
+        if self.lattsite[pos] == S12_EMPTYSITE:
+            if active:
+                return "\33[1;31m ..\33[0m"
+            else:
+                return " __"
+        if active:
+            return "\33[1;31m%3d\33[0m"%self.lattsite[pos]
+        return "%3d"%self.lattsite[pos]
 
 
 class SquareGrid(GridNd):
@@ -240,14 +252,20 @@ class Grid2d(SquareGrid):
          ))
 
     def printLattice(self, lattice=None):
+        pos = -1
         if lattice is None:
             lattice = self.lattsite.reshape(self.lattShape)
         for row in lattice:
+            line = ""
             for e in row:
-                if e == S12_EMPTYSITE:
-                    e = "__"
-                print "%2s"%e,
-            print
+                pos += 1
+                line += self._formatLattSiteToPrint(pos)
+                if self.atompos[e] != S12_EMPTYSITE:
+                    assert pos == self.atompos[e]
+                #if e == S12_EMPTYSITE:
+                #    e = "__"
+                #print "%2s"%e,
+            print line
     def printLatticeDots(self, lattice=None):
         if lattice is None:
             lattice = self.lattsite.reshape(self.lattShape)
