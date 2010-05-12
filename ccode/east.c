@@ -98,8 +98,8 @@ inline void EddEast_updateLatPos(struct SimData *SD, int pos) {
 
 
   int state = SD->lattsite[pos] != S12_EMPTYSITE;
-  if(debugedd) 
-    printf("state is: %d (should be 0 or 1)\n", state);
+  if (debugedd)
+    printf("EddEast_updateLatPos: at update: pos:%d, state=%d\n", pos, state);
   if (SD->flags & S12_FLAG_FROZEN  &&  SD->frozen[pos]) {
     isAllowedMove = 0;
     }
@@ -186,7 +186,8 @@ int EddEast_consistencyCheck(struct SimData *SD) {
       // all these greater ones should be blank
       if (SD->MLL[MLLlocation] != -1) {
 	retval += 1;
-	printf("error rcaohantohk\n");
+	printf("error rcaohantohk: MLL loc %d not empty (points to %d)\n",
+	       MLLlocation, SD->MLL[MLLlocation]);
       }
     }
   }
@@ -200,7 +201,8 @@ int EddEast_consistencyCheck(struct SimData *SD) {
       // if it's less than the list length, then it should be look-up able.
       if (MLLlocation != SD->MLLr[SD->MLL_down[MLLlocation]]) {
 	retval += 1;
-	printf("error yborkrk\n");
+	printf("error yborkrk: MLLlocation(down):%d pos:%d\n", MLLlocation,
+                                         SD->MLL_down[MLLlocation]);
       }
     }
     else {
@@ -215,7 +217,7 @@ int EddEast_consistencyCheck(struct SimData *SD) {
   // be... 
   int pos;
   for (pos=0 ; pos<SD->lattSize ; pos++) {
-    if (debugedd) printf("--cc: pos: %d\n", pos);
+    //if (debugedd) printf("--cc: pos: %d\n", pos);
     int atomtype = SD->atomtype[SD->lattsite[pos]];
     if (SD->flags & S12_FLAG_FROZEN  &&  SD->frozen[pos]) {
       // Site is frozen.  It must not be in MLLr whether it is up or down.
@@ -252,14 +254,14 @@ int EddEast_consistencyCheck(struct SimData *SD) {
 	// We can flip down
 	if (SD->MLLr[pos] == -1) {
 	  retval += 1;
-	  printf("error ycorkon pos:%d\n", pos);
+	  printf("error ycorkon: up site allowed to flip down but not in MLLr pos:%d\n", pos);
 	}
       }
       else {
 	// not allowed to flip down
 	if (SD->MLLr[pos] != -1) {
 	  retval += 1;
-	  printf("error xkrgcaon\n");
+	  printf("error xkrgcaon: up site not allowed to flip down but in MLLr: %d\n", pos);
 	}
       }
     }
