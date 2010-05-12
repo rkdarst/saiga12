@@ -66,3 +66,29 @@ for i in xrange(10):
 #print "time:", resource.getrusage(resource.RUSAGE_SELF).ru_utime-t1
 
 assert S2.eddConsistencyCheck() == 0
+
+
+# Soft FA
+# All sites have some smamll probability of moving.
+if False:
+    print "\nTesting Soft FA"
+
+    S2 = Grid2d()
+    S2.makegrid(*dim)
+    S2.inserttype = type_
+    S2.setCycleMode('fredricksonandersen')
+    S2.addParticles({type_: density})
+    S2.setCycleMoves(1)
+    S2.eddEnable()
+    S2.hardness = 1
+    S2.beta = 1/.1
+
+    for i in xrange(10):
+        S2.cycle(cycleTime)
+        print "-->", i, "  ", \
+              S2.mctime, S2.N, S2.naccept, "cc:", S2.eddConsistencyCheck()
+        assert S2.naccept > 0, \
+                   "Fredrickson-Andersen test not running!"
+        #raw_input('> ')
+
+    S2.printLattice()
