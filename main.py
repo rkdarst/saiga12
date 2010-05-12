@@ -172,6 +172,11 @@ def getClib():
         ("EddEast_init",             None,     (SimData_p, )),
         ("EddEast_consistencyCheck", c_int,    (SimData_p, )),
         ("EddEast_cycle",            c_int,    (SimData_p, c_double)),
+
+        ("EddSpiral_updateLatPos",     None,     (SimData_p, c_int, )),
+        ("EddSpiral_init",             None,     (SimData_p, )),
+        ("EddSpiral_consistencyCheck", c_int,    (SimData_p, )),
+        ("EddSpiral_cycle",            c_int,    (SimData_p, c_double)),
         )
     for name, restype, argtypes in cfuncs:
         getattr(C, name).restype  = restype
@@ -296,6 +301,19 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
                              dtype=numpy_int)
             self.orient[:] = S12_EMPTYSITE
             self.setEnergyMode('ctcc')
+        elif cycleMode.lower() == 'spiral':
+            if len(self.lattShape) != 2 or self.connMax != 4:
+                raise "Error: Spiral model must have a square lattice"
+            self.cycleMode = S12_CYCLE_SPIRAL
+            self._eddInit = self.C.EddSpiral_init
+            self._eddUpdateLatPos = self.C.EddSpiral_updateLatPos
+            self._eddConsistencyCheck = self.C.EddSpiral_consistencyCheck
+            self._eddCycle = self.C.EddSpiral_cycle
+            self.setEnergyMode('zero')
+            if self.lattSize <= 0:
+                raise Exception, ("lattSize is not set-- you must set up "+
+                                 "your arrays before enabling Spiral dynamics")
+            self._allocPersistArray() # automatically set to zeros
 
         else:
             raise Exception("Unknown cycle mode: %s", cycleMode)
@@ -865,7 +883,8 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
             ( self.cycleModeStr == 'ctcc' and
               self.energyModeStr == 'ctcc' and
               ( self.beta == inf or self.hardness == inf )
-            )
+            ) or
+            self.cycleModeStr == 'spiral'
           ):
             return True
         if raiseException:
@@ -877,7 +896,7 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
             return
         assert self.lattSize > 0, "lattSize <= zero... is grid initialized?"
         MLLsize = self.lattSize*self.connMax
-        if self.cycleModeStr in ('fredricksonandersen', 'east'):
+        if self.cycleModeStr in ('fredricksonandersen', 'east', 'spiral'):
             MLLsize = self.lattSize
             self._allocArray("MLL_down", shape=MLLsize, dtype=numpy_int)
             self.MLL_down[:] = -1

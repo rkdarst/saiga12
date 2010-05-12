@@ -113,7 +113,7 @@ class IOSys(object):
         else:
             raise Exception("Invalid save version when loading: %s"%
                             state['stateSaveVersion'])
-        if self.cycleModeStr in ("fredricksonandersen", "east"):
+        if self.cycleModeStr in ("fredricksonandersen", "east", "spiral"):
             self.eddEnable()
         if state.has_key("persist"):
             version, persist = state["persist"]
