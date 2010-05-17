@@ -62,7 +62,7 @@ for cycleMode in ('montecarlo', 'ctcc', 'kobandersen',):
     assert abs(nacceptRegular-nacceptEDD)/(.5*(nacceptRegular+nacceptEDD)) < .05
 
 
-for cycleMode in ('fredricksonandersen', 'east',):
+for cycleMode in ('fredricksonandersen', 'east', 'spiral'):
     print
     print "Mode:", cycleMode
     S = saiga12.Grid2d()
@@ -78,6 +78,10 @@ for cycleMode in ('fredricksonandersen', 'east',):
         S.addParticles({1:.4})
         S.inserttype = 1
         S.beta = 1/.5
+    elif cycleMode == 'spiral':
+        S.addParticles({1:.55})
+        S.inserttype = 1
+        S.beta = -1/.5
     #S.setCycleMoves()
 
     #frozenSites = frozen_bubble(S, length, radius=5)
@@ -87,6 +91,7 @@ for cycleMode in ('fredricksonandersen', 'east',):
                    90,91,92,93,94,95,96,97,98,99, ]
     S.setFrozenSites(frozenSites)
     origContents = S.lattsite[frozenSites] != saiga12.S12_EMPTYSITE
+    origLattsites = S.lattsite.copy()
 
     S.eddEnable()
     assert not S.eddConsistencyCheck()
@@ -96,6 +101,7 @@ for cycleMode in ('fredricksonandersen', 'east',):
         assert not S.eddConsistencyCheck()
         assert ((S.lattsite[frozenSites] != saiga12.S12_EMPTYSITE)
                 == origContents).all()
+        assert (S.lattsite != origLattsites).any()
 
 
         #print S.printLattice().reshape(length, length)
