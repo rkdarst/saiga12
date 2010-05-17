@@ -241,6 +241,9 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
         'ctcc'        -- On a lattice, with one directional degree of
                          freedom.
         'east'        -- East model (one sided Fredrickson-Anderson).
+        'spiral'      -- A model that can be blocked by neighbors on the
+                         (N/NE and S/SW) or (E/SE and W/NW) sides.
+                         Biroli, Toninelli, Euro Phys J B 64 567-572 (2008)
         """
         # self.cycleModeStr is what is used when save/reloading.
         self.cycleModeStr = cycleMode
@@ -941,7 +944,7 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
             n = 100
         elif self.cycleModeStr == 'kobandersen':
             n = 100
-        elif self.cycleModeStr in ('fredricksonandersen', 'east'):
+        elif self.cycleModeStr in ('fredricksonandersen', 'east', 'spiral'):
             return # it should always be enabled for FA.
         elif self.cycleModeStr == 'ctcc':
             n = 100

@@ -307,7 +307,9 @@ int EddSpiral_cycle(struct SimData *SD, double n) {
   //printf("beta:%f c:%f\n", SD->beta, c);
   double wUp = 1-(c);
   double wDown = c;
-  double eta = exp(-SD->beta*SD->hardness);
+  double eta = 0;
+  if (SD->hardness != 1./0.)
+    eta = exp(-SD->beta*SD->hardness);
 
   double pdf_wDown        = wDown * (SD->MLLlen_down);
   double pdf_wUp          = wUp   * (SD->MLLlen     );
