@@ -606,10 +606,21 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
         simulation.
         """
         moves = int(n * self.movesPerCycle)
+        naccept = 0
+        # If moves > 2e9, we will integer overflow so do it in pieces:
+        while moves > 2e9:
+            if self._eddEnabled:
+                naccept += self._eddCycle(self.SD_p, 2000000000)
+            else:
+                naccept += self.C.cycle(self.SD_p, 2000000000)
+            moves -= 2000000000
+            assert moves > 0
+        # Do the remainder:
         if self._eddEnabled:
-            naccept = self._eddCycle(self.SD_p, moves)
+            naccept += self._eddCycle(self.SD_p, moves)
         else:
-            naccept = self.C.cycle(self.SD_p, moves)
+            naccept += self.C.cycle(self.SD_p, moves)
+        # continued
         self.mctime += n
         self.naccept += naccept
         return naccept
