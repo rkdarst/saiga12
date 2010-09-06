@@ -58,6 +58,10 @@ class TestSequenceFunctions(unittest.TestCase):
         execfile("tests/scripttest.py", {})
     def testSpinGlass(self):
         execfile("tests/spinglasstest.py", {})
+    def testSpiral(self):
+        execfile("tests/spiraltest.py", {})
+    def testSquarePlaquette(self):
+        execfile("tests/squareplaquettetest.py", {'short': True})
     def testVibrations(self):
         execfile("tests/vibrationtest.py", {})
 

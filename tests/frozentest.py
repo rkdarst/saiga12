@@ -62,7 +62,8 @@ for cycleMode in ('montecarlo', 'ctcc', 'kobandersen',):
     assert abs(nacceptRegular-nacceptEDD)/(.5*(nacceptRegular+nacceptEDD)) < .05
 
 
-for cycleMode in ('fredricksonandersen', 'east', 'spiral'):
+for cycleMode in ('fredricksonandersen', 'east', 'spiral',
+                  'squareplaquette'):
     print
     print "Mode:", cycleMode
     S = saiga12.Grid2d()
@@ -82,6 +83,11 @@ for cycleMode in ('fredricksonandersen', 'east', 'spiral'):
         S.addParticles({1:.55})
         S.inserttype = 1
         S.beta = -1/.5
+    elif cycleMode == 'squareplaquette':
+        S.beta = -1/.5
+        S.hardness = 1
+        S.addParticles({1:.55})
+        S.inserttype = 1
     #S.setCycleMoves()
 
     #frozenSites = frozen_bubble(S, length, radius=5)
