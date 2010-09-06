@@ -178,17 +178,26 @@ class GridNd(saiga12.Sys):
         """
         self.makegrid(*latticeReInitData)
 
-    def _formatLattSiteToPrint(self, pos):
-        active = False
+    def _formatLattSiteToPrint(self, pos, diffwith=None):
+        active = changed = False
         if self.MLLr is not None and self.MLLr[pos] != S12_EMPTYSITE:
             active = True
+        if diffwith:
+            if ( self.lattsite[pos]!=S12_EMPTYSITE and
+                 diffwith.lattsite[pos]==S12_EMPTYSITE ) or \
+               ( self.lattsite[pos]==S12_EMPTYSITE and
+                 diffwith.lattsite[pos]!=S12_EMPTYSITE):
+                changed = True
+        if diffwith and changed:
+            if self.lattsite[pos] == S12_EMPTYSITE:
+                if active:  return "\33[1;34m ..\33[0m"
+                else:       return "\33[34m ..\33[0m"
+            if active:      return "\33[1;34m%3d\33[0m"%self.lattsite[pos]
+            return                 "\33[34m%3d\33[0m"%self.lattsite[pos]
         if self.lattsite[pos] == S12_EMPTYSITE:
-            if active:
-                return "\33[1;31m ..\33[0m"
-            else:
-                return " __"
-        if active:
-            return "\33[1;31m%3d\33[0m"%self.lattsite[pos]
+            if active:  return "\33[1;31m ..\33[0m"
+            else:       return " __"
+        if active:      return "\33[1;31m%3d\33[0m"%self.lattsite[pos]
         return "%3d"%self.lattsite[pos]
 
 
@@ -251,7 +260,7 @@ class Grid2d(SquareGrid):
          (-1, 0 ),
          ))
 
-    def printLattice(self, lattice=None):
+    def printLattice(self, lattice=None, diffwith=None):
         pos = -1
         if lattice is None:
             lattice = self.lattsite.reshape(self.lattShape)
@@ -259,7 +268,7 @@ class Grid2d(SquareGrid):
             line = ""
             for e in row:
                 pos += 1
-                line += self._formatLattSiteToPrint(pos)
+                line += self._formatLattSiteToPrint(pos, diffwith=diffwith)
                 if self.atompos[e] != S12_EMPTYSITE:
                     assert pos == self.atompos[e]
                 #if e == S12_EMPTYSITE:
