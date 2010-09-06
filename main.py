@@ -177,6 +177,11 @@ def getClib():
         ("EddSpiral_init",             None,     (SimData_p, )),
         ("EddSpiral_consistencyCheck", c_int,    (SimData_p, )),
         ("EddSpiral_cycle",            c_int,    (SimData_p, c_double)),
+
+        #("EddSPM_updateLatPos",    None,     (SimData_p, c_int, )),
+        #("EddSPM_init",            None,     (SimData_p, )),
+        #("EddSPM_consistencyCheck",c_int,    (SimData_p, )),
+        #("EddSPM_cycle",           c_int,    (SimData_p, c_double)),
         )
     for name, restype, argtypes in cfuncs:
         getattr(C, name).restype  = restype
@@ -317,6 +322,20 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
                 raise Exception, ("lattSize is not set-- you must set up "+
                                  "your arrays before enabling Spiral dynamics")
             self._allocPersistArray() # automatically set to zeros
+        elif cycleMode.lower() == 'squareplaquette':
+            if len(self.lattShape) != 2 or self.connMax != 4:
+                raise "Error: square plaquette model must have a square lattice"
+            self.cycleMode = S12_CYCLE_SPINMC
+            #self._eddInit =             self.C.EddSPM_init
+            #self._eddUpdateLatPos =     self.C.EddSPM_updateLatPos
+            #self._eddConsistencyCheck = self.C.EddSPM_consistencyCheck
+            #self._eddCycle =            self.C.EddSPM_cycle
+            if self.lattSize <= 0:
+                raise Exception, ("lattSize is not set-- you must set up "+
+                                 "your arrays before enabling Spiral dynamics")
+            self._allocPersistArray() # automatically set to zeros
+            #self.setEnergyMode('montecarlo')
+            self.setEnergyMode('squareplaquette')
 
         else:
             raise Exception("Unknown cycle mode: %s", cycleMode)
@@ -355,6 +374,8 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
             self.energyMode = S12_ENERGY_ZERO
         elif energyMode.lower() == 'ctcc':
             self.energyMode = S12_ENERGY_CTCC
+        elif energyMode.lower() == 'squareplaquette':
+            self.energyMode = S12_ENERGY_SPM
         else:
             raise Exception("Unknown energy mode: %s", energyMode)
     

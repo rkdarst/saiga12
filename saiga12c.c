@@ -15,6 +15,7 @@
 #define S12_ENERGY_BM (1)
 #define S12_ENERGY_ZERO (2)
 #define S12_ENERGY_CTCC (3)
+#define S12_ENERGY_SPM (4)
 #define S12_ENERGY_BMnotzero (10)
 #define S12_ENERGY_BMimmobile1 (11)
 #define S12_ENERGY_BMimmobile1b (12)
@@ -24,6 +25,7 @@
 #define S12_CYCLE_CTCC (4)
 #define S12_CYCLE_EAST (5)
 #define S12_CYCLE_SPIRAL (6)
+#define S12_CYCLE_SPINMC (7)
 #define S12_CYCLE_CTCCclassic (10)
 #define S12_FLAG_VIB_ENABLED (1)
 #define S12_FLAG_DOSIN (2)
@@ -319,6 +321,7 @@ void loadStateFromSave(struct SimData *SD) {
  */
 #include "ccode/energy_bm.c"
 #include "ccode/energy_ctcc.c"
+#include "ccode/energy_squareplaquette.c"
 
 inline double energy_posLocal(struct SimData *SD, int pos) {
   /*  Energy of a particle at one particular position.  This function
@@ -339,6 +342,8 @@ inline double energy_posLocal(struct SimData *SD, int pos) {
     return energyBMimmobile1_posLocal(SD, pos);
   else if (SD->energyMode == S12_ENERGY_BMimmobile1b)
     return energyBMimmobile1b_posLocal(SD, pos);
+  else if (SD->energyMode == S12_ENERGY_SPM)
+    return energySPM_posLocal(SD, pos);
   // add new energy modes above this line.
   else {
     if (errorcheck) {
@@ -364,6 +369,8 @@ inline double energy_pos(struct SimData *SD, int pos) {
     return energyBMimmobile1_pos(SD, pos);
   else if (SD->energyMode == S12_ENERGY_BMimmobile1b)
     return energyBMimmobile1b_pos(SD, pos);
+  else if (SD->energyMode == S12_ENERGY_SPM)
+    return energySPM_pos(SD, pos);
   // add new energy modes above this line.
   else {
     if (errorcheck) {
@@ -476,6 +483,7 @@ int cycleFA(struct SimData *SD, double n);
 int cycleCTCC(struct SimData *SD, double n);
 int cycleCTCCclassic(struct SimData *SD, double n);
 inline int cycleKA_translate(struct SimData *SD);
+int cycleSpinMC(struct SimData *SD, double n);
 
 
 int cycle(struct SimData *SD, double n) {
@@ -491,6 +499,8 @@ int cycle(struct SimData *SD, double n) {
     return cycleCTCC(SD, n);
   else if (SD->cycleMode == S12_CYCLE_CTCCclassic)
     return cycleCTCCclassic(SD, n);
+  else if (SD->cycleMode == S12_CYCLE_SPINMC)
+    return cycleSpinMC(SD, n);
   else {
     printf("Cycle mode not set: %d", SD->cycleMode);
     exit(49);
@@ -518,6 +528,7 @@ inline void EddEast_updateLatPos(struct SimData *SD, int pos);
 inline void EddSpiral_updateLatPos(struct SimData *SD, int pos);
 #include "ccode/spiral.c"
 
+#include "ccode/spinmontecarlo.c"
 
 
 

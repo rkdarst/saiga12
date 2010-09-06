@@ -10,6 +10,7 @@ S12_ENERGY_AVAIL  = (1, 2, 3, 10, 11, 12)
 S12_ENERGY_BM     = 1             # biroli-mezard thermodynamic lattice glass
 S12_ENERGY_ZERO   = 2             # all configs have zero energy
 S12_ENERGY_CTCC   = 3             # an orientation and an overlap exclusion.
+S12_ENERGY_SPM    = 4             # Square plaquette model
 # somewhat experimental modes:
 S12_ENERGY_BMnotzero     = 10
 S12_ENERGY_BMimmobile1   = 11
@@ -20,6 +21,7 @@ S12_CYCLE_FA      = 3             # fredrickson-andersen
 S12_CYCLE_CTCC    = 4             # an orientation and an overlap exclusion.
 S12_CYCLE_EAST    = 5             # East model - one-sided FA
 S12_CYCLE_SPIRAL  = 6             # Spiral model - Toninelli, EPJ B, 2008
+S12_CYCLE_SPINMC  = 7             # monte carlo for spin systems
 S12_CYCLE_CTCCclassic    = 10     #
 S12_FLAG_VIB_ENABLED     = 1      # vibrations are enabled
 S12_FLAG_DOSIN           = 2      # use 'sin' in fourpoint C func
