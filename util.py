@@ -130,7 +130,8 @@ def cartesianproduct(*args):
 def diff(fname0, *fileNames):
     frame0 = io_open(fname0)
 
-    if frame0.cycleModeStr in ('fredricksonandersen', ):
+    if frame0.cycleModeStr in ('fredricksonandersen', 'east', 'spiral',
+                               'spinmontecarlo'):
         difftype = 'spin'
     else:
         difftype = 'particle'
