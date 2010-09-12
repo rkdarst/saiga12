@@ -36,9 +36,18 @@
 #define S12_FLAG_INCOMPAT (S12_FLAG_FROZEN)
 
 
-int debug = 0;
-int errorcheck = 1;  // print errors if inconsistent
-int debugedd = 0;    // print out info always
+//These all used to be globally defined ints as flags.
+#ifndef debug
+#define debug 0
+#endif
+// Check for consistency errors and print if found
+#ifndef errorcheck
+#define errorcheck 0
+#endif
+// Log event-driven dynamics code
+#ifndef debugedd
+#define debugedd 0
+#endif
 
 struct SimData {
   double beta;
