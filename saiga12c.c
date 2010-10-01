@@ -483,7 +483,7 @@ inline void ensureInMLLIf(int isAllowed, struct SimData *SD,int pos,int conni){
   else
     ensureNotInMLL(SD, pos, conni);
 }
-
+#include "ccode/spinedd.c"
 
 
 int cycleMC(struct SimData *SD, double n);
