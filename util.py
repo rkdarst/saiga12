@@ -1,6 +1,7 @@
 # Richard Darst, September 2008
 
 import math
+from math import log, exp
 import numpy
 import sys
 
@@ -353,6 +354,12 @@ def msdPosition(S0, S, type_=saiga12.S12_TYPE_ANY, otherS=None):
     maxd = max(numpy.sqrt(d2))
     msd = sum(d2) / len(d2)
     return msd
+
+def TtoC(T):
+    return 1./(1+exp(1./T))
+
+def CtoT(c):
+    return 1./(log((1./c)-1.))
 
 
 if __name__ == "__main__":
