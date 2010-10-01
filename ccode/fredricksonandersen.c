@@ -66,6 +66,9 @@ int cycleFA(struct SimData *SD, double n) {
 
 
 
+inline int FANNeighbors(struct SimData *SD, int pos) {
+  return(SD->nneighbors[pos]);
+}
 
 void EddFA_init(struct SimData *SD) {
   int pos;
@@ -93,12 +96,12 @@ inline void EddFA_updateLatPos(struct SimData *SD, int pos) {
   else if (state == 1) {
     int atomtype = SD->atomtype[SD->lattsite[pos]];
     if(debugedd) 
-      printf("pos:%d nneighbors:%d atomtype:%d\n", pos, SD->nneighbors[pos],
-	     atomtype);
-    if (SD->nneighbors[pos] >= atomtype)
+      printf("pos:%d nneighbors:%d atomtype:%d\n", pos,
+	     FANNeighbors(SD, pos), atomtype);
+    if (FANNeighbors(SD, pos) >= atomtype)
       isAllowedMove = 1;
   }
-  else if (state == 0  && SD->nneighbors[pos] >= SD->inserttype)
+  else if (state == 0  && FANNeighbors(SD, pos) >= SD->inserttype)
     {
       isAllowedMove = 1;
     }
@@ -214,7 +217,7 @@ int EddFA_consistencyCheck(struct SimData *SD) {
       }
     }
     else if (SD->lattsite[pos] == S12_EMPTYSITE) {
-      if (SD->nneighbors[pos] >= SD->inserttype) {
+      if (FANNeighbors(SD, pos) >= SD->inserttype) {
 	// It can flip up -- be sure it's in the right list.
         if (SD->MLLr[pos] == -1) {
 	  retval += 1;
@@ -232,7 +235,7 @@ int EddFA_consistencyCheck(struct SimData *SD) {
       // basically reproduce the logic of the update function.
       
       int isAllowedMove;
-      if (SD->nneighbors[pos] >= atomtype)
+      if (FANNeighbors(SD, pos) >= atomtype)
 	isAllowedMove = 1;
       else
 	isAllowedMove = 0;
