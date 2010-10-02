@@ -25,6 +25,8 @@ c_double_p = ctypes.POINTER(c_double)
 c_void_p = ctypes.c_void_p
 numpy_int = ctypes.c_int
 numpy_double = ctypes.c_double
+CFUNCTYPE = ctypes.CFUNCTYPE
+POINTER = ctypes.POINTER
 def get_cdoublep(array):
     return array.ctypes.data_as(c_double_p)
 def get_cintp(array):
@@ -32,7 +34,14 @@ def get_cintp(array):
 
 # Shared state between python and C.
 class SimData(ctypes.Structure):
-    _fields_ = [
+    pass
+# This function lets us go from C->Python for interaction
+def callback(SD):
+    S = SD.contents.S
+    from fitz.interact import interact ; interact()
+    return 0
+Callback = CFUNCTYPE(c_int, POINTER(SimData))
+SimData._fields_ = [
         ("beta", c_double),
         ("N", c_int),             # total number of particles
         ("ntype", c_void_p),      # number of each atomtype.
@@ -42,6 +51,8 @@ class SimData(ctypes.Structure):
         ("cycleMode", c_int),     # 1=MC, 2=kob-andersen
         ("energyMode", c_int),    # 1=BM, 2=all zero
         ("flags", c_int),         # flags for certain sim parameters
+        ("callback", Callback),   # callback to let us get python shell from C
+        ("S", ctypes.py_object),  # Pointer for function above
 
         ("uVTchempotential", c_double),
         ("inserttype", c_int),
@@ -206,6 +217,8 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
         self.__dict__["SD"] = SD
         self.C = getClib()
         self.SD_p = ctypes.pointer(SD)
+        self.callback = Callback(callback)
+        self.S = self
 
         # Start off lattSize as negative -- if it is used before it is
         # set, then hopefully it will raise some errors.

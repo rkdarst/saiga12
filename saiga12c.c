@@ -59,6 +59,8 @@ struct SimData {
   int cycleMode;   // see python for definition
   int energyMode;  // see python for definition
   int flags;
+  int (*callback)(struct SimData *SD);
+  void *S;
 
   double uVTchempotential;
   int inserttype;  // must be generalized later.
