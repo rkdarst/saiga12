@@ -33,6 +33,8 @@ class TestSequenceFunctions(unittest.TestCase):
 
     def testFA(self):
         execfile("tests/fredricksonandersentest.py", {})
+    def testFAsoft(self):
+        execfile("tests/fredricksonandersensofttest.py", {})
     def testFrozen(self):
         execfile("tests/frozentest.py")
     def testGridUnitTests(self):

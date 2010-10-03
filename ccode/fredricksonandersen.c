@@ -266,7 +266,8 @@ int EddFA_cycle(struct SimData *SD, double n) {
     printf("Incompatible features seen: %d (bxcon)\n", SD->flags);
     exit(205);
   }
-  if (SD->MLLlen == 0 && SD->MLLlen_down == 0) {
+  double eta = exp(-SD->beta*SD->hardness);
+  if (SD->MLLlen == 0 && SD->MLLlen_down == 0 && eta == 0 ) {
     // If no moves are possible, then time passes by instantly.
     SD->MLLextraTime = 0;
     return(0);
@@ -285,12 +286,12 @@ int EddFA_cycle(struct SimData *SD, double n) {
   //printf("beta:%f c:%f\n", SD->beta, c);
   double wUp = 1-(c);
   double wDown = c;
-  double eta = exp(-SD->beta*SD->hardness);
+  // eta is defined above
 
   double pdf_wDown        = wDown * (SD->MLLlen_down);
   double pdf_wUp          = wUp   * (SD->MLLlen     );
   double pdf_wDown_frozen = eta*wDown*(SD->lattSize - SD->N - SD->MLLlen_down);
-  double pdf_wUp_frozen   = eta*wUp  *(SD->lattSize);
+  double pdf_wUp_frozen   = eta*wUp  *(SD->N - SD->MLLlen);
   double cdf_wDown        =                    pdf_wDown;
   double cdf_wUp          = cdf_wDown        + pdf_wUp;
   double cdf_wDown_frozen = cdf_wUp          + pdf_wDown_frozen;
@@ -312,6 +313,7 @@ int EddFA_cycle(struct SimData *SD, double n) {
 
     if (rand < cdf_wDown) {
       // pick some down spin to flip up
+      if (debugedd) printf("flip: down -> up\n");
       int i = (int) (rand / wDown);
       pos = SD->MLL_down[i];
       if (debugedd)
@@ -322,6 +324,7 @@ int EddFA_cycle(struct SimData *SD, double n) {
       SD->persist[pos] = 1;
     } else if (rand < cdf_wUp) {
       // pick some up spin to flip down
+      if (debugedd) printf("flip: up -> down\n");
       int i = (int) ((rand - cdf_wDown)  / wUp);
       pos = SD->MLL[i];
       if (debugedd) {
@@ -335,16 +338,20 @@ int EddFA_cycle(struct SimData *SD, double n) {
       SD->persist[pos] = 1;
     } else if (rand < cdf_wDown_frozen) {
       // Pick a immobile down spin to flip.
-      exit(56); // This is not working yet!
+      if (debugedd) {
+	printf("flip: down -> up (frozen)\n");
+	printf("lattSize:%d N:%d MLLlen:%d MLLlen_down:%d \n",
+	       SD->lattSize, SD->N, SD->MLLlen, SD->MLLlen_down);
+      }
+      // Find a down spin that isn't active
       while (1) {
-	// Find a down spin that isn't active
 	pos = SD->lattSize * genrand_real2();
 	if (SD->lattsite[pos] == S12_EMPTYSITE && /* site is down */
 	    SD->MLLr[pos] == -1 )                 /* site is not mobile */
 	  break;
       }
+      // error checking
       if (debugedd) {
-	// Some error checking
 	printf("move: (immoblie) flipping down->up at pos:%d\n", pos);
       }
       if ( frozenEnabled && SD->frozen[pos]) {
@@ -355,17 +362,20 @@ int EddFA_cycle(struct SimData *SD, double n) {
       }
     } else { // (rand < cdf_wUp_frozen)
       // Pick a immobile up spin to flip.
-      exit(56); // This is not working yet!
+      if (debugedd) {
+	printf("flip: up -> down (frozen)\n");
+	printf("lattSize:%d N:%d MLLlen:%d MLLlen_down:%d \n",
+	       SD->lattSize, SD->N, SD->MLLlen, SD->MLLlen_down);
+      }
       while (1) {
-	// Find a down spin that isn't active
+	// Find an up spin that isn't active
 	int i = SD->N * genrand_real2();
 	pos = SD->atompos[i];
 	if (SD->MLLr[pos] == -1 )                 /* site is not mobile */
 	  break;
       }
+      // error checking
       if (debugedd) {
-	// Some error checking
-	printf("move: (immobile) flipping up->down at pos:%d\n", pos);
 	if (SD->lattsite[pos] == S12_EMPTYSITE) exit(165);
       }
       if ( frozenEnabled && SD->frozen[pos]) {
@@ -389,7 +399,7 @@ int EddFA_cycle(struct SimData *SD, double n) {
     pdf_wDown        = wDown * (SD->MLLlen_down);
     pdf_wUp          = wUp   * (SD->MLLlen     );
     pdf_wDown_frozen = eta*wDown*(SD->lattSize - SD->N - SD->MLLlen_down);
-    pdf_wUp_frozen   = eta*wUp  *(SD->lattSize);
+    pdf_wUp_frozen   = eta*wUp  *(SD->N - SD->MLLlen);
     cdf_wDown        =                    pdf_wDown;
     cdf_wUp          = cdf_wDown        + pdf_wUp;
     cdf_wDown_frozen = cdf_wUp          + pdf_wDown_frozen;

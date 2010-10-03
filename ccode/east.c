@@ -68,7 +68,6 @@ int cycleEast(struct SimData *SD, double n) {
 
 
 inline int EastNNeighbors(struct SimData *SD, int pos) {
-  //return(SD->nneighbors[pos]);  // Old way
   int neighbors=0;
   int i;
   int nconn_2=SD->connN[pos]/2;
@@ -276,11 +275,14 @@ int EddEast_cycle(struct SimData *SD, double n) {
     printf("Incompatible features seen: %d (bxcon)\n", SD->flags);
     exit(205);
   }
-  if (SD->MLLlen == 0 && SD->MLLlen_down == 0) {
+  double eta = exp(-SD->beta*SD->hardness);
+  if (SD->MLLlen == 0 && SD->MLLlen_down == 0 && eta == 0 ) {
     // If no moves are possible, then time passes by instantly.
     SD->MLLextraTime = 0;
     return(0);
   }
+  int frozenEnabled = SD->flags & S12_FLAG_FROZEN;
+
   int naccept = 0;
   //struct LList llist; llist.n = 0;
 
@@ -293,8 +295,19 @@ int EddEast_cycle(struct SimData *SD, double n) {
   //printf("beta:%f c:%f\n", SD->beta, c);
   double wUp = 1-(c);
   double wDown = c;
+  // eta is defined above
 
-  double wTot = SD->MLLlen_down * wDown   +   SD->MLLlen * wUp;
+  double pdf_wDown        = wDown * (SD->MLLlen_down);
+  double pdf_wUp          = wUp   * (SD->MLLlen     );
+  double pdf_wDown_frozen = eta*wDown*(SD->lattSize - SD->N - SD->MLLlen_down);
+  double pdf_wUp_frozen   = eta*wUp  *(SD->N - SD->MLLlen);
+  double cdf_wDown        =                    pdf_wDown;
+  double cdf_wUp          = cdf_wDown        + pdf_wUp;
+  double cdf_wDown_frozen = cdf_wUp          + pdf_wDown_frozen;
+  double cdf_wUp_frozen   = cdf_wDown_frozen + pdf_wUp_frozen;
+
+  double wTot = cdf_wUp_frozen ;
+
   if (time == -1.) {
     // pre-move, advance time until the first event.  Otherwise we
     // always end up moving right at time == 0
@@ -307,8 +320,9 @@ int EddEast_cycle(struct SimData *SD, double n) {
     int pos;
     double rand = genrand_real2() * wTot;
 
-    if (rand < (SD->MLLlen_down)*wDown) {
+    if (rand < cdf_wDown) {
       // pick some down spin to flip up
+      if (debugedd) printf("flip: down -> up\n");
       int i = (int) (rand / wDown);
       pos = SD->MLL_down[i];
       if (debugedd)
@@ -317,17 +331,68 @@ int EddEast_cycle(struct SimData *SD, double n) {
       addParticle(SD, pos, SD->inserttype);
       FAaddToMLL(SD, 'u', pos);
       SD->persist[pos] = 1;
-    }
-    else {
+    } else if (rand < cdf_wUp) {
       // pick some up spin to flip down
-      int i = (int) ((rand - (SD->MLLlen_down*wDown))  / wUp);
+      if (debugedd) printf("flip: up -> down\n");
+      int i = (int) ((rand - cdf_wDown)  / wUp);
       pos = SD->MLL[i];
-      if (debugedd)
+      if (debugedd) {
 	printf("move: flipping up->down at pos:%d\n", pos);
+	if (i > SD->MLLlen )
+	  exit(158);
+      }
       FAremoveFromMLL(SD, 'u', pos);
       delParticle(SD, pos);
       FAaddToMLL(SD, 'd', pos);
       SD->persist[pos] = 1;
+    } else if (rand < cdf_wDown_frozen) {
+      // Pick a immobile down spin to flip.
+      if (debugedd) {
+	printf("flip: down -> up (frozen)\n");
+	printf("lattSize:%d N:%d MLLlen:%d MLLlen_down:%d \n",
+	       SD->lattSize, SD->N, SD->MLLlen, SD->MLLlen_down);
+      }
+      // Find a down spin that isn't active
+      while (1) {
+	pos = SD->lattSize * genrand_real2();
+	if (SD->lattsite[pos] == S12_EMPTYSITE && /* site is down */
+	    SD->MLLr[pos] == -1 )                 /* site is not mobile */
+	  break;
+      }
+      // error checking
+      if (debugedd) {
+	printf("move: (immoblie) flipping down->up at pos:%d\n", pos);
+      }
+      if ( frozenEnabled && SD->frozen[pos]) {
+	// If we are frozen, do nothing.
+      } else {
+	addParticle(SD, pos, SD->inserttype);
+	SD->persist[pos] = 1;
+      }
+    } else { // (rand < cdf_wUp_frozen)
+      // Pick a immobile up spin to flip.
+      if (debugedd) {
+	printf("flip: up -> down (frozen)\n");
+	printf("lattSize:%d N:%d MLLlen:%d MLLlen_down:%d \n",
+	       SD->lattSize, SD->N, SD->MLLlen, SD->MLLlen_down);
+      }
+      while (1) {
+	// Find an up spin that isn't active
+	int i = SD->N * genrand_real2();
+	pos = SD->atompos[i];
+	if (SD->MLLr[pos] == -1 )                 /* site is not mobile */
+	  break;
+      }
+      // error checking
+      if (debugedd) {
+	if (SD->lattsite[pos] == S12_EMPTYSITE) exit(165);
+      }
+      if ( frozenEnabled && SD->frozen[pos]) {
+	// If we are frozen, do nothing.
+      } else {
+	delParticle(SD, pos);
+	SD->persist[pos] = 1;
+      }
     }
 
     //llist.n = 0;
@@ -337,11 +402,21 @@ int EddEast_cycle(struct SimData *SD, double n) {
       int adjpos = SD->conn[pos*connMax + conni];
       EddEast_updateLatPos(SD, adjpos);
     }
-    
+
     naccept += 1;
-    
+
+    pdf_wDown        = wDown * (SD->MLLlen_down);
+    pdf_wUp          = wUp   * (SD->MLLlen     );
+    pdf_wDown_frozen = eta*wDown*(SD->lattSize - SD->N - SD->MLLlen_down);
+    pdf_wUp_frozen   = eta*wUp  *(SD->N - SD->MLLlen);
+    cdf_wDown        =                    pdf_wDown;
+    cdf_wUp          = cdf_wDown        + pdf_wUp;
+    cdf_wDown_frozen = cdf_wUp          + pdf_wDown_frozen;
+    cdf_wUp_frozen   = cdf_wDown_frozen + pdf_wUp_frozen;
+
+    wTot = cdf_wUp_frozen ;
+
     // Advance time
-    wTot = SD->MLLlen_down * wDown   +   SD->MLLlen * wUp;
     double timestep = 1./wTot;
     timestep *= -log(genrand_real3());  // exponential distribution of times.
                                         // genrand_real3()  -> (0, 1)
