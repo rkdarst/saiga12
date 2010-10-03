@@ -919,11 +919,12 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
         - KA model
         - BM model with infinite hardness (T=0/beta=inf or hardness=inf)
         """
-        if (
+        if (# FA/East soft modes are handled by EDD code.
             self.cycleModeStr == 'fredricksonandersen' or
             self.cycleModeStr == 'east' or
             ( self.cycleModeStr == 'kobandersen' and
-              not (self.flags & S12_FLAG_KA_SOFT) ) or
+              not (self.flags & S12_FLAG_KA_SOFT)
+            ) or
             ( self.cycleModeStr == 'montecarlo' and
               self.energyModeStr == 'birolimezard' and
               ( self.beta == inf or self.hardness == inf )
