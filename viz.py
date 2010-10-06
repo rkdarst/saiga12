@@ -286,32 +286,36 @@ if __name__ == "__main__":
         from urllib import urlopen as open
     except ImportError:
         pass
-                        
 
-    fileNames = sys.argv[1:]
+    arguments = sys.argv[1:]
+    # bash filename sort ignores "-" which is annoying for negative numbers
+    #print arguments
+    arguments.sort()
+    listOfFrames, listOfNames = saiga12.util.openFiles(arguments)
+
     frame_index = 0
     wait = True
-    # bash filename sort ignores "-" which is annoying for negative numbers
-    fileNames.sort()  
-    #print fileNames
     V = None
     visual.scene.width, visual.scene.height = 800, 800
 
     while True:
-        fname = fileNames[frame_index]
-        S = saiga12.io.io_open(open(fname))
+        S = listOfFrames[frame_index]
+        if isinstance(S, str):
+            # We have delayed opening of individual objects, open them now
+            S = saiga12.io.io_open(S)
 
         if V == None or V.S.lattSize != S.lattSize:
             V = VizSystem(S)
             V.vizMakeBox()
         V.S = S
         V.vizDisplay()
-        
 
-        print fname[-20:], " d=%04.4f e=%4.4g "%(S.density, S.energy()),
+
+        print listOfNames[frame_index][-20:], \
+                " d=%04.4f e=%4.4g "%(S.density, S.energy()),
         sys.stdout.flush()
         frame_index = saiga12.util.getNewFrameIndex(
-                                              frame_index,len(fileNames), V=V)
+                                           frame_index,len(listOfFrames), V=V)
         if frame_index == None: break
     del V
     print

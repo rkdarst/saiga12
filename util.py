@@ -3,6 +3,7 @@
 import math
 from math import log, exp
 import numpy
+import cPickle as pickle
 import sys
 
 try:
@@ -128,14 +129,18 @@ def cartesianproduct(*args):
             for xs in cartesianproduct(*args[1:]):
                 yield (x,) + xs
 
-def diff(fname0, *fileNames):
-    frame0 = io_open(fname0)
+def diff(*fileNames):
+    listOfFrames, listOfNames = openFiles(fileNames)
+    frame0 = listOfFrames[0]
 
+    if isinstance(frame0, str):
+        frame0 = io_open(frame0)
     if frame0.cycleModeStr in ('fredricksonandersen', 'east', 'spiral',
                                'spinmontecarlo'):
         difftype = 'spin'
     else:
         difftype = 'particle'
+
     frame_index = 0
     V = viz.VizSystem(frame0)
     V.vizMakeBox()
@@ -143,11 +148,13 @@ def diff(fname0, *fileNames):
     print frame0.lattSize
     while True:
         print '\r',
-        print fileNames[frame_index][-20:],
-        frame = io_open(fileNames[frame_index])
+        print listOfNames[frame_index][-20:],
+        frame = listOfFrames[frame_index]
+        if isinstance(frame, str):
+            frame = io_open(frame)
         #print frame, frame0
         if frame0.lattShape != frame.lattShape:
-            raise "different lattice shapes!"
+            raise Exception("different lattice shapes!")
         for i in range(len(objs)):
             objs[0].visible = 0
             del objs[0]
@@ -225,7 +232,7 @@ def diff(fname0, *fileNames):
             print "%.4f"%(float(nMove )/frame.lattSize), \
                   "%.4f"%(float(nMoved)/frame.lattSize),
         sys.stdout.flush()
-        frame_index = getNewFrameIndex(frame_index, len(fileNames),
+        frame_index = getNewFrameIndex(frame_index, len(listOfFrames),
                                        V=V, otherObjects=objs)
         if frame_index == None: break
         
@@ -362,6 +369,42 @@ def CtoT(c):
     return 1./(log((1./c)-1.))
 
 
+def openFiles(arguments):
+    """Open a list of files
+
+    This function takes a list of filenames and opens each of them
+    using pickle in a logical manner:
+    - system objects are just opened
+    - list objects have all the systems in them appended to the
+      list of system objects
+    - dicts have their values appended to the list of system objects,
+      sorted by the keys
+
+    A 'list of names' is kept, in the format of filename:key
+
+    Returns (listOfFrames, listOfNames).
+    """
+    listOfFrames = [ ]
+    listOfNames  = [ ]
+    # If it is a list, look at the objects
+    # If it is a dict, look at the values
+    # Otherwise, assume it's a S object in the filename itself.
+    for fname in arguments:
+        data = pickle.load(open(fname))
+        if isinstance(data, list):
+            listOfFrames.extend(data)
+            listOfNames.extend([fname+':'+str(i) for i in range(len(data))])
+        if isinstance(data, dict):
+            sortedKeys = sorted(data.keys())
+            listOfNames.extend(fname+':'+str(x) for x in sortedKeys)
+            listOfFrames.extend([ data[name] for name in sortedKeys ])
+        else:
+            # We have a big list of fnames
+            listOfFrames.append(fname)
+            listOfNames.append(fname)
+    return listOfFrames, listOfNames
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 1 or sys.argv[1] in ('--help', '-h', 'help'):
         print """usage: util.py <command> <arguments>...
@@ -376,7 +419,7 @@ if __name__ == "__main__":
             print name, S.hash()
 
     elif sys.argv[1] == 'diff':
-        diff(sys.argv[2], *sys.argv[3:])
+        diff(*sys.argv[2:])
 
     elif sys.argv[1] == 'moves':
         moves(sys.argv[2:])
