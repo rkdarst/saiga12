@@ -998,6 +998,8 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
             origHash = self.hash()
             origSelf = self
             self = copy.copy(self)
+            if origSelf.flags & S12_FLAG_FROZEN:
+                self.setFrozenSites(numpy.where(origSelf.frozen))
         
         self.eddDisable()
         t = time.time()
