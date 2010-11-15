@@ -242,6 +242,62 @@ def diff(*fileNames):
     visual.scene.visible = 0
     print            
 
+def overlap(*fileNames):
+    listOfFrames, listOfNames = openFiles(fileNames)
+    frame0 = listOfFrames[0]
+
+    if isinstance(frame0, str):
+        frame0 = io_open(frame0)
+
+    frame_index = 0
+    V = viz.VizSystem(frame0)
+    V.vizMakeBox()
+    objs = [ ]
+    print frame0.lattSize
+    while True:
+        print '\r',
+        print listOfNames[frame_index][-20:],
+        frame = listOfFrames[frame_index]
+        if isinstance(frame, str):
+            frame = io_open(frame)
+        #print frame, frame0
+        if frame0.lattShape != frame.lattShape:
+            raise Exception("different lattice shapes!")
+        for i in range(len(objs)):
+            objs[0].visible = 0
+            del objs[0]
+        usePersist = False
+
+
+        if frame.persist is not None  and  usePersist:
+            for pos in range(frame0.lattSize):
+                if frame.persist[pos] != 0:
+                    objs.append(visual.sphere(
+                        pos=vector(frame0.coords(i)),
+                        radius=.25,
+                        color = visual.color.red
+                        ))
+        for pos in range(frame0.lattSize):
+            if not (frame0.lattsite[pos] != saiga12.S12_EMPTYSITE) or \
+                   not (frame.lattsite[pos] != saiga12.S12_EMPTYSITE):
+                continue
+            objs.append(visual.sphere(
+                pos=endCoords,
+                radius=.25,
+                color=visual.color.white
+                ))
+
+        sys.stdout.flush()
+        frame_index = getNewFrameIndex(frame_index, len(listOfFrames),
+                                       V=V, otherObjects=objs)
+        if frame_index == None: break
+
+    for i in range(len(objs)):
+        objs[0].visible = 0
+        del objs[0]
+    visual.scene.visible = 0
+    print
+
 def moves(fileNames):
     S = io_open(fileNames[0])
     V = viz.VizSystem(S)
@@ -430,6 +486,9 @@ if __name__ == "__main__":
         visualizeKvectors(sys.argv[2:], mode='each')
     elif sys.argv[1] == 'kvecs-avg':
         visualizeKvectors(sys.argv[2:], mode='avg')
+
+    elif sys.argv[1] == 'overlap':
+        overlap(sys.argv[2:])
 
     elif sys.argv[1] == 'info':
         for fname in sys.argv[2:]:
