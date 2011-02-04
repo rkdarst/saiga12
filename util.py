@@ -1,5 +1,6 @@
 # Richard Darst, September 2008
 
+import fcntl
 import math
 from math import log, exp
 import numpy
@@ -146,6 +147,47 @@ class Averager(object):
     def varsample(self):
         """Sample Standard Deviation"""
         return self.M2 / (self.n-1)
+
+class WorkUnit(object):
+    def __init__(self, datafile, units=None):
+        self.datafile = datafile
+        self.units = units
+
+        f = open(self.datafile, 'a')
+        fcntl.lockf(f, fcntl.LOCK_EX)
+        self.f = f
+
+        # Load the current data:
+        statuses = { }
+        for line in open(self.datafile):
+            if line == 'stopall':
+                self._stopall = True
+            status, unit = line.split(" ", 1)
+            unit = eval(unit) # Warning: assumes trusted.
+            if self.units:
+                assert unit in self.units, "Unknown work unit in the datafile"
+            statuses[unit] = status
+        self.statuses = statuses
+
+    def __del__(self):
+        self.f.close() # unlock it
+
+    def statusOf(self, unit):
+        if hasattr(self, '_stopall'):
+            return "finished"
+        if unit not in self.statuses:
+            return "unstarted"
+        return self.statuses[unit]
+    def markStarted(self, unit):
+        self.f.write("started %r\n"%(unit,))
+        self.f.flush()
+    def markFinished(self, unit):
+        self.f.write("finished %r\n"%(unit,))
+        self.f.flush()
+    def canRun(self, unit):
+        if self.statusOf(unit) == "unstarted":
+            return True
+        return False
 
 def cartesianproduct(*args):
     """Cartesion product of iterable arguments.
