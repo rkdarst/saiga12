@@ -86,7 +86,7 @@ class Averager(object):
         if 'n' in state:
             state['_n'] = state['n']
             del state['n']
-            self.__dict__.update(state)
+        self.__dict__.update(state)
     def add(self, value):
         """Add a new number to the dataset.
         """
