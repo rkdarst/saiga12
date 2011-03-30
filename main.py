@@ -665,6 +665,7 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
         are set via self.setCycleMoves().
         """
         self.mctime = 0
+        self.MLLextraTime = -1.
     def setCycleMoves(self, mode=None,
                       shift=0, insertdel=0):
         """Sets moves executed each cycle.
