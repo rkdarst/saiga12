@@ -162,6 +162,7 @@ class WorkUnit(object):
         for line in open(self.datafile):
             if line == 'stopall':
                 self._stopall = True
+                break
             status, unit = line.split(" ", 1)
             unit = eval(unit) # Warning: assumes trusted.
             if self.units:
