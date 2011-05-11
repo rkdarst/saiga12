@@ -8,7 +8,10 @@ debian package name 'python-visual', (import name `visual`).
 This module is primarily used via the `VizSystem` object.
 """
 
+import itertools
+
 import saiga12
+from saiga12 import S12_EMPTYSITE
 import numpy
 import visual
 import math
@@ -44,9 +47,14 @@ class VizSystem(object):
                        4:darkblue, 5:darkgreen, 6:blue, otherwise white.
 
     """
-    def __init__(self, S):
+    tagColor = (.5, 0, .5)
+    def __init__(self, S, mode="atoms", S0=None, limit=None):
         self.S = S
-        self._display = [ ]
+        self.S0 = S0
+        self._mode = mode
+        self._limit = limit
+        self.scene = visual.scene
+        self._atoms = [ ]
         self._otherObjects = [ ]
         self.vizColors = {
             0: visual.color.red,    # (1,0,0)
@@ -80,7 +88,7 @@ class VizSystem(object):
             z = 0
         else:
             x,y,z = self.S.physicalShape
-        visual.scene.center = visual.scene.originalCenter = (x/2., y/2., z/2.)
+        self.scene.center = self.scene.originalCenter = (x/2., y/2., z/2.)
         c = visual.color.blue
         self._otherObjects.extend((
         visual.cylinder(pos=(0,0,0), axis=(x, 0, 0), radius=radius, color=c),
@@ -100,6 +108,35 @@ class VizSystem(object):
         ))
 
     def vizDisplay(self):
+        if   self._mode == 'atoms':    self._displayAtoms()
+        elif self._mode == 'persist':  self._displayPersist()
+        elif self._mode == 'overlap':  self._displayOverlap()
+        elif self._mode == 'diff':     self._displayDiff()
+        elif self._mode == 'moves':    self._displayMoves()
+        elif self._mode == 'empty':    self._displayEmpty()
+        else: print "Unknown display mode: '%s'"%self._mode
+    __call__ = vizDisplay
+    def cycleMode(self):
+        """Cycle through the available visualization modes
+        """
+        modes = ['atoms', 'persist', 'overlap', 'diff', 'moves', 'empty']
+        modes = ['atoms', 'empty']
+        mode = self._mode
+        if mode not in modes:
+            return
+        # Find new mode
+        i = modes.index(mode)
+        i = (i+1) % len(modes)
+        newmode = modes[i]
+        print "New mode %s"%newmode
+        # Remove old atoms, set new mode and re-display everything
+        for i in range(len(self._atoms)):
+            self._atoms[0].visible = 0
+            del self._atoms[0]
+        self._mode = newmode
+        self()
+    
+    def _displayAtoms(self):
         """Display the position of atoms in the system.
 
         Call this the first time to display the atoms on the visual.
@@ -111,7 +148,7 @@ class VizSystem(object):
             return
         vizColors = self.vizColors
         vizRadius = self.vizRadius
-        display = self._display
+        atoms = self._atoms
         S = self.S
         # Now go add/update all atom positions, etc.
         for i in range(self.S.N):
@@ -121,32 +158,256 @@ class VizSystem(object):
             radius = vizRadius.get(type_, self.radius)
             color = vizColors.get(type_, visual.color.white)
             # create the particle if not existing yet:
-            if len(display) <= i:
-                display.append(visual.sphere(pos=coords, radius=radius))
-                display[i].opacity = .2
+            if len(atoms) <= i:
+                atoms.append(visual.sphere(pos=coords, radius=radius))
+                atoms[i].opacity = .2
             # update it if it's already there (yes, it re-sets pos...)
-            display[i].visible = 1
-            display[i].pos = coords
-            if not hasattr(display[i], 's12viz'):
-                display[i].color = color
-            display[i].radius = radius
+            atoms[i].visible = 1
+            atoms[i].pos = coords
+            if not hasattr(atoms[i], 's12viz'):
+                atoms[i].color = color
+            atoms[i].radius = radius
         # hide all higher particle numbers:
-        for i in range(self.S.N, len(display)):
-            display[i].visible = 0
+        for i in range(self.S.N, len(atoms)):
+            atoms[i].visible = 0
+    def _displayPersist(self):
+        """Display the position of atoms in the system.
+
+        Call this the first time to display the atoms on the visual.
+        Call it again to update all the positions.  You don't need to
+        re-make the box at every step, it behaves smartly and just
+        moves the particles around.
+        """
+        if visual is None:  return
+        if self.S.persist is None: return
+        vizColors = self.vizColors
+        vizRadius = self.vizRadius
+        atoms = self._atoms
+        S = self.S
+        # Now go add/update all atom positions, etc.
+        for pos in range(S.lattSize):
+            coords = S.coords(pos, raw=True)
+            if S.lattsite[pos] != S12_EMPTYSITE:
+                type_ =  S.atomtype[S.lattsite[pos]]
+                radius = vizRadius.get(type_, self.radius)
+                color = vizColors.get(type_, visual.color.white)
+            else:
+                type_ = 0
+                radius = self.radius
+                color = visual.color.red
+            # non-persisted atoms are invisible
+            if S.persist[pos]:
+                visible = 1
+            else:
+                visible = 0
+            if self._limit and pos not in self._limit:
+                visible = 0
+            # Show particle:
+            self._setatom(i=pos, coords=coords, radius=radius, visible=visible,
+                          color=color)
+    def _displayOverlap(self):
+        """Display the position of atoms in the system.
+
+        Call this the first time to display the atoms on the visual.
+        Call it again to update all the positions.  You don't need to
+        re-make the box at every step, it behaves smartly and just
+        moves the particles around.
+        """
+        if visual is None:  return
+        if self.S0 is None: return
+        atoms = self._atoms
+        S = self.S
+        S0 = self.S0
+
+        type_ = 0
+        radius = self.radius
+        color = visual.color.white
+        # Now go add/update all atom positions, etc.
+        for pos in range(S.lattSize):
+            coords = S.coords(pos, raw=True)
+            if S.lattsite[pos]  != S12_EMPTYSITE and \
+               S0.lattsite[pos] != S12_EMPTYSITE:
+                visible = 1
+            else:
+                visible = 0
+            if self._limit and pos not in self._limit:
+                visible = 0
+            # Show particle:
+            self._setatom(i=pos, coords=coords, radius=radius, visible=visible)
+
+    def _displayDiff(self):
+        """Display arrows for where particles have moved."""
+        if self.S0 is None: return
+        objs = self._atoms
+        S = self.S
+        S0 = self.S0
+        # Delete all objects:
+        for i in range(len(objs)):
+            objs[-1].visible = 0
+            del objs[-1]
+        for i in range(S.N):
+            startPos = S.atompos[i]
+            endPos = S0.atompos[i]
+            if startPos not in self._limit:
+                continue
+            if startPos == endPos:
+                objs.append(visual.sphere(pos=S.coords(startPos), radius=.15))
+            else:
+                startCoords = S.coords(startPos)
+                endCoords   = S0.coords(endPos)
+                dist = math.sqrt(sum((endCoords-startCoords)**2))
+                if dist > S.L/2:
+                    continue
+                objs.append(
+                    visual.arrow(pos=startCoords, axis=endCoords-startCoords,
+                                 shaftwidth=.1, headlength=1, fixedwidth=1
+                                 ))
+
+    def _displayDiffParticle(self):
+        pass
+    def _displayDiffSpin(self):
+        pass
+    def _displayMoves(self):
+        pass
+
+    def _displayEmpty(self):
+        """Display a sphere at every EMPTY lattice site.
+        """
+        if visual is None:  return
+        atoms = self._atoms
+        S = self.S
+
+        type_ = 0
+        radius = self.radius
+        color = visual.color.white
+        # Now go add/update all atom positions, etc.
+        for pos in range(S.lattSize):
+            coords = S.coords(pos, raw=True)
+            if S.lattsite[pos]  == S12_EMPTYSITE:
+                visible = 1
+            else:
+                visible = 0
+            if self._limit and pos not in self._limit:
+                visible = 0
+            # Show particle:
+            self._setatom(i=pos, coords=coords, radius=radius, visible=visible)
+
+    def _setatom(self, i, coords, radius, color=visual.color.white,visible=1):
+        """Add atom to self._objects if needed, otherwise sets its properties.
+        """
+        atoms = self._atoms
+        if len(atoms) <= i:
+            atoms.append(visual.sphere(pos=coords, radius=radius,
+                                       visible=visible))
+            atoms[i].opacity = .2
+        # update it if it's already there (yes, it re-sets pos...)
+        atoms[i].visible = visible
+        atoms[i].pos = coords
+        if not hasattr(atoms[i], 's12viz'):
+            atoms[i].color = color
+        atoms[i].radius = radius
+
 
     def __del__(self):
         """Remove all shapes from the display.
 
         Deleting the object removes all shapes from the display.
         """
-        display = self._display
-        for i in range(len(self._display)):
-            display[0].visible = 0
-            del display[0]
+        atoms = self._atoms
+        for i in range(len(self._atoms)):
+            atoms[0].visible = 0
+            del atoms[0]
         for i in range(len(self._otherObjects)):
             self._otherObjects[0].visible = 0
             del self._otherObjects[0]
-tagColor = (.5, 0, .5)
+    def tagToggle(self, obj=None):
+        """Toggle tag on object under the pointer.
+        """
+        # Pick object if not passed
+        if obj is None:
+            obj = self.scene.mouse.pick
+        # If no object found, then we don't do anything.
+        if obj is None: return
+        info = gets12viz(obj)
+        if info.get('tag', False) == False:  # tag it
+            obj.color = self.tagColor
+            info['tag'] = True
+        else:                                # untag it
+            obj.color = info['color']
+            info['tag'] = False
+    def tagToggle2(self):
+        # Selecting arrows, and other objects for which "pick" does not work
+        closest = 1e9
+        closestObj = None
+        # Iterate through all objects, and select the closest arrow object.
+        for obj in self._otherObjects:
+            # only select arrows - other objects can be directly selected.
+            if not isinstance(obj, visual.primitives.arrow): continue
+            # If this object is closest to pointer, save it for later.
+            displacement = visual.mag(self.scene.mouse.pickpos - obj.pos)
+            if displacement < closest:
+                closest = displacement
+                closestObj = obj
+        # Now set the tags like normal
+        obj = closestObj
+        if obj == None: return
+        self.tagToggle(obj=obj)
+
+    def cycleViz(self, otherObjects=()):
+        """Toggle between highlighting modes in the 'atoms' mode.
+        """
+        if self.mode != 'atoms': return
+        if   self._vizMode == 'full': mode = 'show'
+        elif self._vizMode == 'show': mode = 'hide'
+        elif self._vizMode == 'hide': mode = 'normal'
+        elif self._vizMode == 'normal': mode = 'full'
+        #print "new mode:", mode
+        self._vizMode = mode
+
+        for obj in itertools.chain(self._atoms, self._otherObjects,
+                                   otherObjects):
+            info = gets12viz(obj, relaxed=True)
+            if mode == 'show':
+                if info == None:
+                    obj.visible = False
+                else:
+                    if info['tag'] == True:
+                        obj.visible = True
+                        obj.color = info['color']
+                    else:  obj.visible = False
+            elif mode == 'hide':
+                if info == None:
+                    obj.visible = True
+                else:
+                    if info['tag'] == True:
+                        obj.visible = False
+                    else:  obj.visible = True
+            elif mode == 'full':
+                if info == None:
+                    obj.visible = True
+                else:
+                    if info['tag'] == True:
+                        obj.visible = True
+                        obj.color = tagColor
+                    else:  obj.visible = True
+            elif mode == 'normal':
+                if info == None:
+                    obj.visible = True
+                else:
+                    if info['tag'] == True:
+                        obj.visible = True
+                        obj.color = info['color']
+                    else:  obj.visible = True
+    def toggleBG(self):
+        print self.scene.background, visual.color.white, visual.color.black
+        # is white, make it black
+        if self.scene.background == visual.color.white:
+            self.scene.background = visual.color.black
+        # is black, make it white
+        elif self.scene.background == visual.color.black:
+            self.scene.background = visual.color.white
+
+
 def gets12viz(obj, relaxed=False):
     """Get visualization paremeter dictionary.
     """
@@ -157,93 +418,6 @@ def gets12viz(obj, relaxed=False):
     if not info.has_key('color'):
         info['color'] = obj.color
     return info
-def tagToggle():
-    """Toggle tag on object under the pointer.
-    """
-    obj = visual.scene.mouse.pick
-    #print obj
-    if obj == None: return
-    info = gets12viz(obj)
-    if info.get('tag', False) == False:  # tag it
-        obj.color = tagColor
-        info['tag'] = True
-    else:                                # untag it
-        obj.color = info['color']
-        info['tag'] = False
-def tagToggle2(otherObjects):
-    # Selecting arrows, and other objects for which "pick" does not work
-    closest = 1e9
-    closestObj = None
-    # Iterate through all objects, and select the closest arrow object.
-    for obj in otherObjects:
-        # only select arrows - other objects can be directly selected.
-        if not isinstance(obj, visual.primitives.arrow): continue
-        # If this object is closest to pointer, save it for later.
-        displacement = visual.mag(visual.scene.mouse.pickpos - obj.pos)
-        if displacement < closest:
-            closest = displacement
-            closestObj = obj
-    # Now set the tags like normal
-    obj = closestObj
-    if obj == None: return
-    info = gets12viz(obj)
-    if info.get('tag', False) == False:  # tag it
-        obj.color = tagColor
-        info['tag'] = True
-    else:                                # untag it
-        obj.color = info['color']
-        info['tag'] = False
-
-def toggleViz(V, otherObjects=()):
-    if   V._vizMode == 'full': mode = 'show'
-    elif V._vizMode == 'show': mode = 'hide'
-    elif V._vizMode == 'hide': mode = 'normal'
-    elif V._vizMode == 'normal': mode = 'full'
-    #print "new mode:", mode
-    V._vizMode = mode
-
-    import itertools
-    for obj in itertools.chain(V._display, V._otherObjects, otherObjects):
-        info = gets12viz(obj, relaxed=True)   # we could optimize by not using
-        if mode == 'show':
-            if info == None:
-                obj.visible = False
-            else:
-                if info['tag'] == True:
-                    obj.visible = True
-                    obj.color = info['color']
-                else:  obj.visible = False
-        elif mode == 'hide':
-            if info == None:
-                obj.visible = True
-            else:
-                if info['tag'] == True:
-                    obj.visible = False
-                else:  obj.visible = True
-        elif mode == 'full':
-            if info == None:
-                obj.visible = True
-            else:
-                if info['tag'] == True:
-                    obj.visible = True
-                    obj.color = tagColor
-                else:  obj.visible = True
-        elif mode == 'normal':
-            if info == None:
-                obj.visible = True
-            else:
-                if info['tag'] == True:
-                    obj.visible = True
-                    obj.color = info['color']
-                else:  obj.visible = True
-def toggleBG():
-    print visual.scene.background, visual.color.white, visual.color.black
-    # is white, make it black
-    if visual.scene.background == visual.color.white:
-        visual.scene.background = visual.color.black
-    # is black, make it white
-    elif visual.scene.background == visual.color.black:
-        visual.scene.background = visual.color.white
 
 
 def visualizeKvectors(SsfList):
@@ -287,6 +461,14 @@ if __name__ == "__main__":
     except ImportError:
         pass
 
+    mode = "atoms"
+    if sys.argv[1] == "persist":
+        mode = 'persist'
+        del sys.argv[1]
+    if sys.argv[1] == "empty":
+        mode = 'empty'
+        del sys.argv[1]
+
     arguments = sys.argv[1:]
     # bash filename sort ignores "-" which is annoying for negative numbers
     #print arguments
@@ -305,7 +487,7 @@ if __name__ == "__main__":
             S = saiga12.io.io_open(S)
 
         if V == None or V.S.lattSize != S.lattSize:
-            V = VizSystem(S)
+            V = VizSystem(S, mode=mode)
             V.vizMakeBox()
         V.S = S
         V.vizDisplay()

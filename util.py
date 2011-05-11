@@ -39,7 +39,7 @@ def getNewFrameIndex(frame_index, nFrames, V=None, otherObjects=()):
     while inLoop:
         inLoop = False
         ch = '~'
-        while ch not in '>.<,09xqcCtnvbI':
+        while ch not in '>.<,09xqcCtnvVbI':
             ch = visual.scene.kb.getkey()
             
         if ch in '>.': frame_index += 1
@@ -57,10 +57,11 @@ def getNewFrameIndex(frame_index, nFrames, V=None, otherObjects=()):
             if hasattr(visual.scene, "originalCenter"):
                 visual.scene.center = visual.scene.originalCenter
             inLoop = True
-        if ch == 't': viz.tagToggle(); inLoop = True
-        if ch == 'n': viz.tagToggle2(otherObjects); inLoop = True
-        if ch == 'v': viz.toggleViz(V,otherObjects=otherObjects); inLoop = True
-        if ch == 'b': viz.toggleBG(); inLoop = True
+        if ch == 't': V.tagToggle(); inLoop = True
+        if ch == 'n': V.tagToggle2(otherObjects); inLoop = True
+        if ch == 'v': V.cycleViz(otherObjects=otherObjects); inLoop = True
+        if ch == 'V': V.cycleMode(); inLoop = True
+        if ch == 'b': V.toggleBG(); inLoop = True
         if ch == 'I': from code import interact ; interact(local=locals())
     
     return frame_index
@@ -434,11 +435,12 @@ def visualizeKvectors(fileNames, mode='avg'):
     fileNames.sort()
 
     if mode == 'each':
+        listOfFrames, listOfNames = openFiles(fileNames)
         frame_index = 0
         while True:
             print '\r',
-            print fileNames[frame_index][-20:],
-            frame = io_open(fileNames[frame_index])
+            print listOfNames[frame_index][-20:],
+            frame = listOfFrames[frame_index]
 
             # XXX we still need a way to set the type of this.
             type_ = list(frame.ntype).index(max(frame.ntype))
@@ -462,8 +464,10 @@ def visualizeKvectors(fileNames, mode='avg'):
         del visual.scene
     if mode == 'avg':
         SsfList = None
-        for fname in fileNames:
-            frame = io_open(fname)
+        #listOfFrames, listOfNames = openFiles(fileNames)
+        #print "done loading"
+        #for frame, frameName in zip(listOfFrames, listOfNames):
+        for frame, frameName in openFilesIter(fileNames):
             type_ = list(frame.ntype).index(max(frame.ntype))
             if SsfList==None: 
                 SsfList = corrfunc.StructCorrList(
@@ -497,7 +501,6 @@ def TtoC(T):
 def CtoT(c):
     return 1./(log((1./c)-1.))
 
-
 def openFiles(arguments):
     """Open a list of files
 
@@ -513,12 +516,17 @@ def openFiles(arguments):
 
     Returns (listOfFrames, listOfNames).
     """
-    listOfFrames = [ ]
-    listOfNames  = [ ]
+    #x = 
+    #print x[:10]
+    #print len(x)
+    return zip(*openFilesIter(arguments))
+def openFilesIter(arguments):
     # If it is a list, look at the objects
     # If it is a dict, look at the values
     # Otherwise, assume it's a S object in the filename itself.
     for fname in arguments:
+        listOfFrames = [ ]
+        listOfNames  = [ ]
         data = pickle.load(open(fname))
         if isinstance(data, list):
             listOfFrames.extend(data)
@@ -529,9 +537,11 @@ def openFiles(arguments):
             listOfFrames.extend([ data[name] for name in sortedKeys ])
         else:
             # We have a big list of fnames
-            listOfFrames.append(fname)
+            listOfFrames.append(io_open(fname))
             listOfNames.append(fname)
-    return listOfFrames, listOfNames
+        for frame,name in zip(listOfFrames, listOfNames):
+            yield frame, name
+#    return listOfFrames, listOfNames
 
 
 if __name__ == "__main__":
