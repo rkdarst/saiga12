@@ -5,6 +5,7 @@ import math
 from math import log, exp
 import numpy
 import cPickle as pickle
+import random
 import sys
 
 try:
@@ -542,6 +543,40 @@ def openFilesIter(arguments):
         for frame,name in zip(listOfFrames, listOfNames):
             yield frame, name
 #    return listOfFrames, listOfNames
+
+
+def shuffleSites(S, sites):
+    for i in range(len(sites)-1, 0, -1):
+        j = random.randint(0, i)
+        site0 = sites[i]
+        site1 = sites[j]
+        # the algorithm allows you to swap a site with itself, do
+        # nothing in that case.
+        if site0 == site1:
+            continue
+        # Get part0 / part1 information
+        if S.lattsite[site0] != saiga12.S12_EMPTYSITE:
+            part0 = S.lattsite[site0]
+            type0 = S.atomtype[part0]
+        else:
+            part0 = None
+        if S.lattsite[site1] != saiga12.S12_EMPTYSITE:
+            part1 = S.lattsite[site1]
+            type1 = S.atomtype[part1]
+        else:
+            part1 = None
+        # Remove existing particles
+        if part0 is not None:
+            S.delParticle(site0)
+        if part1 is not None:
+            S.delParticle(site1)
+        # re-add the particles
+        if part0 is not None:
+            S.addParticle(site1, type0)
+            #if S.orient: orient initialized randomly in C
+        if part1 is not None:
+            S.addParticle(site0, type1)
+            #if S.orient: orient initialized randomly in C
 
 
 if __name__ == "__main__":

@@ -58,6 +58,8 @@ class TestSequenceFunctions(unittest.TestCase):
     #    execfile("tests/viztest.py", {})
     def testScripts(self):
         execfile("tests/scripttest.py", {})
+    def testShuffle(self):
+        execfile("tests/shuffletest.py", {})
     def testSpinGlass(self):
         execfile("tests/spinglasstest.py", {})
     def testSpiral(self):
