@@ -50,6 +50,8 @@ class TestSequenceFunctions(unittest.TestCase):
         execfile("tests/kobandersentest.py", {})
     def testEventDrivenDynamics(self):
         execfile("tests/eventdrivendynamics.py", {})
+    def testLogTime(self):
+        execfile("tests/logtimetest.py", {})
     #def testStateFinder(self):
     #    execfile("tests/statefindertest.py", {})
     def testTiming(self):

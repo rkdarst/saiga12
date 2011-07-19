@@ -29,7 +29,7 @@ def getAllTimes(maxTime):
         curTime = nextTime
         times.append(curTime)
     return times
-def logTimeTimesGenerator():
+def logTimeTimesGenerator(maxTime=None):
     timeIndex = 0
     curTime = 0
     yield curTime
@@ -39,6 +39,8 @@ def logTimeTimesGenerator():
         if nextTime <= curTime: continue
         curTime = nextTime
         yield curTime
+        if maxTime is not None and curTime > maxTime:
+            break
 
 
 
@@ -69,6 +71,45 @@ def logTimeGenerator(S, maxTime):
         timeIndex += 1
         nextTime = logTime(1., timeIndex)
         if nextTime <= curTime: continue
+        cycleTime = nextTime - curTime
+        S.cycle(cycleTime)
+        curTime += cycleTime
+
+        yield S, curTime
+    return  # can't return values in generators.
+
+def logTimeGenerator(S, maxTime, callbacks=[]):
+    """Iterate over (S, deltaT) pairs, excluding deltaT = 0.
+
+    `callbacks` can be a list of (time, callback) pairs.  Every `time`
+    time units, the respective callback will be called.  The callback
+    is called right before the S object is returned, if the callback
+    time corresponds to one of the logtimes.
+
+    Callbacks are called with the arguments callback(S, deltaT).
+
+    example: callbacks=[(100, callbackA),
+                        (500, callbackB)]
+    """
+
+    curTime = 0
+    for nextTime in logTimeTimesGenerator(maxTime=maxTime):
+        if callbacks:
+            while True:
+                # Loop doing callbacks as long as we need
+                nextCallbackTime = min( ((curTime//cbTime)+1)*cbTime
+                                        for cbTime, cb in callbacks)
+                if nextCallbackTime > nextTime:
+                    break
+                cycleTime = nextCallbackTime - curTime
+                S.cycle(cycleTime)
+                curTime += cycleTime
+
+                [ cb(S, curTime)
+                  for cbTime, cb in callbacks
+                  if curTime%cbTime == 0 ]
+
+
         cycleTime = nextTime - curTime
         S.cycle(cycleTime)
         curTime += cycleTime
