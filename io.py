@@ -5,6 +5,8 @@ import cPickle as pickle
 import zlib
 import numpy
 
+from common import *
+
 classvars = ("N", "beta", "mctime",
              "movesPerCycle", "cumProbAdd", "cumProbDel",
              "otherData", "cycleModeStr", "energyModeStr",
@@ -155,6 +157,40 @@ class IOSys(object):
     #    """
     #    state = pickle.load(file(filename))
     #    self.io_loadState(state)
+
+
+    def makeImage(self, fname, colormap={}):
+        import matplotlib.figure
+        import matplotlib.backends.backend_agg
+        from matplotlib.patches import Circle
+        #f = matplotlib.backends.backend_agg.Figure()
+        f = matplotlib.figure.Figure()
+        c = matplotlib.backends.backend_agg.FigureCanvasAgg(f)
+        ax = f.add_subplot(111, aspect='equal')
+        #ax.plot((1,2,3, 4), (0, 1, 4, 9))
+
+        coords = self.coords()
+        for i in range(self.lattSize):
+            if self.lattsite[i] != S12_EMPTYSITE:
+                n = self.lattsite[i]
+                type_ = self.atomtype[n]
+                radius = .5 - type_/20.
+                # has particle
+                kwargs = { 'fill':False }
+                if n in colormap:
+                    kwargs['fill'] = True
+                cir = Circle(coords[i], radius=radius, axes=ax,
+                             color=colormap.get(n, 'black'),
+                             **kwargs)
+                ax.add_patch(cir)
+            else:
+                # empty
+                pass
+
+        ax.autoscale_view(tight=True)
+        print fname
+        #f.savefig(fname, tight=True)
+        c.print_figure(fname, bbox_inches='tight')
 
 
 def io_open(state):
