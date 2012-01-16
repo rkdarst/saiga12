@@ -119,7 +119,10 @@ class VizSystem(object):
     def cycleMode(self):
         """Cycle through the available visualization modes
         """
-        modes = ['atoms', 'persist', 'overlap', 'diff', 'moves', 'empty']
+        if self.S0 is not None:
+            modes = ['atoms', 'persist', 'overlap', 'diff', 'moves', 'empty']
+        else:
+            modes = ['atoms', 'persist', 'empty']
         modes = ['atoms', 'empty']
         mode = self._mode
         if mode not in modes:
