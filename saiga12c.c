@@ -917,3 +917,13 @@ void ctest(struct SimData *SD) {
 
   } printf("\n");
 }
+
+int ctest_array(int num, struct SimData **SD_array) {
+  int i;
+  for (i=0; i<num; i++) {
+    struct SimData *SD;
+    SD = SD_array[i];
+    printf("This is System struct #%d, and has %d atoms\n", i, SD->N);
+  }
+  return (num);
+}

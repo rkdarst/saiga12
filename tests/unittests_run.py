@@ -14,6 +14,8 @@ class TestSequenceFunctions(unittest.TestCase):
     #    execfile("tests/chempotential.py", {})
     def testCorrFunc(self):
         execfile("tests/corrfunctest.py", {'noviz':True})
+    def testCPointer(self):
+        execfile("tests/cpointertest.py")
     def testCtccTest(self):
         execfile("tests/ctcctest.py", {})
     def testCtccEDDTest(self):

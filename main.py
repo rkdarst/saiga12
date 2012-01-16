@@ -193,6 +193,9 @@ def getClib():
         #("EddSPM_init",            None,     (SimData_p, )),
         #("EddSPM_consistencyCheck",c_int,    (SimData_p, )),
         #("EddSPM_cycle",           c_int,    (SimData_p, c_double)),
+
+
+        ("ctest_array",            c_int,    (c_int, POINTER(SimData_p),)),
         )
     for name, restype, argtypes in cfuncs:
         getattr(C, name).restype  = restype
