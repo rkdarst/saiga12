@@ -18,7 +18,7 @@ try:
     from scipy.fftpack import fftn, ifftn
 except ImportError:
     from numpy.fft import fftn, ifftn
-    
+
 
 _kvecCache = { }
 
@@ -60,7 +60,7 @@ class Averager(object):
                 return math.sqrt((x[2]/x[0] - (x[1]/x[0])**2))
             except (ValueError, ZeroDivisionError):
                 return -1.
-            
+
     def avgReset(self):
         """Reset all averages.
         """
@@ -153,10 +153,87 @@ def getFftArrays(S, type_, SOverlap=None):
 class NoKvecsException(saiga12.Saiga12Exception):
     pass
 
+_kvecCache = { }
+
+def makeKvecs(n, orthogonal, dim):
+    n2 = n**2
+    if orthogonal:
+        if dim == 2:
+            kvecs = numpy.asarray([(n , 0.  ),
+                                   (0., n),
+                                   ],
+                                  dtype=saiga12.c_double)
+            return kvecs
+        elif dim == 3:
+            kvecs = numpy.asarray([(n , 0., 0.),
+                                   (0., n , 0.),
+                                   (0., 0., n ),
+                                   ],
+                                  dtype=saiga12.c_double)
+            return kvecs
+        else:
+            raise Exception("dimensions must be 2 or 3.")
+
+    else:
+        import shelve
+        cachepar = str((n2, dim))
+        nmax = int(math.ceil(math.sqrt(n2)))
+
+        useCache = False
+        if _kvecCache.has_key(cachepar):  # memory cache always used
+            kvecs = _kvecCache[cachepar]
+        else:
+            cache = shelve.open("kvecCache")
+            if cache.get('version', 0) < 1:
+                for k in cache.keys(): del cache[k]
+                cache['version'] = 1
+            if cache.has_key(cachepar) and useCache:
+                kvecs = cache[cachepar]
+                _kvecCache[cachepar] = kvecs
+            else:
+                # kvecs is a list of all k-vectors consistent with our
+                # magnitude.
+                full = [ x for x in range(-nmax+1, nmax+1) ]
+                half = [ x for x in range(0, nmax+1) ]
+
+                if dim == 1:
+                    kvecs = cartesianproduct(half, )
+                elif dim == 2:
+                    kvecs = cartesianproduct(full, half)
+                elif dim == 3:
+                    kvecs = cartesianproduct(full, full, half)
+                kvecs = numpy.asarray([ _ for _ in kvecs
+                                    # the following lines limits to only
+                                    # orthogonal vectors, which is handled
+                                    # at the very first of this method
+                                    #if numpy.max(numpy.abs(_))**2 == kmag2
+                                        ],
+                                      dtype=saiga12.c_double)
+                magnitudes2 = numpy.sum(kvecs * kvecs, axis=1)
+                kvecs = kvecs[magnitudes2 == n2]
+                if len(kvecs) == 0:
+                    raise NoKvecsException
+
+                if useCache:
+                    cache[cachepar] = kvecs
+                _kvecCache[cachepar] = kvecs   # memory cache always
+            del cache
+        return kvecs
+
+def makeKvecs2D(num):
+    kvecs = numpy.zeros(shape=(num, 3), dtype=saiga12.c_double)
+    thetas = (numpy.arange(num) / num) * 2*math.pi
+    for i, t in enumerate(thetas):
+        kx = math.cos(i)
+        ky = math.sin(i)
+        kvecs[i, 0] = kx
+        kvecs[i, 1] = ky
+    return kvecs
+
 class StructCorr(object):
     def __init__(self, S, type_, L, kmag2, orthogonal=True):
         self._type_ = type_
-        
+
         # the only importance of S is the shape.
         self.L = L
         self.kmag = math.sqrt(kmag2)
@@ -184,9 +261,9 @@ class StructCorr(object):
         self._SkArrayByKvecTMP = numpy.zeros(shape=len(self.kvecs),
                                              dtype=saiga12.c_double)
         self._SkArrayByKvecTMP_p = saiga12.get_cdoublep(self._SkArrayByKvecTMP)
-        self._SkArrayByAtom    = numpy.zeros(shape=S.N,
+        self._SkArrayByAtom    = numpy.zeros(shape=self.N,
                                              dtype=saiga12.c_double)
-        self._SkArrayByAtomTMP = numpy.zeros(shape=S.N,
+        self._SkArrayByAtomTMP = numpy.zeros(shape=self.N,
                                              dtype=saiga12.c_double)
         self._SkArrayByAtomTMP_p = saiga12.get_cdoublep(self._SkArrayByAtomTMP)
         self.reset()
@@ -200,7 +277,7 @@ class StructCorr(object):
         #self.SkArrayAvgs[:] = 0
         self._SkArrayByKvec[:] = 0
         self._SkArrayByAtom[:] = 0
-        
+
     def makeKvecs(self, kmag2, S, orthogonal=True):
         """Make k-vectors needed for space fourier transform.
 
@@ -221,16 +298,26 @@ class StructCorr(object):
             # integer $k$.
             if kmag != math.sqrt(kmag2):
                 raise NoKvecsException
-            kvecs = numpy.asarray([(kmag, 0.  , 0.  ),
-                                   (0.  , kmag, 0.  ),
-                                   (0.  , 0.  , kmag),
-                                   ],
-                                  dtype=saiga12.c_double)
+            if len(S.physicalShape) == 1:
+                kvecs = numpy.asarray([(kmag, ),
+                                       ],
+                                      dtype=saiga12.c_double)
+            elif len(S.physicalShape) == 2:
+                kvecs = numpy.asarray([(kmag, 0.  ),
+                                       (0.  , kmag),
+                                       ],
+                                      dtype=saiga12.c_double)
+            elif len(S.physicalShape) == 3:
+                kvecs = numpy.asarray([(kmag, 0.  , 0.  ),
+                                       (0.  , kmag, 0.  ),
+                                       (0.  , 0.  , kmag),
+                                       ],
+                                      dtype=saiga12.c_double)
         else:
             import shelve
             cachepar = str((kmag2, len(S.physicalShape)))
             kmax = int(math.ceil(math.sqrt(kmag2)))
-    
+
             useCache = False
             if _kvecCache.has_key(cachepar):  # memory cache always used
                 kvecs = _kvecCache[cachepar]
@@ -240,7 +327,7 @@ class StructCorr(object):
                     for k in cache.keys(): del cache[k]
                     cache['version'] = 1
                 if cache.has_key(cachepar) and useCache:
-                
+
                     kvecs = cache[cachepar]
                     _kvecCache[cachepar] = kvecs
                 else:
@@ -248,7 +335,7 @@ class StructCorr(object):
                     # magnitude.
                     full = [ x for x in range(-kmax+1, kmax+1) ]
                     half = [ x for x in range(0, kmax+1) ]
-                    
+
                     if len(S.physicalShape) == 1:
                         kvecs = cartesianproduct(half, )
                     elif len(S.physicalShape) == 2:
@@ -266,7 +353,7 @@ class StructCorr(object):
                     kvecs = kvecs[magnitudes2 == kmag2]
                     if len(kvecs) == 0:
                         raise NoKvecsException
-                    
+
                     if useCache:
                         cache[cachepar] = kvecs
                     _kvecCache[cachepar] = kvecs   # memory cache always
@@ -281,7 +368,7 @@ class StructCorr(object):
     #        c = c.copy()
     #    self.coordLookup = c
     #    self.coordLookup_p = self.coordLookup.ctypes.data
-        
+
 
     def calcSk(self, S, SOverlap=None):
         """Static Structure Factor
@@ -307,7 +394,7 @@ class StructCorr(object):
             # then we need to regenerate the FFTn.
             if mctime != S.mctime:
                 val = None
-        
+
         # Do the actual regeneration of the functions:
         if val is None:
             #lattice = getLattice(S, type_)
@@ -335,14 +422,14 @@ class StructCorr(object):
                 lattice[lattice == 2] = 1
                 #norm = N * S.densityOf(type_)
                 density = N * S.densityOf(type_) / float(lattSize)
-        
+
             #from rkddp import interact ; interact.interact()
             lattice.shape = S.lattShape
             val = fftn(lattice), ifftn(lattice), density
-            S._fftcache[cachepar] = val, S.mctime
+            #S._fftcache[cachepar] = val, S.mctime
 
         ForwardFFT, InverseFFT, density = val
-            
+
         totalsum2 = 0.
         for i, k in enumerate(self.kvecsOrig):
             k = tuple(k)
@@ -366,7 +453,7 @@ class StructCorr(object):
         self._SkArrayByKvecTMP[:] = 0
         self._SkArrayByAtomTMP[:] = 0
         self._niterSk += 1
-        N = self.N
+        N = S.numberOfType(self._type_)
         if S.numberOfType(self._type_) != self._SkArrayByAtomTMP.size:
             raise Exception, "Number of atoms has changed... "\
                   "Fs assumes you aren't doing that."
@@ -445,7 +532,7 @@ class StructCorrList(object):
 
         SsfList = [ ]
         SsfDict = { }
-            
+
         for kmag2 in kmag2s:
             try:
                 Ssf = StructCorr(kmag2=kmag2, S=S, type_=type_, L=L,
@@ -822,7 +909,7 @@ if __name__ == "__main__":
     import sys
 
     from rpy import r
-    
+
     fname = sys.argv[2]
     try:
         type_ = int(sys.argv[1])
@@ -841,17 +928,17 @@ if __name__ == "__main__":
     L = S.lattShape[0]
     for S in (S, ):
         StructCorr.calcSk(S)
-        
+
     v_kmag = StructCorr.kmags()
     v_sk = StructCorr.SkAverages()
 
     #thisRun.sort()
     print "top modes:"
-    
+
     print "%6s %6s %7s %9s"%('kmag', 'Sk', 'kmag/L', 'L/kmag')
     for Sk, kmag in zip(v_sk, v_kmag)[-10:]:
         print "%6.3f %6.3f %7.5f %9.5f"%(kmag, Sk, kmag/L, L/kmag)
-    
+
     r.plot(v_kmag, v_sk,
            xlab="", ylab="", type="l",
            ylim=(0., 15)
@@ -873,6 +960,6 @@ if __name__ == "__main__":
     #for kmag, SkArray in zip(v_kmag, StructCorr.SkArrays()):
     #    r.points(x=kmag, y=numpy.average(SkArray),
     #             col="green", pch="x")
-    
-    
+
+
     import code ; code.interact(local=locals(), banner="" )
