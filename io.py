@@ -193,6 +193,21 @@ class IOSys(object):
         c.print_figure(fname, bbox_inches='tight')
 
 
+    def as_frame(self):
+        """Return a corresponding Frame object (taco.msim compatible)."""
+        N = self.N
+        coords = self.coords(self.atompos[:N])
+        atomtypes = self.atomtype[:N]
+        frame = Frame()
+        frame.N = N
+        frame.coords = coords
+        frame.atomtypes = atomtypes
+        frame.boxsize = self.physicalShape
+        return frame
+
+class Frame(object):
+    pass
+
 def io_open(state):
     """Open state from a pickle and return it.
 
