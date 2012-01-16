@@ -620,6 +620,9 @@ if __name__ == "__main__":
                        S.numberOfType(t)))
             print "energy:", S.energy()
             print "coords:", S.__class__.__name__, S.lattShape
+    elif sys.argv[1] == 'img':
+        S = io_open(sys.argv[2])
+        S.makeImage(sys.argv[3])
 
     else:
         print "command not found: %s"%sys.argv[1]
