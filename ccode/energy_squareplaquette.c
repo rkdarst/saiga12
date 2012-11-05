@@ -13,7 +13,7 @@ inline int energySPM_onSquare(struct SimData *SD,
   if ((ups % 2) == 0)
     return 0;
   else
-    return -1;
+    return +1;
 }
 
 inline double energySPM_posLocal(struct SimData *SD, int pos) {
