@@ -11,6 +11,7 @@ S12_ENERGY_BM     = 1             # biroli-mezard thermodynamic lattice glass
 S12_ENERGY_ZERO   = 2             # all configs have zero energy
 S12_ENERGY_CTCC   = 3             # an orientation and an overlap exclusion.
 S12_ENERGY_SPM    = 4             # Square plaquette model
+S12_ENERGY_TPM    = 5             # Triangular plaquette model
 # somewhat experimental modes:
 S12_ENERGY_BMnotzero     = 10
 S12_ENERGY_BMimmobile1   = 11

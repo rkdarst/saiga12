@@ -16,6 +16,7 @@
 #define S12_ENERGY_ZERO (2)
 #define S12_ENERGY_CTCC (3)
 #define S12_ENERGY_SPM (4)
+#define S12_ENERGY_TPM (5)
 #define S12_ENERGY_BMnotzero (10)
 #define S12_ENERGY_BMimmobile1 (11)
 #define S12_ENERGY_BMimmobile1b (12)
@@ -333,6 +334,7 @@ void loadStateFromSave(struct SimData *SD) {
 #include "ccode/energy_bm.c"
 #include "ccode/energy_ctcc.c"
 #include "ccode/energy_squareplaquette.c"
+#include "ccode/energy_triangularplaquette.c"
 
 inline double energy_posLocal(struct SimData *SD, int pos) {
   /*  Energy of a particle at one particular position.  This function
@@ -355,6 +357,8 @@ inline double energy_posLocal(struct SimData *SD, int pos) {
     return energyBMimmobile1b_posLocal(SD, pos);
   else if (SD->energyMode == S12_ENERGY_SPM)
     return energySPM_posLocal(SD, pos);
+  else if (SD->energyMode == S12_ENERGY_TPM)
+    return energyTPM_posLocal(SD, pos);
   // add new energy modes above this line.
   else {
     if (errorcheck) {
@@ -382,6 +386,8 @@ inline double energy_pos(struct SimData *SD, int pos) {
     return energyBMimmobile1b_pos(SD, pos);
   else if (SD->energyMode == S12_ENERGY_SPM)
     return energySPM_pos(SD, pos);
+  else if (SD->energyMode == S12_ENERGY_TPM)
+    return energyTPM_pos(SD, pos);
   // add new energy modes above this line.
   else {
     if (errorcheck) {

@@ -340,7 +340,7 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
             self._allocPersistArray() # automatically set to zeros
         elif cycleMode.lower() == 'squareplaquette':
             if len(self.lattShape) != 2 or self.connMax != 4:
-                raise "Error: square plaquette model must have a square lattice"
+                raise "Error: square plaquette model must have a square lattice (energy function only uses triangles)."
             self.cycleMode = S12_CYCLE_SPINMC
             #self._eddInit =             self.C.EddSPM_init
             #self._eddUpdateLatPos =     self.C.EddSPM_updateLatPos
@@ -352,6 +352,16 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
             self._allocPersistArray() # automatically set to zeros
             #self.setEnergyMode('montecarlo')
             self.setEnergyMode('squareplaquette')
+        elif cycleMode.lower() == 'triangularplaquette':
+            if len(self.lattShape) != 2 or self.connMax != 4:
+                raise "Error: triangular plaquette model must have a square lattice.  "
+            self.cycleMode = S12_CYCLE_SPINMC
+            if self.lattSize <= 0:
+                raise Exception, ("lattSize is not set-- you must set up "+
+                                 "your arrays before enabling TPM dynamics")
+            self._allocPersistArray() # automatically set to zeros
+            #self.setEnergyMode('montecarlo')
+            self.setEnergyMode('triangularplaquette')
 
         else:
             raise Exception("Unknown cycle mode: %s", cycleMode)
@@ -392,6 +402,8 @@ class Sys(io.IOSys, vibration.SystemVibrations, ctccdynamics.CTCCDynamics,
             self.energyMode = S12_ENERGY_CTCC
         elif energyMode.lower() == 'squareplaquette':
             self.energyMode = S12_ENERGY_SPM
+        elif energyMode.lower() == 'triangularplaquette':
+            self.energyMode = S12_ENERGY_TPM
         else:
             raise Exception("Unknown energy mode: %s", energyMode)
     
